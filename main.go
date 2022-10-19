@@ -30,6 +30,9 @@ func main() {
 		if CLI.List.ListStates {
 			toCheck = append(toCheck, RegexShift)
 		}
+		if CLI.List.ListViews {
+			toCheck = append(toCheck, []LogRegex{RegexNodeEstablied, RegexNodeJoined, RegexNodeLeft}...)
+		}
 
 		timeline := make(Timeline)
 		_ = timeline
@@ -43,15 +46,6 @@ func main() {
 		}
 
 		DisplayColumnar(timeline)
-		/*
-			for sourcenode, sourceTimeline := range timeline {
-				fmt.Println(sourcenode)
-				for _, event := range sourceTimeline {
-					fmt.Printf("\t%d: %s\n", event.Timestamp, event.Msg)
-				}
-
-			}
-		*/
 		break
 	default:
 		panic(ctx.Command())
@@ -77,11 +71,12 @@ type LogCtx struct {
 	ResyncedFromNode string
 	HashToIP         map[string]string
 	IPToHostname     map[string]string
+	IPToMethod       map[string]string
 }
 
 func search(path string, regexes ...LogRegex) (string, LocalTimeline, error) {
 	lt := []LogInfo{}
-	ctx := LogCtx{HashToIP: map[string]string{}, IPToHostname: map[string]string{}}
+	ctx := LogCtx{HashToIP: map[string]string{}, IPToHostname: map[string]string{}, IPToMethod: map[string]string{}}
 
 	regexToSendSlice := []string{}
 	for _, regex := range regexes {
@@ -100,11 +95,16 @@ func search(path string, regexes ...LogRegex) (string, LocalTimeline, error) {
 	wg.Add(1)
 	go func() {
 		s := bufio.NewScanner(out)
-		var line string
+		var (
+			line      string
+			toDisplay string
+		)
 
 		for s.Scan() {
 			line = s.Text()
+			toDisplay = line
 			var t time.Time
+
 		SearchDate:
 			for _, layout := range DateLayouts {
 				t, err = time.Parse(layout, line[:len(layout)])
@@ -118,14 +118,14 @@ func search(path string, regexes ...LogRegex) (string, LocalTimeline, error) {
 				if !r.Match([]byte(line)) {
 					continue
 				}
-				if regex.UpdateCtx != nil {
-					ctx = regex.UpdateCtx(ctx, line)
+				if regex.Handler != nil {
+					ctx, toDisplay = regex.Handler(ctx, line)
 				}
 				if !regex.SkipPrint {
 					lt = append(lt, LogInfo{
 						Date: t,
 						Log:  line,
-						Msg:  regex.Msg(line),
+						Msg:  toDisplay,
 					})
 				}
 			}

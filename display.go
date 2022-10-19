@@ -6,9 +6,44 @@ import (
 	"os"
 	"sort"
 	"strings"
-	"text/tabwriter"
 	"time"
+
+	"github.com/Ladicle/tabwriter"
 )
+
+// Color is given its own type for safe function signatures
+type Color string
+
+// Color codes interpretted by the terminal
+// NOTE: all codes must be of the same length or they will throw off the field alignment of tabwriter
+const (
+	Reset             Color = "\x1b[0000m"
+	Bright                  = "\x1b[0001m"
+	RedText                 = "\x1b[0031m"
+	GreenText               = "\x1b[0032m"
+	YellowText              = "\x1b[0033m"
+	BlueText                = "\x1b[0034m"
+	MagentaText             = "\x1b[0035m"
+	CyanText                = "\x1b[0036m"
+	WhiteText               = "\x1b[0037m"
+	DefaultText             = "\x1b[0039m"
+	BrightRedText           = "\x1b[1;31m"
+	BrightGreenText         = "\x1b[1;32m"
+	BrightYellowText        = "\x1b[1;33m"
+	BrightBlueText          = "\x1b[1;34m"
+	BrightMagentaText       = "\x1b[1;35m"
+	BrightCyanText          = "\x1b[1;36m"
+	BrightWhiteText         = "\x1b[1;37m"
+)
+
+// Color implements the Stringer interface for interoperability with string
+func (c *Color) String() string {
+	return fmt.Sprintf("%v", c)
+}
+
+func Paint(color Color, value string) string {
+	return fmt.Sprintf("%v%v%v", color, value, Reset)
+}
 
 func iterateNode(timeline Timeline) ([]string, time.Time) {
 	var (
@@ -47,7 +82,8 @@ func DisplayColumnar(timeline Timeline) {
 	}
 	sort.Strings(keys)
 
-	fmt.Fprintln(w, "DATE\t"+strings.Join(keys, "\t")+"\t")
+	header := "DATE\t" + strings.Join(keys, "\t") + "\t"
+	fmt.Fprintln(w, header)
 	fmt.Fprintln(w, " \t"+strings.Repeat(" \t", len(keys)))
 
 	for nextNodes, nextDate := iterateNode(timeline); len(nextNodes) != 0; nextNodes, nextDate = iterateNode(timeline) {
@@ -82,7 +118,7 @@ func DisplayColumnar(timeline Timeline) {
 		}
 
 		lastDate = nextDate
-		_ = lastDate
-
 	}
+	fmt.Fprintln(w, " \t"+strings.Repeat(" \t", len(keys)))
+	fmt.Fprintln(w, header)
 }

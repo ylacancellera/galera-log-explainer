@@ -2,6 +2,7 @@ package main
 
 import (
 	"regexp"
+	"strings"
 )
 
 type Criticity int
@@ -36,32 +37,78 @@ type LogRegex struct {
 	// to use with regular grep
 	Regex     string
 	Criticity Criticity
-	UpdateCtx func(LogCtx, string) LogCtx
-	Msg       func(string) string
+	Handler   func(LogCtx, string) (LogCtx, string)
 	SkipPrint bool
 }
 
-var simpleMsg = func(s string) string { return s }
+var (
+	groupMethod       = "ssltcp"
+	groupNodeIP       = "nodeip"
+	groupNodeHash     = "nodehash"
+	regexNodeIPMethod = "(?P<ssltcp>.+)://(?P<nodeip>[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}):[0-9]{1,6}"
+)
 
 var (
 	RegexSourceNode = LogRegex{
 		Regex: "local endpoint for a connection, blacklisting address",
-		UpdateCtx: func(ctx LogCtx, log string) LogCtx {
-			r := regexp.MustCompile("\\((?P<nodehash>.+), '.+'\\).*//(?P<nodeip>[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}):[0-9]{1,6}")
+		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
+			r := regexp.MustCompile("\\((?P<nodehash>.+), '.+'\\).+" + regexNodeIPMethod)
 			r2 := r.FindAllStringSubmatch(log, -1)[0]
 
-			ctx.SourceNodeIP = r2[2]
-			ctx.HashToIP[ctx.SourceNodeIP] = r2[1]
-			return ctx
+			ctx.SourceNodeIP = r2[r.SubexpIndex(groupNodeIP)]
+			ctx.HashToIP[ctx.SourceNodeIP] = r2[r.SubexpIndex(groupNodeHash)]
+			return ctx, ""
 		},
 		SkipPrint: true,
 	}
+
 	RegexShift LogRegex = LogRegex{
 		Regex:     "Shifting",
 		Criticity: Info,
-		Msg: func(s string) string {
+		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
 			r := regexp.MustCompile("[A-Z]+ -> [A-Z]+")
-			return r.FindString(s)
+			log = r.FindString(log)
+			log = strings.Replace(log, "DONOR", Paint(YellowText, "DONOR"), -1)
+			log = strings.Replace(log, "DESYNCED", Paint(YellowText, "DESYNCED"), -1)
+			log = strings.Replace(log, "JOINER", Paint(YellowText, "JOINER"), -1)
+			log = strings.Replace(log, " SYNCED", Paint(GreenText, " SYNCED"), -1)
+			log = strings.Replace(log, "JOINED", Paint(GreenText, "JOINED"), -1)
+			log = strings.Replace(log, "CLOSED", Paint(RedText, "CLOSED"), -1)
+			return ctx, log
+		},
+	}
+
+	RegexNodeEstablied LogRegex = LogRegex{
+		Regex:     "connection established",
+		Criticity: Info,
+		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
+			r := regexp.MustCompile("\\((?P<nodehash>.+), '.+'\\) " + regexNodeIPMethod)
+			r2 := r.FindAllStringSubmatch(log, -1)[0]
+
+			ctx.HashToIP[r2[r.SubexpIndex(groupNodeHash)]] = ctx.SourceNodeIP
+			return ctx, r2[r.SubexpIndex(groupNodeIP)] + " established"
+		},
+	}
+	RegexNodeJoined LogRegex = LogRegex{
+		Regex:     "declaring .* stable",
+		Criticity: Info,
+		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
+			r := regexp.MustCompile("declaring (?P<nodehash>.+) at " + regexNodeIPMethod)
+			r2 := r.FindAllStringSubmatch(log, -1)[0]
+
+			ctx.HashToIP[r2[r.SubexpIndex(groupNodeHash)]] = r2[r.SubexpIndex(groupNodeIP)]
+			ctx.IPToMethod[r2[r.SubexpIndex(groupNodeIP)]] = r2[r.SubexpIndex(groupMethod)]
+			return ctx, r2[r.SubexpIndex(groupNodeIP)] + Paint(GreenText, " has joined")
+		},
+	}
+	RegexNodeLeft LogRegex = LogRegex{
+		Regex:     "forgetting",
+		Criticity: Info,
+		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
+			r := regexp.MustCompile("forgetting (?P<nodehash>.+)\\(" + regexNodeIPMethod)
+			r2 := r.FindAllStringSubmatch(log, -1)[0]
+
+			return ctx, r2[r.SubexpIndex(groupNodeIP)] + Paint(RedText, " has left")
 		},
 	}
 )

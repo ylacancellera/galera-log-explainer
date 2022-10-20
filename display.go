@@ -2,12 +2,14 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"math"
 	"os"
 	"sort"
 	"strings"
 	"time"
 
+	// regular tabwriter do not work with color, this is a forked versions that ignores color special characters
 	"github.com/Ladicle/tabwriter"
 )
 
@@ -45,6 +47,9 @@ func Paint(color Color, value string) string {
 	return fmt.Sprintf("%v%v%v", color, value, Reset)
 }
 
+// iterateNode is used to search the node that contains the next events
+// as they stored in chronological order
+// this is a slice in case 2 nodes have an event precisely at the same time
 func iterateNode(timeline Timeline) ([]string, time.Time) {
 	var (
 		nextDate  time.Time
@@ -76,18 +81,22 @@ func DisplayColumnar(timeline Timeline) {
 	defer w.Flush()
 
 	// keys will be used to access the timeline map with an ordered manner
+	// without this, we would not print on the correct column as the order of a map is guaranteed to be random each time
 	keys := make([]string, 0, len(timeline))
 	for node := range timeline {
 		keys = append(keys, node)
 	}
 	sort.Strings(keys)
 
+	// header
 	header := "DATE\t" + strings.Join(keys, "\t") + "\t"
 	fmt.Fprintln(w, header)
 	fmt.Fprintln(w, " \t"+strings.Repeat(" \t", len(keys)))
 
+	// as long as there is a next event to print
 	for nextNodes, nextDate := iterateNode(timeline); len(nextNodes) != 0; nextNodes, nextDate = iterateNode(timeline) {
 
+		// to avoid having a complete datetime everytime. It highlights that some events happened during the same second
 		if nextDate.Truncate(time.Second).Equal(lastDate.Truncate(time.Second)) {
 			args = []string{nextDate.Format(".000000Z")}
 		} else {
@@ -109,16 +118,20 @@ func DisplayColumnar(timeline Timeline) {
 					continue MakeLine
 				}
 			}
+
+			// if there are no events
 			args = append(args, "| ")
 
 		}
 		_, err := fmt.Fprintln(w, strings.Join(args, "\t")+"\t")
 		if err != nil {
-			panic(err)
+			log.Println("Failed to write a line", err)
 		}
 
 		lastDate = nextDate
 	}
+
+	// footer
 	fmt.Fprintln(w, " \t"+strings.Repeat(" \t", len(keys)))
 	fmt.Fprintln(w, header)
 }

@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"log"
 	"os/exec"
-	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -52,7 +51,7 @@ func listingChecks() []LogRegex {
 		toCheck = append(toCheck, RegexShift)
 	}
 	if CLI.List.ListViews {
-		toCheck = append(toCheck, []LogRegex{RegexNodeEstablied, RegexNodeJoined, RegexNodeLeft}...)
+		toCheck = append(toCheck, []LogRegex{RegexNodeEstablished, RegexNodeJoined, RegexNodeLeft}...)
 	}
 	return toCheck
 }
@@ -87,7 +86,7 @@ func search(path string, regexes ...LogRegex) (string, LocalTimeline, error) {
 	// A first pass is done, with every regexes we want compiled. We will iterate on this one later
 	regexToSendSlice := []string{}
 	for _, regex := range regexes {
-		regexToSendSlice = append(regexToSendSlice, regex.Regex)
+		regexToSendSlice = append(regexToSendSlice, regex.Regex.String())
 	}
 	grepRegex := "(" + strings.Join(regexToSendSlice, "|") + ")"
 
@@ -118,8 +117,7 @@ func search(path string, regexes ...LogRegex) (string, LocalTimeline, error) {
 			t := searchDateFromLog(line)
 
 			for _, regex := range regexes {
-				r := regexp.MustCompile(regex.Regex)
-				if !r.Match([]byte(line)) {
+				if !regex.Regex.Match([]byte(line)) {
 					continue
 				}
 				if regex.Handler != nil {

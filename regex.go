@@ -5,24 +5,17 @@ import (
 	"strings"
 )
 
-type Criticity int
-
-const (
-	Info Criticity = iota
-	Warn
-	Error
-)
-
 // 5.5 date : 151027  6:02:49
 // 5.6 date : 2019-07-17 07:16:37
 //5.7 date : 2019-07-17T15:16:37.123456Z
 //5.7 date : 2019-07-17T15:16:37.123456+01:00
 // 10.3 date: 2019-07-15  7:32:25
 var DateLayouts = []string{
-	"2006-01-02T15:04:05.000000Z", // 5.7
-	"060102 15:04:05",             // 5.5
-	"2006-01-02 15:04:05",         // 5.6
-	"2006-01-02  15:04:05",        // 10.3
+	"2006-01-02T15:04:05.000000Z",      // 5.7
+	"2006-01-02T15:04:05.000000-07:00", // 5.7
+	"060102 15:04:05",                  // 5.5
+	"2006-01-02 15:04:05",              // 5.6
+	"2006-01-02  15:04:05",             // 10.3
 }
 
 /*
@@ -34,13 +27,14 @@ REGEX_LOG_PREFIX="$REGEX_DATE \?[0-9]* "
 */
 
 type LogRegex struct {
-	// to use with regular grep
-	Regex     *regexp.Regexp
-	Criticity Criticity
+	Regex *regexp.Regexp
+
+	// Taking into arguments the current context and log line, returning an updated context and a message to display
 	Handler   func(LogCtx, string) (LogCtx, string)
 	SkipPrint bool
 }
 
+// general buidling block wsrep regexes
 var (
 	groupMethod       = "ssltcp"
 	groupNodeIP       = "nodeip"
@@ -50,6 +44,7 @@ var (
 )
 
 var (
+	// sourceNode is to identify from which node this log was taken
 	regexSourceNodeHandler = regexp.MustCompile("\\(" + regexNodeHash + ", '.+'\\).+" + regexNodeIPMethod)
 	RegexSourceNode        = LogRegex{
 		Regex: regexp.MustCompile("local endpoint for a connection, blacklisting address"),
@@ -65,8 +60,7 @@ var (
 
 	regexShiftHandler          = regexp.MustCompile("[A-Z]+ -> [A-Z]+")
 	RegexShift        LogRegex = LogRegex{
-		Regex:     regexp.MustCompile("Shifting"),
-		Criticity: Info,
+		Regex: regexp.MustCompile("Shifting"),
 		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
 			log = regexShiftHandler.FindString(log)
 			log = strings.Replace(log, "DONOR", Paint(YellowText, "DONOR"), -1)
@@ -81,8 +75,7 @@ var (
 
 	regexNodeEstablishedHandler          = regexSourceNodeHandler
 	RegexNodeEstablished        LogRegex = LogRegex{
-		Regex:     regexp.MustCompile("connection established"),
-		Criticity: Info,
+		Regex: regexp.MustCompile("connection established"),
 		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
 			r := regexNodeEstablishedHandler.FindAllStringSubmatch(log, -1)[0]
 
@@ -93,8 +86,7 @@ var (
 
 	regexNodeJoinedHandler          = regexp.MustCompile(regexNodeHash + " at " + regexNodeIPMethod)
 	RegexNodeJoined        LogRegex = LogRegex{
-		Regex:     regexp.MustCompile("declaring .* stable"),
-		Criticity: Info,
+		Regex: regexp.MustCompile("declaring .* stable"),
 		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
 			r := regexNodeJoinedHandler.FindAllStringSubmatch(log, -1)[0]
 
@@ -106,8 +98,7 @@ var (
 
 	regexNodeLeftHandler          = regexp.MustCompile("forgetting" + regexNodeHash + "\\(" + regexNodeIPMethod)
 	RegexNodeLeft        LogRegex = LogRegex{
-		Regex:     regexp.MustCompile("forgetting"),
-		Criticity: Info,
+		Regex: regexp.MustCompile("forgetting"),
 		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
 			r := regexNodeLeftHandler.FindAllStringSubmatch(log, -1)[0]
 
@@ -118,6 +109,7 @@ var (
 
 /*
 var (
+	"SELF-LEAVE."
 	REGEX_NEW_VIEW          = "New cluster view"
 	REGEX_NODE_LEFT         = "forgetting"
 	REGEX_NODE_ESTABLISHED  = "connection established"

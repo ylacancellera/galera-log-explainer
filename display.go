@@ -60,6 +60,9 @@ func iterateNode(timeline Timeline) ([]string, time.Time) {
 		if len(timeline[node]) == 0 {
 			continue
 		}
+		if timeline[node][0].Msg == "" {
+			continue
+		}
 		curDate := timeline[node][0].Date
 		if curDate.Before(nextDate) {
 			nextDate = curDate
@@ -89,9 +92,17 @@ func DisplayColumnar(timeline Timeline) {
 	sort.Strings(keys)
 
 	// header
-	header := "DATE\t" + strings.Join(keys, "\t") + "\t"
+	separator := " \t" + strings.Repeat(" \t", len(keys))
+	header := "DATE\t" + strings.Join(keys, "\t") + "\t" + "\n \t"
+	for _, node := range keys {
+		if len(timeline[node]) > 0 {
+			header += timeline[node][0].Ctx.FilePath + "\t"
+		} else {
+			header += " \t"
+		}
+	}
 	fmt.Fprintln(w, header)
-	fmt.Fprintln(w, " \t"+strings.Repeat(" \t", len(keys)))
+	fmt.Fprintln(w, separator)
 
 	// as long as there is a next event to print
 	for nextNodes, nextDate := iterateNode(timeline); len(nextNodes) != 0; nextNodes, nextDate = iterateNode(timeline) {
@@ -132,6 +143,6 @@ func DisplayColumnar(timeline Timeline) {
 	}
 
 	// footer
-	fmt.Fprintln(w, " \t"+strings.Repeat(" \t", len(keys)))
+	fmt.Fprintln(w, separator)
 	fmt.Fprintln(w, header)
 }

@@ -30,8 +30,7 @@ type LogRegex struct {
 	Regex *regexp.Regexp
 
 	// Taking into arguments the current context and log line, returning an updated context and a message to display
-	Handler   func(LogCtx, string) (LogCtx, string)
-	SkipPrint bool
+	Handler func(LogCtx, string) (LogCtx, string)
 }
 
 // general buidling block wsrep regexes
@@ -47,7 +46,7 @@ var (
 	// sourceNode is to identify from which node this log was taken
 	regexSourceNodeHandler = regexp.MustCompile("\\(" + regexNodeHash + ", '.+'\\).+" + regexNodeIPMethod)
 	RegexSourceNode        = LogRegex{
-		Regex: regexp.MustCompile("local endpoint for a connection, blacklisting address"),
+		Regex: regexp.MustCompile("(local endpoint for a connection, blacklisting address)|(points to own listening address, blacklisting)"),
 		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
 			r := regexSourceNodeHandler.FindAllStringSubmatch(log, -1)[0]
 
@@ -55,7 +54,6 @@ var (
 			ctx.HashToIP[ctx.SourceNodeIP] = r[regexSourceNodeHandler.SubexpIndex(groupNodeHash)]
 			return ctx, ""
 		},
-		SkipPrint: true,
 	}
 
 	regexShiftHandler          = regexp.MustCompile("[A-Z]+ -> [A-Z]+")
@@ -79,8 +77,12 @@ var (
 		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
 			r := regexNodeEstablishedHandler.FindAllStringSubmatch(log, -1)[0]
 
-			ctx.HashToIP[r[regexNodeEstablishedHandler.SubexpIndex(groupNodeHash)]] = ctx.SourceNodeIP
-			return ctx, r[regexNodeEstablishedHandler.SubexpIndex(groupNodeIP)] + " established"
+			ip := r[regexNodeEstablishedHandler.SubexpIndex(groupNodeIP)]
+			ctx.HashToIP[r[regexNodeEstablishedHandler.SubexpIndex(groupNodeHash)]] = ip
+			if ip == ctx.SourceNodeIP {
+				return ctx, ""
+			}
+			return ctx, ip + " established"
 		},
 	}
 
@@ -110,6 +112,7 @@ var (
 /*
 var (
 	"SELF-LEAVE."
+	"2022-10-29T12:00:34.449023Z 0 [Note] WSREP: Found saved state: 8e862473-455e-11e8-a0ca-3fcd8faf3209:-1, safe_to_bootstrap: 0"
 	REGEX_NEW_VIEW          = "New cluster view"
 	REGEX_NODE_LEFT         = "forgetting"
 	REGEX_NODE_ESTABLISHED  = "connection established"

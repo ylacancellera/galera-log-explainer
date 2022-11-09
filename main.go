@@ -66,9 +66,11 @@ type LogInfo struct {
 	Date time.Time
 	Msg  string // what to show
 	Log  string // the raw log
+	Ctx  LogCtx
 }
 
 type LogCtx struct {
+	FilePath         string
 	SourceNodeIP     string
 	IsStarted        bool
 	IsInRecovery     bool
@@ -81,7 +83,7 @@ type LogCtx struct {
 
 func search(path string, regexes ...LogRegex) (string, LocalTimeline, error) {
 	lt := []LogInfo{}
-	ctx := LogCtx{HashToIP: map[string]string{}, IPToHostname: map[string]string{}, IPToMethod: map[string]string{}}
+	ctx := LogCtx{FilePath: path, HashToIP: map[string]string{}, IPToHostname: map[string]string{}, IPToMethod: map[string]string{}}
 
 	// A first pass is done, with every regexes we want compiled. We will iterate on this one later
 	regexToSendSlice := []string{}
@@ -110,7 +112,6 @@ func search(path string, regexes ...LogRegex) (string, LocalTimeline, error) {
 			toDisplay string
 		)
 
-	SequentialScan:
 		for s.Scan() {
 			line = s.Text()
 			toDisplay = line
@@ -123,13 +124,11 @@ func search(path string, regexes ...LogRegex) (string, LocalTimeline, error) {
 				if regex.Handler != nil {
 					ctx, toDisplay = regex.Handler(ctx, line)
 				}
-				if regex.SkipPrint {
-					continue SequentialScan
-				}
 				lt = append(lt, LogInfo{
 					Date: t,
 					Log:  line,
 					Msg:  toDisplay,
+					Ctx:  ctx,
 				})
 			}
 		}
@@ -137,7 +136,12 @@ func search(path string, regexes ...LogRegex) (string, LocalTimeline, error) {
 	}()
 
 	wg.Wait()
-	return ctx.SourceNodeIP, lt, nil
+
+	source := ctx.SourceNodeIP
+	if source == "" {
+		source = path
+	}
+	return source, lt, nil
 }
 
 func searchDateFromLog(log string) time.Time {

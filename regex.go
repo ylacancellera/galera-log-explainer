@@ -5,6 +5,15 @@ import (
 	"strings"
 )
 
+type Verbosity int
+
+const (
+	Info Verbosity = iota
+	// DebugMySQL only includes finding that are usually not relevant to show but useful to create the log context
+	DebugMySQL
+	Debug
+)
+
 // 5.5 date : 151027  6:02:49
 // 5.6 date : 2019-07-17 07:16:37
 //5.7 date : 2019-07-17T15:16:37.123456Z
@@ -30,7 +39,8 @@ type LogRegex struct {
 	Regex *regexp.Regexp
 
 	// Taking into arguments the current context and log line, returning an updated context and a message to display
-	Handler func(LogCtx, string) (LogCtx, string)
+	Handler   func(LogCtx, string) (LogCtx, string)
+	Verbosity Verbosity
 }
 
 // general buidling block wsrep regexes
@@ -52,8 +62,9 @@ var (
 
 			ctx.SourceNodeIP = r[regexSourceNodeHandler.SubexpIndex(groupNodeIP)]
 			ctx.HashToIP[ctx.SourceNodeIP] = r[regexSourceNodeHandler.SubexpIndex(groupNodeHash)]
-			return ctx, ""
+			return ctx, ctx.SourceNodeIP + "is local"
 		},
+		Verbosity: DebugMySQL,
 	}
 
 	regexShiftHandler          = regexp.MustCompile("[A-Z]+ -> [A-Z]+")

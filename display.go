@@ -60,9 +60,6 @@ func iterateNode(timeline Timeline) ([]string, time.Time) {
 		if len(timeline[node]) == 0 {
 			continue
 		}
-		if timeline[node][0].Msg == "" {
-			continue
-		}
 		curDate := timeline[node][0].Date
 		if curDate.Before(nextDate) {
 			nextDate = curDate
@@ -111,7 +108,11 @@ func DisplayColumnar(timeline Timeline) {
 		if nextDate.Truncate(time.Second).Equal(lastDate.Truncate(time.Second)) {
 			args = []string{nextDate.Format(".000000Z")}
 		} else {
-			args = []string{nextDate.Format("2006-01-02 15:04:05.000000Z")}
+			// Taking the first next event to log for the date format
+			// It could be troublesome if some nodes do not have the same one (mysql versions, different timezone) but it's good enough for now
+			// nextNodes[0] is always supposed to exist, else we would not have anything to print anymore, same for timeline[nextNodes[0]][0] which is the next log to print for the nextnode
+			fmt.Println(timeline[nextNodes[0]][0].DateLayout)
+			args = []string{nextDate.Format(timeline[nextNodes[0]][0].DateLayout)}
 		}
 
 	MakeLine:

@@ -63,10 +63,11 @@ type LocalTimeline []LogInfo
 type Timeline map[string]LocalTimeline
 
 type LogInfo struct {
-	Date time.Time
-	Msg  string // what to show
-	Log  string // the raw log
-	Ctx  LogCtx
+	Date       time.Time
+	DateLayout string // Per LogInfo and not global, because it could be useful in case a major version upgrade happened sometime
+	Msg        string // what to show
+	Log        string // the raw log
+	Ctx        LogCtx
 }
 
 type LogCtx struct {
@@ -115,7 +116,7 @@ func search(path string, regexes ...LogRegex) (string, LocalTimeline, error) {
 		for s.Scan() {
 			line = s.Text()
 			toDisplay = line
-			t := searchDateFromLog(line)
+			t, dateLayout := searchDateFromLog(line)
 
 			for _, regex := range regexes {
 				if !regex.Regex.Match([]byte(line)) {
@@ -125,10 +126,11 @@ func search(path string, regexes ...LogRegex) (string, LocalTimeline, error) {
 					ctx, toDisplay = regex.Handler(ctx, line)
 				}
 				lt = append(lt, LogInfo{
-					Date: t,
-					Log:  line,
-					Msg:  toDisplay,
-					Ctx:  ctx,
+					Date:       t,
+					DateLayout: dateLayout,
+					Log:        line,
+					Msg:        toDisplay,
+					Ctx:        ctx,
 				})
 			}
 		}
@@ -144,12 +146,12 @@ func search(path string, regexes ...LogRegex) (string, LocalTimeline, error) {
 	return source, lt, nil
 }
 
-func searchDateFromLog(log string) time.Time {
+func searchDateFromLog(log string) (time.Time, string) {
 	for _, layout := range DateLayouts {
 		t, err := time.Parse(layout, log[:len(layout)])
 		if err == nil {
-			return t
+			return t, layout
 		}
 	}
-	return time.Time{}
+	return time.Time{}, ""
 }

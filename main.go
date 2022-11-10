@@ -15,6 +15,7 @@ import (
 var CLI struct {
 	List struct {
 		Paths      []string `arg:"" name:"paths" help:"paths of the log to use"`
+		Verbosity  Verbosity
 		ListStates bool
 		ListViews  bool
 		ListSST    bool
@@ -125,13 +126,15 @@ func search(path string, regexes ...LogRegex) (string, LocalTimeline, error) {
 				if regex.Handler != nil {
 					ctx, toDisplay = regex.Handler(ctx, line)
 				}
-				lt = append(lt, LogInfo{
-					Date:       t,
-					DateLayout: dateLayout,
-					Log:        line,
-					Msg:        toDisplay,
-					Ctx:        ctx,
-				})
+				if CLI.List.Verbosity >= regex.Verbosity {
+					lt = append(lt, LogInfo{
+						Date:       t,
+						DateLayout: dateLayout,
+						Log:        line,
+						Msg:        toDisplay,
+						Ctx:        ctx,
+					})
+				}
 			}
 		}
 		wg.Done()

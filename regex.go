@@ -62,7 +62,7 @@ var (
 
 			ctx.SourceNodeIP = r[regexSourceNodeHandler.SubexpIndex(groupNodeIP)]
 			ctx.HashToIP[ctx.SourceNodeIP] = r[regexSourceNodeHandler.SubexpIndex(groupNodeHash)]
-			return ctx, ctx.SourceNodeIP + "is local"
+			return ctx, ctx.SourceNodeIP + " is local"
 		},
 		Verbosity: DebugMySQL,
 	}

@@ -44,12 +44,15 @@ func (c *Color) String() string {
 }
 
 func Paint(color Color, value string) string {
+	if CLI.NoColor {
+		return value
+	}
 	return fmt.Sprintf("%v%v%v", color, value, Reset)
 }
 
-// iterateNode is used to search the node that contains the next events
-// as they stored in chronological order
-// this is a slice in case 2 nodes have an event precisely at the same time
+// iterateNode is used to search the source node(s) that contains the next chronological events
+// it returns a slice in case 2 nodes have their next event precisely at the same time, which
+// happens a lot on some versions
 func iterateNode(timeline Timeline) ([]string, time.Time) {
 	var (
 		nextDate  time.Time
@@ -89,27 +92,20 @@ func DisplayColumnar(timeline Timeline) {
 	sort.Strings(keys)
 
 	// header
-	separator := " \t" + strings.Repeat(" \t", len(keys))
-	header := "DATE\t" + strings.Join(keys, "\t") + "\t" + "\n \t"
-	for _, node := range keys {
-		if len(timeline[node]) > 0 {
-			header += timeline[node][0].Ctx.FilePath + "\t"
-		} else {
-			header += " \t"
-		}
-	}
+	header, separator := headerAndSeparator(keys, timeline)
 	fmt.Fprintln(w, header)
 	fmt.Fprintln(w, separator)
 
 	// as long as there is a next event to print
 	for nextNodes, nextDate := iterateNode(timeline); len(nextNodes) != 0; nextNodes, nextDate = iterateNode(timeline) {
 
-		// to avoid having a complete datetime everytime. It highlights that some events happened during the same second
+		// To avoid having a complete datetime everytime, we partially print some dates to make them looked "grouped"
+		// It highlights that some events happened during the same second
 		if nextDate.Truncate(time.Second).Equal(lastDate.Truncate(time.Second)) {
 			args = []string{nextDate.Format(".000000Z")}
 		} else {
 			// Taking the first next event to log for the date format
-			// It could be troublesome if some nodes do not have the same one (mysql versions, different timezone) but it's good enough for now
+			// It could be troublesome if some nodes do not have the same one (mysql versions, different timezone) but it's good enough for now.
 			// nextNodes[0] is always supposed to exist, else we would not have anything to print anymore, same for timeline[nextNodes[0]][0] which is the next log to print for the nextnode
 			fmt.Println(timeline[nextNodes[0]][0].DateLayout)
 			args = []string{nextDate.Format(timeline[nextNodes[0]][0].DateLayout)}
@@ -127,6 +123,7 @@ func DisplayColumnar(timeline Timeline) {
 						timeline[nextNode] = timeline[nextNode][1:]
 
 					}
+					// we found something to print for this node
 					continue MakeLine
 				}
 			}
@@ -144,6 +141,43 @@ func DisplayColumnar(timeline Timeline) {
 	}
 
 	// footer
+	// only having a header is not fast enough to read when there are too many lines
 	fmt.Fprintln(w, separator)
 	fmt.Fprintln(w, header)
+
+}
+
+func printMetadata(timeline Timeline) {
+	ip2hash := make(map[string][]string)
+	for _, nodetl := range timeline {
+		for hash, ip := range nodetl[len(nodetl)-1].Ctx.HashToIP {
+			ip2hash[ip] = append(ip2hash[ip], hash)
+		}
+		//fmt.Println(nodetl[len(nodetl)-1].Ctx.HashToIP)
+		//fmt.Println(nodetl[len(nodetl)-1].Ctx.IPToHostname)
+	}
+	for ip, hash := range ip2hash {
+		fmt.Println(ip+": ", strings.Join(hash, ", "), "\n")
+	}
+}
+
+func headerAndSeparator(keys []string, timeline Timeline) (string, string) {
+	separator := " \t" + strings.Repeat(" \t", len(keys))
+	header := "DATE\t" + strings.Join(keys, "\t") + "\t" + "\n \t"
+	for _, node := range keys {
+		if len(timeline[node]) > 0 {
+			header += timeline[node][0].Ctx.FilePath + "\t"
+		} else {
+			header += " \t"
+		}
+	}
+	header += "\n \t"
+	for _, node := range keys {
+		if len(timeline[node]) > 0 {
+			header += timeline[node][0].Ctx.IPToHostname[timeline[node][0].Ctx.SourceNodeIP] + "\t"
+		} else {
+			header += " \t"
+		}
+	}
+	return header, separator
 }

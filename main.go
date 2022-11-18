@@ -13,12 +13,17 @@ import (
 )
 
 var CLI struct {
-	List struct {
-		Paths      []string `arg:"" name:"paths" help:"paths of the log to use"`
-		Verbosity  Verbosity
-		ListStates bool
-		ListViews  bool
-		ListSST    bool
+	NoColor bool
+	List    struct {
+		Paths         []string `arg:"" name:"paths" help:"paths of the log to use"`
+		Verbosity     Verbosity
+		PrintMetadata bool
+		ListStates    bool
+		ListViews     bool
+		ListSST       bool
+	} `cmd:""`
+	Metadata struct {
+		Paths []string `arg:"" name:"paths" help:"paths of the log to use"`
 	} `cmd:""`
 }
 
@@ -27,34 +32,23 @@ func main() {
 
 	switch ctx.Command() {
 	case "list <paths>":
-		toCheck := listingChecks()
-		timeline := make(Timeline)
-
-		for _, path := range CLI.List.Paths {
-			node, localTimeline, err := search(path, toCheck...)
-			if err != nil {
-				log.Println(err)
-			}
-
-			// TODO: merge timelines if the nodes already exists
-			timeline[node] = localTimeline
+		// RegexSourceNode is always needed: we would not be able to identify the node where the file come from
+		toCheck := []LogRegex{RegexSourceNode}
+		if CLI.List.ListStates {
+			toCheck = append(toCheck, StatesRegexes...)
 		}
-
+		if CLI.List.ListViews {
+			toCheck = append(toCheck, ViewsRegexes...)
+		}
+		timeline := createTimeline(CLI.List.Paths, toCheck)
 		DisplayColumnar(timeline)
+	case "metadata <paths>":
+		toCheck := append(append([]LogRegex{RegexSourceNode}, StatesRegexes...), ViewsRegexes...)
+		timeline := createTimeline(CLI.Metadata.Paths, toCheck)
+		printMetadata(timeline)
 	default:
 		log.Fatal("Command not known:", ctx.Command())
 	}
-}
-
-func listingChecks() []LogRegex {
-	toCheck := []LogRegex{RegexSourceNode}
-	if CLI.List.ListStates {
-		toCheck = append(toCheck, RegexShift)
-	}
-	if CLI.List.ListViews {
-		toCheck = append(toCheck, []LogRegex{RegexNodeEstablished, RegexNodeJoined, RegexNodeLeft}...)
-	}
-	return toCheck
 }
 
 // It should be kept already sorted by timestamp
@@ -63,14 +57,17 @@ type LocalTimeline []LogInfo
 // "string" key is a node IP
 type Timeline map[string]LocalTimeline
 
+// LogInfo is to store a single event in log. This is something that should be displayed ultimately, this is what we want when we launch this tool
 type LogInfo struct {
 	Date       time.Time
 	DateLayout string // Per LogInfo and not global, because it could be useful in case a major version upgrade happened sometime
 	Msg        string // what to show
 	Log        string // the raw log
-	Ctx        LogCtx
+	Ctx        LogCtx // the context is copied for each logInfo, so that it is easier to handle some info (current state), and this is also interesting how it evolved
 }
 
+// LogCtx is a context for a given file.
+// It used to keep track of what is going on at each new event.
 type LogCtx struct {
 	FilePath         string
 	SourceNodeIP     string
@@ -83,11 +80,27 @@ type LogCtx struct {
 	IPToMethod       map[string]string
 }
 
+func createTimeline(paths []string, toCheck []LogRegex) Timeline {
+	timeline := make(Timeline)
+
+	for _, path := range paths {
+		node, localTimeline, err := search(path, toCheck...)
+		if err != nil {
+			log.Println(err)
+		}
+
+		// TODO: merge timelines if the nodes already exists
+		timeline[node] = localTimeline
+	}
+	return timeline
+}
+
+// search is the main function to search what we want in a file
 func search(path string, regexes ...LogRegex) (string, LocalTimeline, error) {
 	lt := []LogInfo{}
 	ctx := LogCtx{FilePath: path, HashToIP: map[string]string{}, IPToHostname: map[string]string{}, IPToMethod: map[string]string{}}
 
-	// A first pass is done, with every regexes we want compiled. We will iterate on this one later
+	// A first pass is done, with every regexes we want compiled in a single one.
 	regexToSendSlice := []string{}
 	for _, regex := range regexes {
 		regexToSendSlice = append(regexToSendSlice, regex.Regex.String())
@@ -114,11 +127,13 @@ func search(path string, regexes ...LogRegex) (string, LocalTimeline, error) {
 			toDisplay string
 		)
 
+		// Scan for each grep results
 		for s.Scan() {
 			line = s.Text()
 			toDisplay = line
 			t, dateLayout := searchDateFromLog(line)
 
+			// We have to find again what regex worked to get this log line
 			for _, regex := range regexes {
 				if !regex.Regex.Match([]byte(line)) {
 					continue

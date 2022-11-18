@@ -43,7 +43,14 @@ type LogRegex struct {
 	Verbosity Verbosity
 }
 
+// Grouped LogRegex per functions
+var (
+	StatesRegexes = []LogRegex{RegexShift}
+	ViewsRegexes  = []LogRegex{RegexNodeEstablished, RegexNodeJoined, RegexNodeLeft}
+)
+
 // general buidling block wsrep regexes
+// It's later used to identify subgroups easier
 var (
 	groupMethod       = "ssltcp"
 	groupNodeIP       = "nodeip"
@@ -61,7 +68,7 @@ var (
 			r := regexSourceNodeHandler.FindAllStringSubmatch(log, -1)[0]
 
 			ctx.SourceNodeIP = r[regexSourceNodeHandler.SubexpIndex(groupNodeIP)]
-			ctx.HashToIP[ctx.SourceNodeIP] = r[regexSourceNodeHandler.SubexpIndex(groupNodeHash)]
+			ctx.HashToIP[r[regexSourceNodeHandler.SubexpIndex(groupNodeHash)]] = ctx.SourceNodeIP
 			return ctx, ctx.SourceNodeIP + " is local"
 		},
 		Verbosity: DebugMySQL,
@@ -97,7 +104,7 @@ var (
 		},
 	}
 
-	regexNodeJoinedHandler          = regexp.MustCompile(regexNodeHash + " at " + regexNodeIPMethod)
+	regexNodeJoinedHandler          = regexp.MustCompile("declaring " + regexNodeHash + " at " + regexNodeIPMethod)
 	RegexNodeJoined        LogRegex = LogRegex{
 		Regex: regexp.MustCompile("declaring .* stable"),
 		Handler: func(ctx LogCtx, log string) (LogCtx, string) {

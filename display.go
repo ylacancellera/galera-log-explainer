@@ -79,6 +79,8 @@ func DisplayColumnar(timeline Timeline) {
 		lastDate time.Time
 		args     []string
 	)
+	// to hold the current context for each node
+	currentContext := map[string]LogCtx{}
 
 	w := tabwriter.NewWriter(os.Stdout, 8, 8, 3, ' ', tabwriter.AlignRight)
 	defer w.Flush()
@@ -117,7 +119,10 @@ func DisplayColumnar(timeline Timeline) {
 
 				if node == nextNode {
 					nl := timeline[nextNode][0]
+					currentContext[nextNode] = nl.Ctx
 					args = append(args, nl.Msg)
+
+					// dequeue the events
 					if len(timeline[nextNode]) > 0 {
 						timeline[nextNode] = timeline[nextNode][1:]
 
@@ -127,8 +132,18 @@ func DisplayColumnar(timeline Timeline) {
 				}
 			}
 
-			// if there are no events
-			args = append(args, "| ")
+			// if there are no events, having a | is needed for tabwriter
+			// A few color can also help highlighting how the node is doing
+			switch currentContext[node].State {
+			case "DONOR", "JOINER", "DESYNCED":
+				args = append(args, Paint(YellowText, "| "))
+			case "SYNCED":
+				args = append(args, Paint(GreenText, "| "))
+			case "CLOSED":
+				args = append(args, Paint(RedText, "| "))
+			default:
+				args = append(args, "| ")
+			}
 
 		}
 		_, err := fmt.Fprintln(w, strings.Join(args, "\t")+"\t")

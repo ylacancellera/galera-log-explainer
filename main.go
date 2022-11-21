@@ -71,8 +71,7 @@ type LogInfo struct {
 type LogCtx struct {
 	FilePath         string
 	SourceNodeIP     string
-	IsStarted        bool
-	IsInRecovery     bool
+	State            string
 	ResyncingNode    string
 	ResyncedFromNode string
 	HashToIP         map[string]string

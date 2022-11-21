@@ -83,12 +83,17 @@ var (
 		Regex: regexp.MustCompile("Shifting"),
 		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
 			log = regexShiftHandler.FindString(log)
+
+			splitted := strings.Split(log, " -> ")
+			ctx.State = splitted[1]
+
 			log = strings.Replace(log, "DONOR", Paint(YellowText, "DONOR"), -1)
 			log = strings.Replace(log, "DESYNCED", Paint(YellowText, "DESYNCED"), -1)
 			log = strings.Replace(log, "JOINER", Paint(YellowText, "JOINER"), -1)
 			log = strings.Replace(log, " SYNCED", Paint(GreenText, " SYNCED"), -1)
 			log = strings.Replace(log, "JOINED", Paint(GreenText, "JOINED"), -1)
 			log = strings.Replace(log, "CLOSED", Paint(RedText, "CLOSED"), -1)
+
 			return ctx, log
 		},
 	}

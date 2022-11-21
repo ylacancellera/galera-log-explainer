@@ -107,7 +107,6 @@ func DisplayColumnar(timeline Timeline) {
 			// Taking the first next event to log for the date format
 			// It could be troublesome if some nodes do not have the same one (mysql versions, different timezone) but it's good enough for now.
 			// nextNodes[0] is always supposed to exist, else we would not have anything to print anymore, same for timeline[nextNodes[0]][0] which is the next log to print for the nextnode
-			fmt.Println(timeline[nextNodes[0]][0].DateLayout)
 			args = []string{nextDate.Format(timeline[nextNodes[0]][0].DateLayout)}
 		}
 

@@ -9,7 +9,9 @@ type Verbosity int
 
 const (
 	Info Verbosity = iota
-	// DebugMySQL only includes finding that are usually not relevant to show but useful to create the log context
+	// Detailed is having every suspect/warn
+	Detailed
+	// DebugMySQL only includes finding that are usually not relevant to show but useful to create the log context (eg: how we found the local address)
 	DebugMySQL
 	Debug
 )
@@ -46,17 +48,19 @@ type LogRegex struct {
 // Grouped LogRegex per functions
 var (
 	StatesRegexes = []LogRegex{RegexShift}
-	ViewsRegexes  = []LogRegex{RegexNodeEstablished, RegexNodeJoined, RegexNodeLeft}
+	ViewsRegexes  = []LogRegex{RegexNodeEstablished, RegexNodeJoined, RegexNodeLeft, RegexNodeSuspect, RegexNodeChangedIdentity}
 )
 
 // general buidling block wsrep regexes
 // It's later used to identify subgroups easier
 var (
-	groupMethod       = "ssltcp"
-	groupNodeIP       = "nodeip"
-	groupNodeHash     = "nodehash"
-	regexNodeHash     = "(?P<nodehash>.+)"
-	regexNodeIPMethod = "(?P<ssltcp>.+)://(?P<nodeip>[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}):[0-9]{1,6}"
+	groupMethod        = "ssltcp"
+	groupNodeIP        = "nodeip"
+	groupNodeHash      = "nodehash"
+	regexNodeHash      = "(?P<nodehash>.+)"
+	regexNodeHash4Dash = "(?P<nodehash>[a-z0-9]+-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]+)" // eg ed97c863-d5c9-11ec-8ab7-671bbd2d70ef
+	regexNodeHash1Dash = "(?P<nodehash>[a-z0-9]+-[a-z0-9]{4})"                                   // eg ed97c863-8ab7
+	regexNodeIPMethod  = "(?P<ssltcp>.+)://(?P<nodeip>[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}):[0-9]{1,6}"
 )
 
 var (
@@ -74,8 +78,8 @@ var (
 		Verbosity: DebugMySQL,
 	}
 
-	regexShiftHandler          = regexp.MustCompile("[A-Z]+ -> [A-Z]+")
-	RegexShift        LogRegex = LogRegex{
+	regexShiftHandler = regexp.MustCompile("[A-Z]+ -> [A-Z]+")
+	RegexShift        = LogRegex{
 		Regex: regexp.MustCompile("Shifting"),
 		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
 			log = regexShiftHandler.FindString(log)
@@ -89,8 +93,8 @@ var (
 		},
 	}
 
-	regexNodeEstablishedHandler          = regexSourceNodeHandler
-	RegexNodeEstablished        LogRegex = LogRegex{
+	regexNodeEstablishedHandler = regexSourceNodeHandler
+	RegexNodeEstablished        = LogRegex{
 		Regex: regexp.MustCompile("connection established"),
 		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
 			r := regexNodeEstablishedHandler.FindAllStringSubmatch(log, -1)[0]
@@ -104,8 +108,8 @@ var (
 		},
 	}
 
-	regexNodeJoinedHandler          = regexp.MustCompile("declaring " + regexNodeHash + " at " + regexNodeIPMethod)
-	RegexNodeJoined        LogRegex = LogRegex{
+	regexNodeJoinedHandler = regexp.MustCompile("declaring " + regexNodeHash + " at " + regexNodeIPMethod)
+	RegexNodeJoined        = LogRegex{
 		Regex: regexp.MustCompile("declaring .* stable"),
 		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
 			r := regexNodeJoinedHandler.FindAllStringSubmatch(log, -1)[0]
@@ -116,14 +120,55 @@ var (
 		},
 	}
 
-	regexNodeLeftHandler          = regexp.MustCompile("forgetting" + regexNodeHash + "\\(" + regexNodeIPMethod)
-	RegexNodeLeft        LogRegex = LogRegex{
+	regexNodeLeftHandler = regexp.MustCompile("forgetting" + regexNodeHash + "\\(" + regexNodeIPMethod)
+	RegexNodeLeft        = LogRegex{
 		Regex: regexp.MustCompile("forgetting"),
 		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
 			r := regexNodeLeftHandler.FindAllStringSubmatch(log, -1)[0]
 
 			return ctx, r[regexNodeLeftHandler.SubexpIndex(groupNodeIP)] + Paint(RedText, " has left")
 		},
+	}
+
+	regexNodeSuspectHandler = regexp.MustCompile("suspecting node: " + regexNodeHash)
+	RegexNodeSuspect        = LogRegex{
+		Regex: regexp.MustCompile("suspecting node"),
+		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
+			r := regexNodeSuspectHandler.FindAllStringSubmatch(log, -1)[0]
+
+			hash := r[regexNodeSuspectHandler.SubexpIndex(groupNodeHash)]
+			ip, ok := ctx.HashToIP[hash]
+			if ok {
+				return ctx, ip + Paint(YellowText, " suspected to be down")
+			}
+			return ctx, hash + Paint(YellowText, " suspected to be down")
+		},
+		Verbosity: Detailed,
+	}
+
+	regexNodeChangedIdentityHandler = regexp.MustCompile("remote endpoint " + regexNodeIPMethod + " changed identity " + regexNodeHash + " -> " + strings.Replace(regexNodeHash, groupNodeHash, groupNodeHash+"2", -1))
+	RegexNodeChangedIdentity        = LogRegex{
+		Regex: regexp.MustCompile("remote endpoint.*changed identity"),
+		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
+
+			r := regexNodeChangedIdentityHandler.FindAllStringSubmatch(log, -1)[0]
+
+			hash := r[regexNodeChangedIdentityHandler.SubexpIndex(groupNodeHash)]
+			ip, ok := ctx.HashToIP[hash]
+			if !ok && regexp.MustCompile(regexNodeHash4Dash).MatchString(hash) {
+				splitted := strings.Split(hash, "-")
+				ip, ok = ctx.HashToIP[splitted[0]+"-"+splitted[3]]
+
+				// there could have additional corner case to discover yet
+				if !ok {
+					return ctx, hash + Paint(YellowText, " changed identity ")
+				}
+			}
+			hash2 := r[regexNodeChangedIdentityHandler.SubexpIndex(groupNodeHash+"2")]
+			ctx.HashToIP[hash2] = ip
+			return ctx, ip + Paint(YellowText, " changed identity ")
+		},
+		Verbosity: Detailed,
 	}
 )
 
@@ -132,11 +177,7 @@ var (
 	"SELF-LEAVE."
 	"2022-10-29T12:00:34.449023Z 0 [Note] WSREP: Found saved state: 8e862473-455e-11e8-a0ca-3fcd8faf3209:-1, safe_to_bootstrap: 0"
 	REGEX_NEW_VIEW          = "New cluster view"
-	REGEX_NODE_LEFT         = "forgetting"
-	REGEX_NODE_ESTABLISHED  = "connection established"
-	REGEX_NODE_SUSPECT      = "suspecting node"
 	REGEX_NODE_INACTIVE     = "declaring inactive"
-	REGEX_NODE_JOINED       = "declaring .* stable"
 	REGEX_NODE_TIMEOUT      = "timed out, no messages seen in"
 	REGEX_INCONSISTENT_VIEW = "node uuid:.*is inconsistent to restored view"
 	REGEX_IDENTITY_CHANGES  = "remote endpoint.*changed identity.*"

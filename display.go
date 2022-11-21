@@ -19,8 +19,8 @@ type Color string
 // Color codes interpretted by the terminal
 // NOTE: all codes must be of the same length or they will throw off the field alignment of tabwriter
 const (
-	Reset             Color = "\x1b[0000m"
-	Bright                  = "\x1b[0001m"
+	ResetText         Color = "\x1b[0000m"
+	BrightText              = "\x1b[0001m"
 	RedText                 = "\x1b[0031m"
 	GreenText               = "\x1b[0032m"
 	YellowText              = "\x1b[0033m"
@@ -47,7 +47,7 @@ func Paint(color Color, value string) string {
 	if CLI.NoColor {
 		return value
 	}
-	return fmt.Sprintf("%v%v%v", color, value, Reset)
+	return fmt.Sprintf("%v%v%v", color, value, ResetText)
 }
 
 // iterateNode is used to search the source node(s) that contains the next chronological events

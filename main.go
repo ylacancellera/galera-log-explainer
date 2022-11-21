@@ -15,8 +15,8 @@ import (
 var CLI struct {
 	NoColor bool
 	List    struct {
-		Paths         []string `arg:"" name:"paths" help:"paths of the log to use"`
-		Verbosity     Verbosity
+		Paths         []string  `arg:"" name:"paths" help:"paths of the log to use"`
+		Verbosity     Verbosity `default:"1"`
 		PrintMetadata bool
 		ListStates    bool
 		ListViews     bool

@@ -15,12 +15,13 @@ import (
 var CLI struct {
 	NoColor bool
 	List    struct {
-		Paths         []string  `arg:"" name:"paths" help:"paths of the log to use"`
-		Verbosity     Verbosity `default:"1"`
-		PrintMetadata bool
-		ListStates    bool
-		ListViews     bool
-		ListSST       bool
+		Paths                  []string  `arg:"" name:"paths" help:"paths of the log to use"`
+		Verbosity              Verbosity `default:"1"`
+		PrintMetadata          bool
+		SkipStateColoredColumn bool
+		ListStates             bool
+		ListViews              bool
+		ListSST                bool
 	} `cmd:""`
 	Metadata struct {
 		Paths []string `arg:"" name:"paths" help:"paths of the log to use"`
@@ -35,6 +36,9 @@ func main() {
 		// RegexSourceNode is always needed: we would not be able to identify the node where the file come from
 		toCheck := []LogRegex{RegexSourceNode}
 		if CLI.List.ListStates {
+			toCheck = append(toCheck, StatesRegexes...)
+		} else if !CLI.List.SkipStateColoredColumn {
+			SilenceRegex(StatesRegexes...)
 			toCheck = append(toCheck, StatesRegexes...)
 		}
 		if CLI.List.ListViews {
@@ -140,7 +144,7 @@ func search(path string, regexes ...LogRegex) (string, LocalTimeline, error) {
 				if regex.Handler != nil {
 					ctx, toDisplay = regex.Handler(ctx, line)
 				}
-				if CLI.List.Verbosity >= regex.Verbosity {
+				if CLI.List.Verbosity >= regex.Verbosity && !regex.SkipPrint {
 					lt = append(lt, LogInfo{
 						Date:       t,
 						DateLayout: dateLayout,

@@ -43,11 +43,20 @@ type LogRegex struct {
 	// Taking into arguments the current context and log line, returning an updated context and a message to display
 	Handler   func(LogCtx, string) (LogCtx, string)
 	Verbosity Verbosity
+	SkipPrint bool
+}
+
+// SilenceRegex accepts any LogRegex and set SkipPrint to avoid having it displayed.
+// Some can be useful to construct context, but we can choose not to display them
+func SilenceRegex(regexes ...LogRegex) {
+	for _, regex := range regexes {
+		regex.SkipPrint = true
+	}
 }
 
 // Grouped LogRegex per functions
 var (
-	StatesRegexes = []LogRegex{RegexShift}
+	StatesRegexes = []LogRegex{RegexShift, RegexRestoredState}
 	ViewsRegexes  = []LogRegex{RegexNodeEstablished, RegexNodeJoined, RegexNodeLeft, RegexNodeSuspect, RegexNodeChangedIdentity}
 )
 
@@ -77,27 +86,44 @@ var (
 		},
 		Verbosity: DebugMySQL,
 	}
+)
 
+var (
 	regexShiftHandler = regexp.MustCompile("[A-Z]+ -> [A-Z]+")
-	RegexShift        = LogRegex{
-		Regex: regexp.MustCompile("Shifting"),
+	shiftFunc         = func(ctx LogCtx, log string) (LogCtx, string) {
+		log = regexShiftHandler.FindString(log)
+
+		splitted := strings.Split(log, " -> ")
+		ctx.State = splitted[1]
+
+		log = strings.Replace(log, "DONOR", Paint(YellowText, "DONOR"), -1)
+		log = strings.Replace(log, "DESYNCED", Paint(YellowText, "DESYNCED"), -1)
+		log = strings.Replace(log, "JOINER", Paint(YellowText, "JOINER"), -1)
+		log = strings.Replace(log, " SYNCED", Paint(GreenText, " SYNCED"), -1)
+		log = strings.Replace(log, "JOINED", Paint(GreenText, "JOINED"), -1)
+		log = strings.Replace(log, "CLOSED", Paint(RedText, "CLOSED"), -1)
+
+		return ctx, log
+	}
+	RegexShift = LogRegex{
+		Regex:   regexp.MustCompile("Shifting"),
+		Handler: shiftFunc,
+	}
+	// 2022-07-18T11:20:52.125141Z 0 [Note] [MY-000000] [Galera] Shifting CLOSED -> OPEN (TO: 0)
+
+	RegexRestoredState = LogRegex{
+		Regex: regexp.MustCompile("Restored state"),
 		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
-			log = regexShiftHandler.FindString(log)
+			ctx, log = shiftFunc(ctx, log)
 
-			splitted := strings.Split(log, " -> ")
-			ctx.State = splitted[1]
-
-			log = strings.Replace(log, "DONOR", Paint(YellowText, "DONOR"), -1)
-			log = strings.Replace(log, "DESYNCED", Paint(YellowText, "DESYNCED"), -1)
-			log = strings.Replace(log, "JOINER", Paint(YellowText, "JOINER"), -1)
-			log = strings.Replace(log, " SYNCED", Paint(GreenText, " SYNCED"), -1)
-			log = strings.Replace(log, "JOINED", Paint(GreenText, "JOINED"), -1)
-			log = strings.Replace(log, "CLOSED", Paint(RedText, "CLOSED"), -1)
-
-			return ctx, log
+			return ctx, "(restored)" + log
 		},
 	}
+	// 2022-09-22T20:01:32.505660Z 0 [Note] [MY-000000] [Galera] Restored state OPEN -> SYNCED (13361114)
+)
 
+// "galera views" regexes
+var (
 	regexNodeEstablishedHandler = regexSourceNodeHandler
 	RegexNodeEstablished        = LogRegex{
 		Regex: regexp.MustCompile("connection established"),

@@ -21,6 +21,7 @@ var CLI struct {
 		SkipStateColoredColumn bool
 		ListStates             bool
 		ListViews              bool
+		ListEvents             bool
 		ListSST                bool
 	} `cmd:""`
 	Metadata struct {
@@ -38,11 +39,13 @@ func main() {
 		if CLI.List.ListStates {
 			toCheck = append(toCheck, StatesRegexes...)
 		} else if !CLI.List.SkipStateColoredColumn {
-			SilenceRegex(StatesRegexes...)
-			toCheck = append(toCheck, StatesRegexes...)
+			toCheck = append(toCheck, SilenceRegex(StatesRegexes...)...)
 		}
 		if CLI.List.ListViews {
 			toCheck = append(toCheck, ViewsRegexes...)
+		}
+		if CLI.List.ListEvents {
+			toCheck = append(toCheck, EventsRegexes...)
 		}
 		timeline := createTimeline(CLI.List.Paths, toCheck)
 		DisplayColumnar(timeline)

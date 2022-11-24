@@ -48,16 +48,20 @@ type LogRegex struct {
 
 // SilenceRegex accepts any LogRegex and set SkipPrint to avoid having it displayed.
 // Some can be useful to construct context, but we can choose not to display them
-func SilenceRegex(regexes ...LogRegex) {
+func SilenceRegex(regexes ...LogRegex) []LogRegex {
+	silenced := []LogRegex{}
 	for _, regex := range regexes {
 		regex.SkipPrint = true
+		silenced = append(silenced, regex)
 	}
+	return silenced
 }
 
 // Grouped LogRegex per functions
 var (
 	StatesRegexes = []LogRegex{RegexShift, RegexRestoredState}
-	ViewsRegexes  = []LogRegex{RegexNodeEstablished, RegexNodeJoined, RegexNodeLeft, RegexNodeSuspect, RegexNodeChangedIdentity}
+	ViewsRegexes  = []LogRegex{RegexNodeEstablished, RegexNodeJoined, RegexNodeLeft, RegexNodeSuspect, RegexNodeChangedIdentity, RegexWsrepUnsafeBootstrap, RegexWsrepConsistenctyCompromised, RegexWsrepNonPrimary}
+	EventsRegexes = []LogRegex{RegexShutdownComplete, RegexShutdownSignal, RegexTerminated, RegexWsrepLoad, RegexWsrepRecovery, RegexUnknownConf, RegexBindAddressAlreadyUsed, RegexAssertionFailure}
 )
 
 // general buidling block wsrep regexes
@@ -201,6 +205,29 @@ var (
 		},
 		Verbosity: Detailed,
 	}
+
+	RegexWsrepUnsafeBootstrap = LogRegex{
+		Regex: regexp.MustCompile("ERROR.*not be safe to bootstrap"),
+		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
+			ctx.State = "CLOSED"
+
+			return ctx, Paint(RedText, "not safe to bootstrap")
+		},
+	}
+	RegexWsrepConsistenctyCompromised = LogRegex{
+		Regex: regexp.MustCompile(".ode consistency compromi.ed"),
+		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
+			ctx.State = "CLOSED"
+
+			return ctx, Paint(RedText, "consistencty compromised")
+		},
+	}
+	RegexWsrepNonPrimary = LogRegex{
+		Regex: regexp.MustCompile("failed to reach primary view"),
+		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
+			return ctx, Paint(RedText, "non primary")
+		},
+	}
 )
 
 /*
@@ -211,7 +238,6 @@ var (
 	REGEX_NODE_INACTIVE     = "declaring inactive"
 	REGEX_NODE_TIMEOUT      = "timed out, no messages seen in"
 	REGEX_INCONSISTENT_VIEW = "node uuid:.*is inconsistent to restored view"
-	REGEX_IDENTITY_CHANGES  = "remote endpoint.*changed identity.*"
 )
 */
 
@@ -233,21 +259,86 @@ REGEX_SST_NOTES="\(Note\|Warning\). WSREP.*\($REGEX_SST_REQ\|$REGEX_SST_TRANSFER
 REGEX_SST_COMPILED="\($REGEX_SST_ERRORS\|$REGEX_SST_NOTES\|$REGEX_SST_METHOD\|$REGEX_IST_UNAVAILABLE\|$REGEX_SST_BYPASS\)"
 
 )
-
-var (
-REGEX_SHUT_COMPLETE="mysqld: Shutdown complete"
-REGEX_TERMINATED="mysqld: Terminated"
-REGEX_SHUT="\($REGEX_SHUT_COMPLETE\|$REGEX_TERMINATED\)"
-REGEX_STARTED="wsrep_load(): loading provider library"
-REGEX_STARTED_STANDALONE="$REGEX_STARTED 'none'"
-REGEX_RECOVER="dump/restore during wsrep recovery"
-REGEX_NORMAL_SHUT="\(Normal\|Received\) shutdown"
-REGEX_ABORTING="[ERROR] Aborting"
-REGEX_ERROR_CONF="unknown variable"
-REGEX_ERROR_BOOTSTRAP="ERROR.*not be safe to bootstrap"
-REGEX_ERROR_NONP="failed to reach primary view"
-REGEX_ERROR_ASSERT="Assertion failure"
-REGEX_ERROR_CONSISTENCY=".ode consistency compromi.ed"
-REGEX_ERROR_GALERA_BIND="asio error .bind: Address already in use"
-)
 */
+var (
+	RegexShutdownComplete = LogRegex{
+		Regex: regexp.MustCompile("mysqld: Shutdown complete"),
+		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
+			ctx.State = "CLOSED"
+
+			return ctx, Paint(RedText, "shutdown complete")
+		},
+	}
+	RegexTerminated = LogRegex{
+		Regex: regexp.MustCompile("mysqld: Terminated"),
+		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
+			ctx.State = "CLOSED"
+
+			return ctx, Paint(RedText, "terminated")
+		},
+	}
+	RegexShutdownSignal = LogRegex{
+		Regex: regexp.MustCompile("Normal|Received shutdown"),
+		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
+			ctx.State = "CLOSED"
+
+			return ctx, Paint(RedText, "received shutdown")
+		},
+	}
+	RegexAborting = LogRegex{
+		Regex: regexp.MustCompile("[ERROR] Aborting"),
+		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
+			ctx.State = "CLOSED"
+
+			return ctx, Paint(RedText, "ABORTING")
+		},
+	}
+
+	regexWsrepLoadNone = regexp.MustCompile("none")
+	RegexWsrepLoad     = LogRegex{
+		Regex: regexp.MustCompile("wsrep_load\\(\\): loading provider library"),
+		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
+			ctx.State = "OPEN"
+			if regexWsrepLoadNone.MatchString(log) {
+				return ctx, Paint(GreenText, "started(standalone)")
+			}
+			return ctx, Paint(GreenText, "started(cluster)")
+		},
+	}
+	RegexWsrepRecovery = LogRegex{
+		//  INFO: WSREP: Recovered position 00000000-0000-0000-0000-000000000000:-1
+		Regex: regexp.MustCompile("WSREP: Recovered position"),
+		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
+			ctx.State = "RECOVERY"
+
+			return ctx, "wsrep recovery"
+		},
+	}
+
+	RegexUnknownConf = LogRegex{
+		Regex: regexp.MustCompile("unknown variable"),
+		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
+			ctx.State = "CLOSED"
+			//TODO get which variable ? Useful?
+
+			return ctx, Paint(RedText, "unknown variable")
+		},
+	}
+
+	RegexAssertionFailure = LogRegex{
+		Regex: regexp.MustCompile("Assertion failure"),
+		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
+			ctx.State = "CLOSED"
+
+			return ctx, Paint(RedText, "ASSERTION FAILURE")
+		},
+	}
+	RegexBindAddressAlreadyUsed = LogRegex{
+		Regex: regexp.MustCompile("asio error .bind: Address already in use"),
+		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
+			ctx.State = "CLOSED"
+
+			return ctx, Paint(RedText, "bind address already used")
+		},
+	}
+)

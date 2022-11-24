@@ -13,43 +13,6 @@ import (
 	"github.com/Ladicle/tabwriter"
 )
 
-// Color is given its own type for safe function signatures
-type Color string
-
-// Color codes interpretted by the terminal
-// NOTE: all codes must be of the same length or they will throw off the field alignment of tabwriter
-const (
-	ResetText         Color = "\x1b[0000m"
-	BrightText              = "\x1b[0001m"
-	RedText                 = "\x1b[0031m"
-	GreenText               = "\x1b[0032m"
-	YellowText              = "\x1b[0033m"
-	BlueText                = "\x1b[0034m"
-	MagentaText             = "\x1b[0035m"
-	CyanText                = "\x1b[0036m"
-	WhiteText               = "\x1b[0037m"
-	DefaultText             = "\x1b[0039m"
-	BrightRedText           = "\x1b[1;31m"
-	BrightGreenText         = "\x1b[1;32m"
-	BrightYellowText        = "\x1b[1;33m"
-	BrightBlueText          = "\x1b[1;34m"
-	BrightMagentaText       = "\x1b[1;35m"
-	BrightCyanText          = "\x1b[1;36m"
-	BrightWhiteText         = "\x1b[1;37m"
-)
-
-// Color implements the Stringer interface for interoperability with string
-func (c *Color) String() string {
-	return fmt.Sprintf("%v", c)
-}
-
-func Paint(color Color, value string) string {
-	if CLI.NoColor {
-		return value
-	}
-	return fmt.Sprintf("%v%v%v", color, value, ResetText)
-}
-
 // iterateNode is used to search the source node(s) that contains the next chronological events
 // it returns a slice in case 2 nodes have their next event precisely at the same time, which
 // happens a lot on some versions
@@ -74,6 +37,8 @@ func iterateNode(timeline Timeline) ([]string, time.Time) {
 	return nextNodes, nextDate
 }
 
+// DisplayColumnar is the main function to print
+// It will print header and footers, and dequeue the timeline chronologically
 func DisplayColumnar(timeline Timeline) {
 	var (
 		lastDate   time.Time
@@ -82,22 +47,25 @@ func DisplayColumnar(timeline Timeline) {
 	)
 	// to hold the current context for each node
 	currentContext := map[string]LogCtx{}
-
-	w := tabwriter.NewWriter(os.Stdout, 8, 8, 3, ' ', tabwriter.AlignRight)
-	defer w.Flush()
+	lastContext := map[string]LogCtx{}
 
 	// keys will be used to access the timeline map with an ordered manner
 	// without this, we would not print on the correct column as the order of a map is guaranteed to be random each time
 	keys := make([]string, 0, len(timeline))
 	for node := range timeline {
 		keys = append(keys, node)
+		currentContext[node] = timeline[node][0].Ctx
 	}
 	sort.Strings(keys)
 
+	w := tabwriter.NewWriter(os.Stdout, 8, 8, 3, ' ', tabwriter.AlignRight)
+	defer w.Flush()
+
 	// header
-	header, separator := headerAndSeparator(keys, timeline)
-	fmt.Fprintln(w, header)
-	fmt.Fprintln(w, separator)
+	fmt.Fprintln(w, headerNodes(keys))
+	fmt.Fprintln(w, headerFilePath(keys, currentContext))
+	fmt.Fprintln(w, headerHostname(keys, currentContext))
+	fmt.Fprintln(w, separator(keys))
 
 	// as long as there is a next event to print
 	for nextNodes, nextDate := iterateNode(timeline); len(nextNodes) != 0; nextNodes, nextDate = iterateNode(timeline) {
@@ -107,40 +75,33 @@ func DisplayColumnar(timeline Timeline) {
 		dateCol, lastLayout = dateBlock(nextDate, lastDate, timeline[nextNodes[0]][0].DateLayout, lastLayout)
 		args = []string{dateCol}
 
-	MakeLine:
+		// node values
 		for _, node := range keys {
 
-			for _, nextNode := range nextNodes {
-
-				if node == nextNode {
-					nl := timeline[nextNode][0]
-					currentContext[nextNode] = nl.Ctx
-					args = append(args, nl.Msg)
-
-					// dequeue the events
-					if len(timeline[nextNode]) > 0 {
-						timeline[nextNode] = timeline[nextNode][1:]
-
-					}
-					// we found something to print for this node
-					continue MakeLine
-				}
+			if !sliceContains(nextNodes, node) {
+				// if there are no events, having a | is needed for tabwriter
+				// A few color can also help highlighting how the node is doing
+				args = append(args, defaultColumnValue("| ", currentContext[node].State))
+				continue
 			}
 
-			// if there are no events, having a | is needed for tabwriter
-			// A few color can also help highlighting how the node is doing
-			switch currentContext[node].State {
-			case "DONOR", "JOINER", "DESYNCED":
-				args = append(args, Paint(YellowText, "| "))
-			case "SYNCED":
-				args = append(args, Paint(GreenText, "| "))
-			case "CLOSED":
-				args = append(args, Paint(RedText, "| "))
-			default:
-				args = append(args, "| ")
+			nl := timeline[node][0]
+			lastContext[node] = currentContext[node]
+			currentContext[node] = nl.Ctx
+			args = append(args, nl.Msg)
+
+			// dequeue the events
+			if len(timeline[node]) > 0 {
+				timeline[node] = timeline[node][1:]
 			}
 
 		}
+
+		if sep := fileTransitionSeparator(keys, lastContext, currentContext); sep != "" {
+			fmt.Fprintln(w, sep)
+		}
+
+		// Print tabwriter line
 		_, err := fmt.Fprintln(w, strings.Join(args, "\t")+"\t")
 		if err != nil {
 			log.Println("Failed to write a line", err)
@@ -151,9 +112,25 @@ func DisplayColumnar(timeline Timeline) {
 
 	// footer
 	// only having a header is not fast enough to read when there are too many lines
-	fmt.Fprintln(w, separator)
-	fmt.Fprintln(w, header)
+	fmt.Fprintln(w, separator(keys))
+	fmt.Fprintln(w, headerNodes(keys))
+	fmt.Fprintln(w, headerFilePath(keys, currentContext))
+	fmt.Fprintln(w, headerHostname(keys, currentContext))
+}
 
+// defaultColumnValue is displayed if the node did not have an event for a line
+func defaultColumnValue(placeholder, state string) string {
+
+	switch state {
+	case "DONOR", "JOINER", "DESYNCED":
+		return Paint(YellowText, placeholder)
+	case "SYNCED":
+		return Paint(GreenText, placeholder)
+	case "CLOSED":
+		return Paint(RedText, placeholder)
+	default:
+		return placeholder
+	}
 }
 
 var timeBlocks = []struct {
@@ -204,23 +181,60 @@ func printMetadata(timeline Timeline) {
 	}
 }
 
-func headerAndSeparator(keys []string, timeline Timeline) (string, string) {
-	separator := " \t" + strings.Repeat(" \t", len(keys))
-	header := "DATE\t" + strings.Join(keys, "\t") + "\t" + "\n \t"
+func separator(keys []string) string {
+	return " \t" + strings.Repeat(" \t", len(keys))
+}
+
+func headerNodes(keys []string) string {
+	return "DATE\t" + strings.Join(keys, "\t") + "\t" + "\n \t"
+}
+
+func headerFilePath(keys []string, ctxs map[string]LogCtx) string {
+	header := " \t"
 	for _, node := range keys {
-		if len(timeline[node]) > 0 {
-			header += timeline[node][0].Ctx.FilePath + "\t"
+		if ctx, ok := ctxs[node]; ok {
+			header += ctx.FilePath + "\t"
 		} else {
 			header += " \t"
 		}
 	}
-	header += "\n \t"
+	return header
+}
+
+func headerHostname(keys []string, ctxs map[string]LogCtx) string {
+	header := " \t"
 	for _, node := range keys {
-		if len(timeline[node]) > 0 {
-			header += timeline[node][0].Ctx.IPToHostname[timeline[node][0].Ctx.SourceNodeIP] + "\t"
+		if ctx, ok := ctxs[node]; ok {
+			header += ctx.IPToHostname[ctx.SourceNodeIP] + "\t"
 		} else {
 			header += " \t"
 		}
 	}
-	return header, separator
+	return header
+}
+
+func fileTransitionSeparator(keys []string, oldctxs, ctxs map[string]LogCtx) string {
+	sep1 := " \t"
+	sep2 := " \t"
+	sep3 := " \t"
+	found := false
+	for _, node := range keys {
+		ctx, ok1 := ctxs[node]
+		oldctx, ok2 := oldctxs[node]
+		if ok1 && ok2 && ctx.FilePath != oldctx.FilePath {
+			sep1 += Paint(BrightText, oldctx.FilePath) + "\t"
+			sep2 += Paint(BrightText, " V ") + "\t"
+			sep3 += Paint(BrightText, ctx.FilePath) + "\t"
+			found = true
+		} else {
+			sep1 += " \t"
+			sep2 += " \t"
+			sep3 += " \t"
+		}
+	}
+	if !found {
+		return ""
+	}
+	return sep1 + "\n" + sep2 + "\n" + sep3
+
 }

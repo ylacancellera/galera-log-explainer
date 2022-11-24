@@ -318,10 +318,12 @@ var (
 	RegexUnknownConf = LogRegex{
 		Regex: regexp.MustCompile("unknown variable"),
 		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
-			ctx.State = "CLOSED"
-			//TODO get which variable ? Useful?
-
-			return ctx, Paint(RedText, "unknown variable")
+			split := strings.Split(log, "'")
+			v := "?"
+			if len(split) > 0 {
+				v = split[1]
+			}
+			return ctx, Paint(YellowText, "unknown variable") + ": " + v
 		},
 	}
 

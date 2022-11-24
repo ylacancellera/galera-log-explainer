@@ -76,8 +76,9 @@ func iterateNode(timeline Timeline) ([]string, time.Time) {
 
 func DisplayColumnar(timeline Timeline) {
 	var (
-		lastDate time.Time
-		args     []string
+		lastDate   time.Time
+		lastLayout string
+		args       []string
 	)
 	// to hold the current context for each node
 	currentContext := map[string]LogCtx{}
@@ -101,16 +102,10 @@ func DisplayColumnar(timeline Timeline) {
 	// as long as there is a next event to print
 	for nextNodes, nextDate := iterateNode(timeline); len(nextNodes) != 0; nextNodes, nextDate = iterateNode(timeline) {
 
-		// To avoid having a complete datetime everytime, we partially print some dates to make them looked "grouped"
-		// It highlights that some events happened during the same second
-		if nextDate.Truncate(time.Second).Equal(lastDate.Truncate(time.Second)) {
-			args = []string{nextDate.Format(".000000Z")}
-		} else {
-			// Taking the first next event to log for the date format
-			// It could be troublesome if some nodes do not have the same one (mysql versions, different timezone) but it's good enough for now.
-			// nextNodes[0] is always supposed to exist, else we would not have anything to print anymore, same for timeline[nextNodes[0]][0] which is the next log to print for the nextnode
-			args = []string{nextDate.Format(timeline[nextNodes[0]][0].DateLayout)}
-		}
+		// Date column
+		var dateCol string
+		dateCol, lastLayout = dateBlock(nextDate, lastDate, timeline[nextNodes[0]][0].DateLayout, lastLayout)
+		args = []string{dateCol}
 
 	MakeLine:
 		for _, node := range keys {
@@ -159,6 +154,40 @@ func DisplayColumnar(timeline Timeline) {
 	fmt.Fprintln(w, separator)
 	fmt.Fprintln(w, header)
 
+}
+
+var timeBlocks = []struct {
+	layout   string
+	duration time.Duration
+}{
+	{
+		layout:   ".000000Z",
+		duration: time.Second,
+	},
+	{
+		layout:   "05.000000Z",
+		duration: time.Minute,
+	},
+	{
+		layout:   "04:05.000000Z",
+		duration: time.Hour,
+	},
+}
+
+func dateBlock(nextDate, lastDate time.Time, layout, lastLayout string) (string, string) {
+	// To avoid having a complete datetime everytime, we partially print some dates to make them looked "grouped"
+	// It highlights that some events happened during the same second/minute/hour
+	//
+	// comparing last layout and current to avoid having a date shorter than the last one, it would create unreadable cascades of partial dates
+	for _, tb := range timeBlocks {
+		if nextDate.Truncate(tb.duration).Equal(lastDate.Truncate(tb.duration)) && len(lastLayout) >= len(tb.layout) {
+			return nextDate.Format(tb.layout), tb.layout
+		}
+	}
+	// Taking the first next event to log for the date format
+	// It could be troublesome if some nodes do not have the same one (mysql versions, different timezone) but it's good enough for now.
+	// nextNodes[0] is always supposed to exist, else we would not have anything to print anymore, same for timeline[nextNodes[0]][0] which is the next log to print for the nextnode
+	return nextDate.Format(layout), layout
 }
 
 func printMetadata(timeline Timeline) {

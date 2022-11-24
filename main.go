@@ -5,7 +5,6 @@ import (
 	"log"
 	"os/exec"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/alecthomas/kong"
@@ -121,8 +120,6 @@ func mergeTimeline(t1, t2 LocalTimeline) LocalTimeline {
 
 // search is the main function to search what we want in a file
 func search(path string, regexes ...LogRegex) (string, LocalTimeline, error) {
-	lt := []LogInfo{}
-	ctx := LogCtx{FilePath: path, HashToIP: map[string]string{}, IPToHostname: map[string]string{}, IPToMethod: map[string]string{}}
 
 	// A first pass is done, with every regexes we want compiled in a single one.
 	regexToSendSlice := []string{}
@@ -142,44 +139,42 @@ func search(path string, regexes ...LogRegex) (string, LocalTimeline, error) {
 		return "", nil, errors.Wrapf(err, "failed to search in %s", path)
 	}
 
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		s := bufio.NewScanner(out)
-		var (
-			line      string
-			toDisplay string
-		)
+	// grep treatment
+	s := bufio.NewScanner(out)
+	var (
+		line      string
+		toDisplay string
+	)
+	lt := []LogInfo{}
+	ctx := LogCtx{FilePath: path, HashToIP: map[string]string{}, IPToHostname: map[string]string{}, IPToMethod: map[string]string{}}
 
-		// Scan for each grep results
-		for s.Scan() {
-			line = s.Text()
-			toDisplay = line
-			t, dateLayout := searchDateFromLog(line)
+	// Scan for each grep results
+	for s.Scan() {
+		line = s.Text()
+		toDisplay = line
+		t, dateLayout := searchDateFromLog(line)
 
-			// We have to find again what regex worked to get this log line
-			for _, regex := range regexes {
-				if !regex.Regex.Match([]byte(line)) {
-					continue
-				}
-				if regex.Handler != nil {
-					ctx, toDisplay = regex.Handler(ctx, line)
-				}
-				if CLI.List.Verbosity >= regex.Verbosity && !regex.SkipPrint {
-					lt = append(lt, LogInfo{
-						Date:       t,
-						DateLayout: dateLayout,
-						Log:        line,
-						Msg:        toDisplay,
-						Ctx:        ctx,
-					})
-				}
+		// We have to find again what regex worked to get this log line
+		for _, regex := range regexes {
+			if !regex.Regex.Match([]byte(line)) {
+				continue
 			}
+			if regex.Handler == nil {
+				continue
+			}
+			ctx, toDisplay = regex.Handler(ctx, line)
+			if CLI.List.Verbosity < regex.Verbosity || regex.SkipPrint {
+				continue
+			}
+			lt = append(lt, LogInfo{
+				Date:       t,
+				DateLayout: dateLayout,
+				Log:        line,
+				Msg:        toDisplay,
+				Ctx:        ctx,
+			})
 		}
-		wg.Done()
-	}()
-
-	wg.Wait()
+	}
 
 	source := ctx.SourceNodeIP
 	if source == "" {

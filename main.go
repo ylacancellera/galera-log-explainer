@@ -49,10 +49,12 @@ func main() {
 		}
 		timeline := createTimeline(CLI.List.Paths, toCheck)
 		DisplayColumnar(timeline)
+
 	case "metadata <paths>":
 		toCheck := append(append([]LogRegex{RegexSourceNode}, StatesRegexes...), ViewsRegexes...)
 		timeline := createTimeline(CLI.Metadata.Paths, toCheck)
 		printMetadata(timeline)
+
 	default:
 		log.Fatal("Command not known:", ctx.Command())
 	}
@@ -95,10 +97,26 @@ func createTimeline(paths []string, toCheck []LogRegex) Timeline {
 			log.Println(err)
 		}
 
-		// TODO: merge timelines if the nodes already exists
+		if t, ok := timeline[node]; ok {
+			localTimeline = mergeTimeline(t, localTimeline)
+		}
 		timeline[node] = localTimeline
 	}
 	return timeline
+}
+
+// mergeTimeline is helpful when log files are split by date, it can be useful to be able to merge content
+func mergeTimeline(t1, t2 LocalTimeline) LocalTimeline {
+	if len(t1) == 0 {
+		return t2
+	}
+	if len(t2) == 0 {
+		return t1
+	}
+	if t1[0].Date.Before(t2[0].Date) {
+		return append(t1, t2...)
+	}
+	return append(t2, t1...)
 }
 
 // search is the main function to search what we want in a file

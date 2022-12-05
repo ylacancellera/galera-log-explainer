@@ -62,8 +62,7 @@ func DisplayColumnar(timeline Timeline) {
 	for nextNodes, nextDate := iterateNode(timeline); len(nextNodes) != 0; nextNodes, nextDate = iterateNode(timeline) {
 
 		// Date column
-		var dateCol string
-		dateCol, lastLayout = dateBlock(nextDate, lastDate, timeline[nextNodes[0]][0].DateLayout, lastLayout)
+		dateCol, tmpLastLayout := dateBlock(nextDate, lastDate, timeline[nextNodes[0]][0].DateLayout, lastLayout)
 		args = []string{dateCol}
 		displayedValue := 0
 
@@ -98,15 +97,21 @@ func DisplayColumnar(timeline Timeline) {
 		}
 
 		// If line is not filled with default placeholder values
-		if displayedValue > 0 {
-			// Print tabwriter line
-			_, err := fmt.Fprintln(w, strings.Join(args, "\t")+"\t")
-			if err != nil {
-				log.Println("Failed to write a line", err)
-			}
+		if displayedValue == 0 {
+			continue
+
 		}
 
+		// Print tabwriter line
+		_, err := fmt.Fprintln(w, strings.Join(args, "\t")+"\t")
+		if err != nil {
+			log.Println("Failed to write a line", err)
+		}
+
+		// a tmp value was stored because we could not know if it was going to be displayed yet
+		lastLayout = tmpLastLayout
 		lastDate = nextDate
+
 	}
 
 	// footer

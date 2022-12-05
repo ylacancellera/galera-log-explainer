@@ -46,17 +46,8 @@ func DisplayColumnar(timeline Timeline) {
 		args       []string
 	)
 	// to hold the current context for each node
-	currentContext := map[string]LogCtx{}
+	keys, currentContext := initKeysContext(timeline)
 	lastContext := map[string]LogCtx{}
-
-	// keys will be used to access the timeline map with an ordered manner
-	// without this, we would not print on the correct column as the order of a map is guaranteed to be random each time
-	keys := make([]string, 0, len(timeline))
-	for node := range timeline {
-		keys = append(keys, node)
-		currentContext[node] = timeline[node][0].Ctx
-	}
-	sort.Strings(keys)
 
 	w := tabwriter.NewWriter(os.Stdout, 8, 8, 3, ' ', tabwriter.AlignRight)
 	defer w.Flush()
@@ -74,6 +65,7 @@ func DisplayColumnar(timeline Timeline) {
 		var dateCol string
 		dateCol, lastLayout = dateBlock(nextDate, lastDate, timeline[nextNodes[0]][0].DateLayout, lastLayout)
 		args = []string{dateCol}
+		displayedValue := 0
 
 		// node values
 		for _, node := range keys {
@@ -84,27 +76,34 @@ func DisplayColumnar(timeline Timeline) {
 				args = append(args, defaultColumnValue("| ", currentContext[node].State))
 				continue
 			}
-
 			nl := timeline[node][0]
 			lastContext[node] = currentContext[node]
 			currentContext[node] = nl.Ctx
-			args = append(args, nl.Msg)
 
 			// dequeue the events
 			if len(timeline[node]) > 0 {
 				timeline[node] = timeline[node][1:]
 			}
 
+			if CLI.List.Verbosity > nl.Verbosity {
+				args = append(args, nl.Msg)
+				displayedValue++
+			} else {
+				args = append(args, defaultColumnValue("| ", nl.Ctx.State))
+			}
 		}
 
 		if sep := fileTransitionSeparator(keys, lastContext, currentContext); sep != "" {
 			fmt.Fprintln(w, sep)
 		}
 
-		// Print tabwriter line
-		_, err := fmt.Fprintln(w, strings.Join(args, "\t")+"\t")
-		if err != nil {
-			log.Println("Failed to write a line", err)
+		// If line is not filled with default placeholder values
+		if displayedValue > 0 {
+			// Print tabwriter line
+			_, err := fmt.Fprintln(w, strings.Join(args, "\t")+"\t")
+			if err != nil {
+				log.Println("Failed to write a line", err)
+			}
 		}
 
 		lastDate = nextDate
@@ -116,6 +115,25 @@ func DisplayColumnar(timeline Timeline) {
 	fmt.Fprintln(w, headerNodes(keys))
 	fmt.Fprintln(w, headerFilePath(keys, currentContext))
 	fmt.Fprintln(w, headerHostname(keys, currentContext))
+}
+
+func initKeysContext(timeline Timeline) ([]string, map[string]LogCtx) {
+	currentContext := map[string]LogCtx{}
+
+	// keys will be used to access the timeline map with an ordered manner
+	// without this, we would not print on the correct column as the order of a map is guaranteed to be random each time
+	keys := make([]string, 0, len(timeline))
+	for node := range timeline {
+		keys = append(keys, node)
+		if len(timeline[node]) > 0 {
+			currentContext[node] = timeline[node][0].Ctx
+		} else {
+			// Avoid crashing, but not ideal: we could have a better default Ctx with filepath at least
+			currentContext[node] = LogCtx{}
+		}
+	}
+	sort.Strings(keys)
+	return keys, currentContext
 }
 
 // defaultColumnValue is displayed if the node did not have an event for a line
@@ -186,7 +204,7 @@ func separator(keys []string) string {
 }
 
 func headerNodes(keys []string) string {
-	return "DATE\t" + strings.Join(keys, "\t") + "\t" + "\n \t"
+	return "DATE\t" + strings.Join(keys, "\t") + "\t"
 }
 
 func headerFilePath(keys []string, ctxs map[string]LogCtx) string {

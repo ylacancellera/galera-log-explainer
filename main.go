@@ -38,13 +38,15 @@ func main() {
 		if CLI.List.ListStates {
 			toCheck = append(toCheck, StatesRegexes...)
 		} else if !CLI.List.SkipStateColoredColumn {
-			toCheck = append(toCheck, SilenceRegex(StatesRegexes...)...)
+			toCheck = append(toCheck, SetVerbosity(DebugMySQL, StatesRegexes...)...)
 		}
 		if CLI.List.ListViews {
 			toCheck = append(toCheck, ViewsRegexes...)
 		}
 		if CLI.List.ListEvents {
 			toCheck = append(toCheck, EventsRegexes...)
+		} else if !CLI.List.SkipStateColoredColumn {
+			toCheck = append(toCheck, SetVerbosity(DebugMySQL, EventsRegexes...)...)
 		}
 		timeline := createTimeline(CLI.List.Paths, toCheck)
 		DisplayColumnar(timeline)
@@ -68,10 +70,11 @@ type Timeline map[string]LocalTimeline
 // LogInfo is to store a single event in log. This is something that should be displayed ultimately, this is what we want when we launch this tool
 type LogInfo struct {
 	Date       time.Time
-	DateLayout string // Per LogInfo and not global, because it could be useful in case a major version upgrade happened sometime
+	DateLayout string // Per LogInfo and not global, because it could be useful in case a major version upgrade happened
 	Msg        string // what to show
 	Log        string // the raw log
-	Ctx        LogCtx // the context is copied for each logInfo, so that it is easier to handle some info (current state), and this is also interesting how it evolved
+	Ctx        LogCtx // the context is copied for each logInfo, so that it is easier to handle some info (current state), and this is also interesting to check how it evolved
+	Verbosity  Verbosity
 }
 
 // LogCtx is a context for a given file.
@@ -105,6 +108,7 @@ func createTimeline(paths []string, toCheck []LogRegex) Timeline {
 }
 
 // mergeTimeline is helpful when log files are split by date, it can be useful to be able to merge content
+// a "timeline" come from a log file. Log files that came from some node should not never have overlapping dates
 func mergeTimeline(t1, t2 LocalTimeline) LocalTimeline {
 	if len(t1) == 0 {
 		return t2
@@ -145,8 +149,8 @@ func search(path string, regexes ...LogRegex) (string, LocalTimeline, error) {
 		line      string
 		toDisplay string
 	)
-	lt := []LogInfo{}
 	ctx := LogCtx{FilePath: path, HashToIP: map[string]string{}, IPToHostname: map[string]string{}, IPToMethod: map[string]string{}}
+	lt := []LogInfo{}
 
 	// Scan for each grep results
 	for s.Scan() {
@@ -156,22 +160,20 @@ func search(path string, regexes ...LogRegex) (string, LocalTimeline, error) {
 
 		// We have to find again what regex worked to get this log line
 		for _, regex := range regexes {
-			if !regex.Regex.Match([]byte(line)) {
+			if !regex.Regex.MatchString(line) {
 				continue
 			}
 			if regex.Handler == nil {
 				continue
 			}
 			ctx, toDisplay = regex.Handler(ctx, line)
-			if CLI.List.Verbosity < regex.Verbosity || regex.SkipPrint {
-				continue
-			}
 			lt = append(lt, LogInfo{
 				Date:       t,
 				DateLayout: dateLayout,
 				Log:        line,
 				Msg:        toDisplay,
 				Ctx:        ctx,
+				Verbosity:  regex.Verbosity,
 			})
 		}
 	}

@@ -43,15 +43,14 @@ type LogRegex struct {
 	// Taking into arguments the current context and log line, returning an updated context and a message to display
 	Handler   func(LogCtx, string) (LogCtx, string)
 	Verbosity Verbosity
-	SkipPrint bool
 }
 
-// SilenceRegex accepts any LogRegex and set SkipPrint to avoid having it displayed.
+// SetVerbosity accepts any LogRegex and set
 // Some can be useful to construct context, but we can choose not to display them
-func SilenceRegex(regexes ...LogRegex) []LogRegex {
+func SetVerbosity(verbosity Verbosity, regexes ...LogRegex) []LogRegex {
 	silenced := []LogRegex{}
 	for _, regex := range regexes {
-		regex.SkipPrint = true
+		regex.Verbosity = verbosity
 		silenced = append(silenced, regex)
 	}
 	return silenced
@@ -251,13 +250,10 @@ REGEX_SST_ERROR_PROCESS="Process completed with error: wsrep_sst"
 REGEX_IST_UNAVAILABLE="Failed to prepare for incremental state transfer"
 REGEX_SST_BYPASS="\(Bypassing state dump\|IST sender starting\|IST received\)"
 REGEX_IST="\( IST \| ist \)"
-REGEX_SST_METHOD="\(wsrep_sst_common\|wsrep_sst_rsync\|wsrep_sst_mysqldump\|wsrep_sst_xtrabackup-v2\|wsrep_sst_xtrabackup\)"
+
 
 REGEX_SST_ERRORS="ERROR.*\($REGEX_SST_ERROR_PROCESS\|innobackupex\|xtrabackup\|$REGEX_IST\)"
 REGEX_SST_NOTES="\(Note\|Warning\). WSREP.*\($REGEX_SST_REQ\|$REGEX_SST_TRANSFER_TO\|$REGEX_SST_TRANSFER_FROM\|$REGEX_SST_SYNCED\)"
-
-REGEX_SST_COMPILED="\($REGEX_SST_ERRORS\|$REGEX_SST_NOTES\|$REGEX_SST_METHOD\|$REGEX_IST_UNAVAILABLE\|$REGEX_SST_BYPASS\)"
-
 )
 */
 var (
@@ -344,3 +340,20 @@ var (
 		},
 	}
 )
+
+/*
+
+2022-11-25T17:05:00.693591-05:00 468765 [Warning] [MY-000000] [WSREP] Toggling wsrep_on to OFF will affect sql_log_bin. Check manual for more details
+
+2022-11-21T20:59:04.893186-05:00 0 [Note] [MY-000000] [Galera] Member 2(hn1) initiates vote on 9214cd54-5acd-11ed-8489-f7f024f872b4:5405,ad544d173db06c24:  <error>, Error_code: 1304;
+2022-11-21T20:59:04.893287-05:00 0 [Note] [MY-000000] [Galera] Votes over 9214cd54-5acd-11ed-8489-f7f024f872b4:5405:
+   ad544d173db06c24:   1/3
+Waiting for more votes.
+2022-11-21T20:59:04.893345-05:00 12 [Note] [MY-000000] [Galera] Got vote request for seqno 9214cd54-5acd-11ed-8489-f7f024f872b4:5405
+2022-11-21T20:59:04.894150-05:00 0 [Note] [MY-000000] [Galera] Member 1(hn1) initiates vote on 9214cd54-5acd-11ed-8489-f7f024f872b4:5405,ad544d173db06c24:  <error>,  Error_code: 1304;
+2022-11-21T20:59:04.894178-05:00 0 [Note] [MY-000000] [Galera] Votes over 9214cd54-5acd-11ed-8489-f7f024f872b4:5405:
+   ad544d173db06c24:   2/3
+Winner: ad544d173db06c24
+2022-11-21T20:59:04.898114-05:00 10 [ERROR] [MY-010584] [Repl] Slave SQL: Error '<query>', Error_code: MY-001304
+2022-11-21T20:59:04.898180-05:00 10 [Warning] [MY-000000] [WSREP] Event 1 Query apply failed: 1, seqno 5405
+*/

@@ -21,7 +21,7 @@ var CLI struct {
 		ListViews              bool      `help:"List how Galera views evolved (who joined, who left)"`
 		ListEvents             bool      `help:"List generic mysql events (start, shutdown, assertion failures)"`
 		ListSST                bool      `help:"List Galera synchronization event"`
-		GroupByTime            bool      `default:"false" help:"group time to highlight which events happened close (unstable, only working with rfc3339 on utc)"`
+		GroupByTime            bool      `default:"false" help:"Avoid printing complete date to highlight which events happened close to each others. eg: if two events happened the same minute, only show the seconds part (unstable, only works with UTC rfc3339 micro format, as in 2006-01-02T15:04:05.000000Z)"`
 	} `cmd:""`
 	Metadata struct {
 		Paths []string `arg:"" name:"paths" help:"paths of the log to use"`

@@ -15,13 +15,13 @@ var CLI struct {
 	NoColor bool
 	List    struct {
 		Paths                  []string  `arg:"" name:"paths" help:"paths of the log to use"`
-		Verbosity              Verbosity `default:"1"`
-		PrintMetadata          bool
-		SkipStateColoredColumn bool
-		ListStates             bool
-		ListViews              bool
-		ListEvents             bool
-		ListSST                bool
+		Verbosity              Verbosity `default:"1" help:"0: Info, 1: Detailed, 2: DebugMySQL (every mysql info the tool used), 3: Debug (internal tool debug)"`
+		SkipStateColoredColumn bool      `help:"avoid having the placeholder colored with mysql state, which is guessed using several regexes that will not be displayed"`
+		ListStates             bool      `help:"List WSREP state changes(SYNCED, DONOR, ...)"`
+		ListViews              bool      `help:"List how Galera views evolved (who joined, who left)"`
+		ListEvents             bool      `help:"List generic mysql events (start, shutdown, assertion failures)"`
+		ListSST                bool      `help:"List Galera synchronization event"`
+		GroupByTime            bool      `default:"false" help:"group time to highlight which events happened close (unstable, only working with rfc3339 on utc)"`
 	} `cmd:""`
 	Metadata struct {
 		Paths []string `arg:"" name:"paths" help:"paths of the log to use"`

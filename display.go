@@ -175,6 +175,9 @@ var timeBlocks = []struct {
 }
 
 func dateBlock(nextDate, lastDate time.Time, layout, lastLayout string) (string, string) {
+	if !CLI.List.GroupByTime {
+		return nextDate.Format(layout), layout
+	}
 	// To avoid having a complete datetime everytime, we partially print some dates to make them looked "grouped"
 	// It highlights that some events happened during the same second/minute/hour
 	//

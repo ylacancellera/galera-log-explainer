@@ -47,3 +47,17 @@ func sliceContains(s []string, str string) bool {
 	}
 	return false
 }
+
+func ColorForState(text, state string) string {
+
+	switch state {
+	case "DONOR", "JOINER", "DESYNCED":
+		return Paint(YellowText, text)
+	case "SYNCED":
+		return Paint(GreenText, text)
+	case "CLOSED":
+		return Paint(RedText, text)
+	default:
+		return text
+	}
+}

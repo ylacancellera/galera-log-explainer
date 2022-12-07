@@ -72,7 +72,7 @@ func DisplayColumnar(timeline Timeline) {
 			if !sliceContains(nextNodes, node) {
 				// if there are no events, having a | is needed for tabwriter
 				// A few color can also help highlighting how the node is doing
-				args = append(args, defaultColumnValue("| ", currentContext[node].State))
+				args = append(args, ColorForState("| ", currentContext[node].State))
 				continue
 			}
 			nl := timeline[node][0]
@@ -88,7 +88,7 @@ func DisplayColumnar(timeline Timeline) {
 				args = append(args, nl.Msg)
 				displayedValue++
 			} else {
-				args = append(args, defaultColumnValue("| ", nl.Ctx.State))
+				args = append(args, ColorForState("| ", nl.Ctx.State))
 			}
 		}
 
@@ -139,21 +139,6 @@ func initKeysContext(timeline Timeline) ([]string, map[string]LogCtx) {
 	}
 	sort.Strings(keys)
 	return keys, currentContext
-}
-
-// defaultColumnValue is displayed if the node did not have an event for a line
-func defaultColumnValue(placeholder, state string) string {
-
-	switch state {
-	case "DONOR", "JOINER", "DESYNCED":
-		return Paint(YellowText, placeholder)
-	case "SYNCED":
-		return Paint(GreenText, placeholder)
-	case "CLOSED":
-		return Paint(RedText, placeholder)
-	default:
-		return placeholder
-	}
 }
 
 var timeBlocks = []struct {

@@ -233,9 +233,9 @@ func fileTransitionSeparator(keys []string, oldctxs, ctxs map[string]LogCtx) str
 		ctx, ok1 := ctxs[node]
 		oldctx, ok2 := oldctxs[node]
 		if ok1 && ok2 && ctx.FilePath != oldctx.FilePath {
-			sep1 += Paint(BrightText, oldctx.FilePath) + "\t"
-			sep2 += Paint(BrightText, " V ") + "\t"
-			sep3 += Paint(BrightText, ctx.FilePath) + "\t"
+			sep1 += Paint(BrightBlueText, oldctx.FilePath) + "\t"
+			sep2 += Paint(BrightBlueText, " V ") + "\t"
+			sep3 += Paint(BrightBlueText, ctx.FilePath) + "\t"
 			found = true
 		} else {
 			sep1 += " \t"

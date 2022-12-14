@@ -29,7 +29,7 @@ const (
 
 // Color implements the Stringer interface for interoperability with string
 func (c *Color) String() string {
-	return fmt.Sprintf("%v", c)
+	return string(*c)
 }
 
 func Paint(color Color, value string) string {

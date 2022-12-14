@@ -188,7 +188,7 @@ func printMetadata(timeline Timeline) {
 		//fmt.Println(nodetl[len(nodetl)-1].Ctx.IPToHostname)
 	}
 	for ip, hash := range ip2hash {
-		fmt.Println(ip+": ", strings.Join(hash, ", "), "\n")
+		fmt.Println(ip+": ", strings.Join(hash, ", "))
 	}
 }
 

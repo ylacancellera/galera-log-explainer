@@ -1,8 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
+	"time"
 )
 
 type Verbosity int
@@ -27,6 +30,59 @@ var DateLayouts = []string{
 	"060102 15:04:05",                  // 5.5
 	"2006-01-02 15:04:05",              // 5.6
 	"2006-01-02  15:04:05",             // 10.3
+}
+
+// BetweenDateRegex generate a regex to filter mysql error log dates to just get
+// events between 2 dates
+// Currently limited to filter by day to produce "short" regexes. Finer events will be filtered later in code
+// Trying to filter hours, minutes using regexes would produce regexes even harder to read
+// while not really adding huge benefit as we do not expect so many events of interets
+func BetweenDateRegex(since, until *time.Time) string {
+	/*
+		"2006-01-02
+		"2006-01-0[3-9]
+		"2006-01-[1-9][0-9]
+		"2006-0[2-9]-[0-9]{2}
+		"2006-[1-9][0-9]-[0-9]{2}
+		"200[7-9]-[0-9]{2}-[0-9]{2}
+		"20[1-9][0-9]-[0-9]{2}-[0-9]{2}
+	*/
+	regexConstructor := []struct {
+		unit      int
+		unitToStr string
+	}{
+		{
+			unit:      since.Day(),
+			unitToStr: fmt.Sprintf("%02d", since.Day()),
+		},
+		{
+			unit:      int(since.Month()),
+			unitToStr: fmt.Sprintf("%02d", since.Month()),
+		},
+		{
+			unit:      since.Year(),
+			unitToStr: fmt.Sprintf("%d", since.Year())[2:],
+		},
+	}
+	s := ""
+	for _, layout := range []string{"2006-01-02", "060102"} {
+		// base complete date
+		lastTransformed := since.Format(layout)
+		s += "|^" + lastTransformed
+
+		for _, construct := range regexConstructor {
+			if construct.unit != 9 {
+				s += "|^" + strings.Replace(lastTransformed, construct.unitToStr, string(construct.unitToStr[0])+"["+strconv.Itoa(construct.unit%10+1)+"-9]", 1)
+			}
+			// %1000 here is to cover the transformation of 2022 => 22
+			s += "|^" + strings.Replace(lastTransformed, construct.unitToStr, "["+strconv.Itoa((construct.unit%1000/10)+1)+"-9][0-9]", 1)
+
+			lastTransformed = strings.Replace(lastTransformed, construct.unitToStr, "[0-9][0-9]", 1)
+
+		}
+	}
+	s += ")"
+	return "(" + s[1:]
 }
 
 /*

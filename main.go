@@ -14,14 +14,16 @@ import (
 var CLI struct {
 	NoColor bool
 	List    struct {
-		Paths                  []string  `arg:"" name:"paths" help:"paths of the log to use"`
-		Verbosity              Verbosity `default:"1" help:"0: Info, 1: Detailed, 2: DebugMySQL (every mysql info the tool used), 3: Debug (internal tool debug)"`
-		SkipStateColoredColumn bool      `help:"avoid having the placeholder colored with mysql state, which is guessed using several regexes that will not be displayed"`
-		ListStates             bool      `help:"List WSREP state changes(SYNCED, DONOR, ...)"`
-		ListViews              bool      `help:"List how Galera views evolved (who joined, who left)"`
-		ListEvents             bool      `help:"List generic mysql events (start, shutdown, assertion failures)"`
-		ListSST                bool      `help:"List Galera synchronization event"`
-		GroupByTime            bool      `default:"false" help:"Avoid printing complete date to highlight which events happened close to each others. eg: if two events happened the same minute, only show the seconds part (unstable, only works with UTC rfc3339 micro format, as in 2006-01-02T15:04:05.000000Z)"`
+		Paths                  []string   `arg:"" name:"paths" help:"paths of the log to use"`
+		Verbosity              Verbosity  `default:"1" help:"0: Info, 1: Detailed, 2: DebugMySQL (every mysql info the tool used), 3: Debug (internal tool debug)"`
+		SkipStateColoredColumn bool       `help:"avoid having the placeholder colored with mysql state, which is guessed using several regexes that will not be displayed"`
+		ListStates             bool       `help:"List WSREP state changes(SYNCED, DONOR, ...)"`
+		ListViews              bool       `help:"List how Galera views evolved (who joined, who left)"`
+		ListEvents             bool       `help:"List generic mysql events (start, shutdown, assertion failures)"`
+		ListSST                bool       `help:"List Galera synchronization event"`
+		GroupByTime            bool       `default:"false" help:"Avoid printing complete date to highlight which events happened close to each others. eg: if two events happened the same minute, only show the seconds part (unstable, only works with UTC rfc3339 micro format, as in 2006-01-02T15:04:05.000000Z)"`
+		Since                  *time.Time `help:"Only list events after this date, you can copy-paste a date from mysql error log"`
+		Until                  *time.Time `help:"Only list events before this date, you can copy-paste a date from mysql error log"`
 	} `cmd:""`
 	Metadata struct {
 		Paths []string `arg:"" name:"paths" help:"paths of the log to use"`
@@ -130,7 +132,11 @@ func search(path string, regexes ...LogRegex) (string, LocalTimeline, error) {
 	for _, regex := range regexes {
 		regexToSendSlice = append(regexToSendSlice, regex.Regex.String())
 	}
-	grepRegex := "(" + strings.Join(regexToSendSlice, "|") + ")"
+	var grepRegex string
+	if CLI.List.Since != nil || CLI.List.Until != nil {
+		grepRegex += BetweenDateRegex(CLI.List.Since, CLI.List.Until) + ".*"
+	}
+	grepRegex += "(" + strings.Join(regexToSendSlice, "|") + ")"
 
 	// Regular grep is actually used
 	// There are no great alternatives, even less as golang libraries. grep itself do not have great alternatives: they are less performant for common use-cases, or are not easily portable, or are costlier to execute.
@@ -138,6 +144,7 @@ func search(path string, regexes ...LogRegex) (string, LocalTimeline, error) {
 	// The usual bottleneck with grep is that it is single-threaded, but we actually benefit from a sequential scan here as we will rely on the log order. Being sequential also ensure this program is light enough to run without too much impacts
 	cmd := exec.Command("grep", "-P", grepRegex, path)
 	out, _ := cmd.StdoutPipe()
+	defer out.Close()
 	err := cmd.Start()
 	if err != nil {
 		return "", nil, errors.Wrapf(err, "failed to search in %s", path)
@@ -153,10 +160,18 @@ func search(path string, regexes ...LogRegex) (string, LocalTimeline, error) {
 	lt := []LogInfo{}
 
 	// Scan for each grep results
+SCAN:
 	for s.Scan() {
 		line = s.Text()
 		toDisplay = line
 		t, dateLayout := searchDateFromLog(line)
+
+		if CLI.List.Since != nil && CLI.List.Since.After(t) {
+			continue
+		}
+		if CLI.List.Until != nil && CLI.List.Until.Before(t) {
+			break SCAN
+		}
 
 		// We have to find again what regex worked to get this log line
 		for _, regex := range regexes {

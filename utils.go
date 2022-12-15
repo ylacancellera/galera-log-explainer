@@ -1,6 +1,9 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // Color is given its own type for safe function signatures
 type Color string
@@ -60,4 +63,19 @@ func ColorForState(text, state string) string {
 	default:
 		return text
 	}
+}
+
+// StringsReplaceReversed is similar to strings.Replace, but replacing the
+// right-most elements instead of left-most
+func StringsReplaceReversed(s, old, new string, n int) string {
+
+	s2 := s
+	stop := len(s)
+
+	for i := 0; i < n; i++ {
+		stop = strings.LastIndex(s[:stop], old)
+
+		s2 = (s[:stop]) + new + s2[stop+len(old):]
+	}
+	return s2
 }

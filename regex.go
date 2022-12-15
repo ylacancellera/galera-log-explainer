@@ -72,12 +72,12 @@ func BetweenDateRegex(since, until *time.Time) string {
 
 		for _, construct := range regexConstructor {
 			if construct.unit != 9 {
-				s += "|^" + strings.Replace(lastTransformed, construct.unitToStr, string(construct.unitToStr[0])+"["+strconv.Itoa(construct.unit%10+1)+"-9]", 1)
+				s += "|^" + StringsReplaceReversed(lastTransformed, construct.unitToStr, string(construct.unitToStr[0])+"["+strconv.Itoa(construct.unit%10+1)+"-9]", 1)
 			}
 			// %1000 here is to cover the transformation of 2022 => 22
-			s += "|^" + strings.Replace(lastTransformed, construct.unitToStr, "["+strconv.Itoa((construct.unit%1000/10)+1)+"-9][0-9]", 1)
+			s += "|^" + StringsReplaceReversed(lastTransformed, construct.unitToStr, "["+strconv.Itoa((construct.unit%1000/10)+1)+"-9][0-9]", 1)
 
-			lastTransformed = strings.Replace(lastTransformed, construct.unitToStr, "[0-9][0-9]", 1)
+			lastTransformed = StringsReplaceReversed(lastTransformed, construct.unitToStr, "[0-9][0-9]", 1)
 
 		}
 	}

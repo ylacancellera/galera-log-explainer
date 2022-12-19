@@ -88,8 +88,14 @@ type LogCtx struct {
 	ResyncingNode    string
 	ResyncedFromNode string
 	HashToIP         map[string]string
+	HashToNodeName   map[string]string
 	IPToHostname     map[string]string
 	IPToMethod       map[string]string
+	IPToNodeName     map[string]string
+}
+
+func newLogCtx() LogCtx {
+	return LogCtx{HashToIP: map[string]string{}, IPToHostname: map[string]string{}, IPToMethod: map[string]string{}, IPToNodeName: map[string]string{}, HashToNodeName: map[string]string{}}
 }
 
 func createTimeline(paths []string, toCheck []LogRegex) Timeline {
@@ -156,7 +162,8 @@ func search(path string, regexes ...LogRegex) (string, LocalTimeline, error) {
 		line      string
 		toDisplay string
 	)
-	ctx := LogCtx{FilePath: path, HashToIP: map[string]string{}, IPToHostname: map[string]string{}, IPToMethod: map[string]string{}}
+	ctx := newLogCtx()
+	ctx.FilePath = path
 	lt := []LogInfo{}
 
 	// Scan for each grep results

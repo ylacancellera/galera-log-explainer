@@ -35,8 +35,8 @@ func main() {
 
 	switch ctx.Command() {
 	case "list <paths>":
-		// RegexSourceNode is always needed: we would not be able to identify the node where the file come from
-		toCheck := []LogRegex{RegexSourceNode}
+		// IdentRegexes is always needed: we would not be able to identify the node where the file come from
+		toCheck := IdentRegexes
 		if CLI.List.ListStates {
 			toCheck = append(toCheck, StatesRegexes...)
 		} else if !CLI.List.SkipStateColoredColumn {
@@ -83,7 +83,7 @@ type LogInfo struct {
 // It used to keep track of what is going on at each new event.
 type LogCtx struct {
 	FilePath         string
-	SourceNodeIP     string
+	SourceNodeIP     []string
 	State            string
 	ResyncingNode    string
 	ResyncedFromNode string
@@ -200,11 +200,7 @@ SCAN:
 		}
 	}
 
-	source := ctx.SourceNodeIP
-	if source == "" {
-		source = path
-	}
-	return source, lt, nil
+	return path, lt, nil
 }
 
 func searchDateFromLog(log string) (time.Time, string) {

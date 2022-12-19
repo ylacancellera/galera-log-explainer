@@ -180,15 +180,22 @@ func dateBlock(nextDate, lastDate time.Time, layout, lastLayout string) (string,
 
 func printMetadata(timeline Timeline) {
 	ip2hash := make(map[string][]string)
+	ipToHostname := make(map[string]string)
 	for _, nodetl := range timeline {
-		for hash, ip := range nodetl[len(nodetl)-1].Ctx.HashToIP {
+
+		lastCtx := nodetl[len(nodetl)-1].Ctx
+		for hash, ip := range lastCtx.HashToIP {
 			ip2hash[ip] = append(ip2hash[ip], hash)
+			h, ok := lastCtx.IPToHostname[ip]
+			if ok {
+				ipToHostname[ip] = h
+			}
+
 		}
-		//fmt.Println(nodetl[len(nodetl)-1].Ctx.HashToIP)
-		//fmt.Println(nodetl[len(nodetl)-1].Ctx.IPToHostname)
 	}
+
 	for ip, hash := range ip2hash {
-		fmt.Println(ip+": ", strings.Join(hash, ", "))
+		fmt.Println(ip+"("+ipToHostname[ip]+"): ", strings.Join(hash, ", "))
 	}
 }
 
@@ -216,7 +223,7 @@ func headerHostname(keys []string, ctxs map[string]LogCtx) string {
 	header := " \t"
 	for _, node := range keys {
 		if ctx, ok := ctxs[node]; ok {
-			header += ctx.IPToHostname[ctx.SourceNodeIP] + "\t"
+			header += DisplayLocalNodeSimplestForm(ctx) + "\t"
 		} else {
 			header += " \t"
 		}

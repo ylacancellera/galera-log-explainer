@@ -86,9 +86,6 @@ func BetweenDateRegex(since, until *time.Time) string {
 }
 
 /*
-REGEX_DAYS="\([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}\|[0-9]\{6\}\)"
-REGEX_HOURS=".[0-9]:[0-9]\{2\}:[0-9]\{2\}\(\.[0-9]\{6\}"
-REGEX_DATE="$REGEX_DAYS.$REGEX_HOURS\(Z\|+[0-9]\{2\}:[0-9]\{2\}\)\|\.[0-9]\{3\}\|\)"
 SYSLOG_DATE="\(Jan\|Feb\|Mar\|Apr\|May\|Jun\|Jul\|Aug\|Sep\|Oct\|Nov\|Dec\) \( \|[0-9]\)[0-9] [0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}"
 REGEX_LOG_PREFIX="$REGEX_DATE \?[0-9]* "
 */
@@ -114,6 +111,7 @@ func SetVerbosity(verbosity Verbosity, regexes ...LogRegex) []LogRegex {
 
 // Grouped LogRegex per functions
 var (
+	IdentRegexes  = []LogRegex{RegexSourceNode, RegexBaseHost}
 	StatesRegexes = []LogRegex{RegexShift, RegexRestoredState}
 	ViewsRegexes  = []LogRegex{RegexNodeEstablished, RegexNodeJoined, RegexNodeLeft, RegexNodeSuspect, RegexNodeChangedIdentity, RegexWsrepUnsafeBootstrap, RegexWsrepConsistenctyCompromised, RegexWsrepNonPrimary}
 	EventsRegexes = []LogRegex{RegexShutdownComplete, RegexShutdownSignal, RegexTerminated, RegexWsrepLoad, RegexWsrepRecovery, RegexUnknownConf, RegexBindAddressAlreadyUsed, RegexAssertionFailure}
@@ -125,10 +123,13 @@ var (
 	groupMethod        = "ssltcp"
 	groupNodeIP        = "nodeip"
 	groupNodeHash      = "nodehash"
-	regexNodeHash      = "(?P<nodehash>.+)"
-	regexNodeHash4Dash = "(?P<nodehash>[a-z0-9]+-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]+)" // eg ed97c863-d5c9-11ec-8ab7-671bbd2d70ef
-	regexNodeHash1Dash = "(?P<nodehash>[a-z0-9]+-[a-z0-9]{4})"                                   // eg ed97c863-8ab7
-	regexNodeIPMethod  = "(?P<ssltcp>.+)://(?P<nodeip>[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}):[0-9]{1,6}"
+	groupNodeName      = "nodename"
+	regexNodeHash      = "(?P<" + groupNodeHash + ">.+)"
+	regexNodeName      = "(?P<" + groupNodeName + ">.+)"
+	regexNodeHash4Dash = "(?P<" + groupNodeHash + ">[a-z0-9]+-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]+)" // eg ed97c863-d5c9-11ec-8ab7-671bbd2d70ef
+	regexNodeHash1Dash = "(?P<" + groupNodeHash + ">[a-z0-9]+-[a-z0-9]{4})"                                   // eg ed97c863-8ab7
+	regexNodeIP        = "(?P<" + groupNodeIP + ">[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})"
+	regexNodeIPMethod  = "(?P<" + groupMethod + ">.+)://" + regexNodeIP + ":[0-9]{1,6}"
 )
 
 var (
@@ -139,9 +140,20 @@ var (
 		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
 			r := regexSourceNodeHandler.FindAllStringSubmatch(log, -1)[0]
 
-			ctx.SourceNodeIP = r[regexSourceNodeHandler.SubexpIndex(groupNodeIP)]
-			ctx.HashToIP[r[regexSourceNodeHandler.SubexpIndex(groupNodeHash)]] = ctx.SourceNodeIP
-			return ctx, ctx.SourceNodeIP + " is local"
+			ctx.SourceNodeIP = append(ctx.SourceNodeIP, r[regexSourceNodeHandler.SubexpIndex(groupNodeIP)])
+			ctx.HashToIP[r[regexSourceNodeHandler.SubexpIndex(groupNodeHash)]] = ctx.SourceNodeIP[len(ctx.SourceNodeIP)-1]
+			return ctx, ctx.SourceNodeIP[len(ctx.SourceNodeIP)-1] + " is local"
+		},
+		Verbosity: DebugMySQL,
+	}
+	regexBaseHostHandler = regexp.MustCompile("base_host = " + regexNodeIP)
+	RegexBaseHost        = LogRegex{
+		Regex: regexp.MustCompile("base_host"),
+		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
+			r := regexBaseHostHandler.FindAllStringSubmatch(log, -1)[0]
+
+			ctx.SourceNodeIP = append(ctx.SourceNodeIP, r[regexBaseHostHandler.SubexpIndex(groupNodeIP)])
+			return ctx, ctx.SourceNodeIP[len(ctx.SourceNodeIP)-1] + " is local"
 		},
 		Verbosity: DebugMySQL,
 	}
@@ -185,10 +197,10 @@ var (
 
 			ip := r[regexNodeEstablishedHandler.SubexpIndex(groupNodeIP)]
 			ctx.HashToIP[r[regexNodeEstablishedHandler.SubexpIndex(groupNodeHash)]] = ip
-			if ip == ctx.SourceNodeIP {
+			if sliceContains(ctx.SourceNodeIP, ip) {
 				return ctx, ""
 			}
-			return ctx, ip + " established"
+			return ctx, DisplayNodeSimplestForm(ip, ctx) + " established"
 		},
 	}
 
@@ -198,9 +210,10 @@ var (
 		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
 			r := regexNodeJoinedHandler.FindAllStringSubmatch(log, -1)[0]
 
-			ctx.HashToIP[r[regexNodeJoinedHandler.SubexpIndex(groupNodeHash)]] = r[regexNodeJoinedHandler.SubexpIndex(groupNodeIP)]
-			ctx.IPToMethod[r[regexNodeJoinedHandler.SubexpIndex(groupNodeIP)]] = r[regexNodeJoinedHandler.SubexpIndex(groupMethod)]
-			return ctx, r[regexNodeJoinedHandler.SubexpIndex(groupNodeIP)] + Paint(GreenText, " has joined")
+			ip := r[regexNodeJoinedHandler.SubexpIndex(groupNodeIP)]
+			ctx.HashToIP[r[regexNodeJoinedHandler.SubexpIndex(groupNodeHash)]] = ip
+			ctx.IPToMethod[ip] = r[regexNodeJoinedHandler.SubexpIndex(groupMethod)]
+			return ctx, DisplayNodeSimplestForm(ip, ctx) + Paint(GreenText, " has joined")
 		},
 	}
 
@@ -210,7 +223,8 @@ var (
 		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
 			r := regexNodeLeftHandler.FindAllStringSubmatch(log, -1)[0]
 
-			return ctx, r[regexNodeLeftHandler.SubexpIndex(groupNodeIP)] + Paint(RedText, " has left")
+			ip := r[regexNodeLeftHandler.SubexpIndex(groupNodeIP)]
+			return ctx, DisplayNodeSimplestForm(ip, ctx) + Paint(RedText, " has left")
 		},
 	}
 
@@ -223,7 +237,7 @@ var (
 			hash := r[regexNodeSuspectHandler.SubexpIndex(groupNodeHash)]
 			ip, ok := ctx.HashToIP[hash]
 			if ok {
-				return ctx, ip + Paint(YellowText, " suspected to be down")
+				return ctx, DisplayNodeSimplestForm(ip, ctx) + Paint(YellowText, " suspected to be down")
 			}
 			return ctx, hash + Paint(YellowText, " suspected to be down")
 		},
@@ -250,7 +264,7 @@ var (
 			}
 			hash2 := r[regexNodeChangedIdentityHandler.SubexpIndex(groupNodeHash+"2")]
 			ctx.HashToIP[hash2] = ip
-			return ctx, ip + Paint(YellowText, " changed identity ")
+			return ctx, DisplayNodeSimplestForm(ip, ctx) + Paint(YellowText, " changed identity ")
 		},
 		Verbosity: Detailed,
 	}
@@ -416,5 +430,59 @@ Winner: ad544d173db06c24
 2022-12-07  1:00:03 0 [Note] WSREP: Member 0.0 (node) desyncs itself from group
 2022-12-07  1:00:06 0 [Note] WSREP: Member 0.0 (node) resyncs itself to group.
 2022-12-07  1:00:06 0 [Note] WSREP: Member 0.0 (node) synced with group.
+
+
+2021-03-25T21:58:08.570748Z 0 [Warning] WSREP: no nodes coming from prim view, prim not possible
+2021-03-25T21:58:13.570928Z 0 [Warning] WSREP: no nodes coming from prim view, prim not possible
+2021-03-25T21:58:13.855983Z 0 [Warning] WSREP: Quorum: No node with complete state:
+
+2021-03-25T21:58:02.322381Z 0 [Warning] WSREP: No persistent state found. Bootstraping with default state
+
+
+2021-04-22T08:01:05.000581Z 0 [Warning] WSREP: Failed to report last committed 66328091, -110 (Connection timed out)
+
+
+input_map=evs::input_map: {aru_seq=8,safe_seq=8,node_index=node: {idx=0,range=[9,8],safe_seq=8} node: {idx=1,range=[9,8],safe_seq=8} },
+fifo_seq=4829086170,
+last_sent=8,
+known:
+17a2e064 at tcp://ip:4567
+{o=0,s=1,i=0,fs=-1,}
+470a6438 at tcp://ip:4567
+{o=1,s=0,i=0,fs=4829091361,jm=
+{v=0,t=4,ut=255,o=1,s=8,sr=-1,as=8,f=4,src=470a6438,srcvid=view_id(REG,470a6438,24),insvid=view_id(UNKNOWN,00000000,0),ru=00000000,r=[-1,-1],fs=4829091361,nl=(
+        17a2e064, {o=0,s=1,e=0,ls=-1,vid=view_id(REG,00000000,0),ss=-1,ir=[-1,-1],}
+        470a6438, {o=1,s=0,e=0,ls=-1,vid=view_id(REG,470a6438,24),ss=8,ir=[9,8],}
+        6548cf50, {o=1,s=1,e=0,ls=-1,vid=view_id(REG,17a2e064,24),ss=12,ir=[13,12],}
+        8b0c0f77, {o=1,s=0,e=0,ls=-1,vid=view_id(REG,470a6438,24),ss=8,ir=[9,8],}
+        d4397932, {o=0,s=1,e=0,ls=-1,vid=view_id(REG,00000000,0),ss=-1,ir=[-1,-1],}
+)
+},
+}
+6548cf50 at tcp://ip:4567
+{o=1,s=1,i=0,fs=-1,jm=
+{v=0,t=4,ut=255,o=1,s=12,sr=-1,as=12,f=4,src=6548cf50,srcvid=view_id(REG,17a2e064,24),insvid=view_id(UNKNOWN,00000000,0),ru=00000000,r=[-1,-1],fs=4829165031,nl=(
+        17a2e064, {o=1,s=0,e=0,ls=-1,vid=view_id(REG,17a2e064,24),ss=12,ir=[13,12],}
+        470a6438, {o=1,s=0,e=0,ls=-1,vid=view_id(REG,00000000,0),ss=-1,ir=[-1,-1],}
+        6548cf50, {o=1,s=0,e=0,ls=-1,vid=view_id(REG,17a2e064,24),ss=12,ir=[13,12],}
+        8b0c0f77, {o=1,s=0,e=0,ls=-1,vid=view_id(REG,00000000,0),ss=-1,ir=[-1,-1],}
+        d4397932, {o=1,s=0,e=0,ls=-1,vid=view_id(REG,17a2e064,24),ss=12,ir=[13,12],}
+)
+},
+}
+8b0c0f77 at
+{o=1,s=0,i=0,fs=-1,jm=
+{v=0,t=4,ut=255,o=1,s=8,sr=-1,as=8,f=0,src=8b0c0f77,srcvid=view_id(REG,470a6438,24),insvid=view_id(UNKNOWN,00000000,0),ru=00000000,r=[-1,-1],fs=4829086170,nl=(
+        17a2e064, {o=0,s=1,e=0,ls=-1,vid=view_id(REG,00000000,0),ss=-1,ir=[-1,-1],}
+        470a6438, {o=1,s=0,e=0,ls=-1,vid=view_id(REG,470a6438,24),ss=8,ir=[9,8],}
+        6548cf50, {o=1,s=1,e=0,ls=-1,vid=view_id(REG,17a2e064,24),ss=12,ir=[13,12],}
+        8b0c0f77, {o=1,s=0,e=0,ls=-1,vid=view_id(REG,470a6438,24),ss=8,ir=[9,8],}
+        d4397932, {o=0,s=1,e=0,ls=-1,vid=view_id(REG,00000000,0),ss=-1,ir=[-1,-1],}
+)
+},
+}
+d4397932 at tcp://ip:4567
+{o=0,s=1,i=0,fs=4685894552,}
+ }
 
 */

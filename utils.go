@@ -79,3 +79,20 @@ func StringsReplaceReversed(s, old, new string, n int) string {
 	}
 	return s2
 }
+
+func DisplayLocalNodeSimplestForm(ctx LogCtx) string {
+	if len(ctx.SourceNodeIP) > 0 {
+		return DisplayNodeSimplestForm(ctx.SourceNodeIP[len(ctx.SourceNodeIP)-1], ctx)
+	}
+	return ctx.FilePath
+}
+
+func DisplayNodeSimplestForm(ip string, ctx LogCtx) string {
+	if nodename, ok := ctx.IPToNodeName[ip]; ok {
+		return nodename
+	}
+	if hostname, ok := ctx.IPToHostname[ip]; ok {
+		return hostname
+	}
+	return ip
+}

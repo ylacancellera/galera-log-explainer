@@ -87,6 +87,7 @@ type LogCtx struct {
 	State            string
 	ResyncingNode    string
 	ResyncedFromNode string
+	OwnHashes        []string
 	HashToIP         map[string]string
 	HashToNodeName   map[string]string
 	IPToHostname     map[string]string
@@ -203,6 +204,9 @@ SCAN:
 		}
 	}
 
+	if len(lt) > 0 {
+		return DisplayLocalNodeSimplestForm(lt[len(lt)-1].Ctx), lt, nil
+	}
 	return path, lt, nil
 }
 

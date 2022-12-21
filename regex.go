@@ -85,16 +85,32 @@ func BetweenDateRegex(since, until *time.Time) string {
 	return "(" + s[1:]
 }
 
+func NoDatesRegex() string {
+	//return "((?![0-9]{4}-[0-9]{2}-[0-9]{2})|(?![0-9]{6}))"
+	return "^(?![0-9]{4})"
+}
+
 /*
 SYSLOG_DATE="\(Jan\|Feb\|Mar\|Apr\|May\|Jun\|Jul\|Aug\|Sep\|Oct\|Nov\|Dec\) \( \|[0-9]\)[0-9] [0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}"
 REGEX_LOG_PREFIX="$REGEX_DATE \?[0-9]* "
 */
 
+// LogDisplayer is the handler to generate messages thanks to a context
+// The context in parameters should be as updated as possible
+type LogDisplayer func(LogCtx) string
+
+// SimpleDisplayer satisfies LogDisplayer and ignores any context received
+func SimpleDisplayer(s string) LogDisplayer {
+	return func(_ LogCtx) string { return s }
+}
+
 type LogRegex struct {
 	Regex *regexp.Regexp
 
-	// Taking into arguments the current context and log line, returning an updated context and a message to display
-	Handler   func(LogCtx, string) (LogCtx, string)
+	// Taking into arguments the current context and log line, returning an updated context and a handler to get the msg to display
+	// The message is not a string, but a function taking a context to return a string
+	// this is to be able to display information using the latest updated context containing most hash/ip/nodenames information
+	Handler   func(LogCtx, string) (LogCtx, LogDisplayer)
 	Verbosity Verbosity
 }
 
@@ -111,7 +127,7 @@ func SetVerbosity(verbosity Verbosity, regexes ...LogRegex) []LogRegex {
 
 // Grouped LogRegex per functions
 var (
-	IdentRegexes  = []LogRegex{RegexSourceNode, RegexBaseHost}
+	IdentRegexes  = []LogRegex{RegexSourceNode, RegexBaseHost, RegexMember}
 	StatesRegexes = []LogRegex{RegexShift, RegexRestoredState}
 	ViewsRegexes  = []LogRegex{RegexNodeEstablished, RegexNodeJoined, RegexNodeLeft, RegexNodeSuspect, RegexNodeChangedIdentity, RegexWsrepUnsafeBootstrap, RegexWsrepConsistenctyCompromised, RegexWsrepNonPrimary}
 	EventsRegexes = []LogRegex{RegexShutdownComplete, RegexShutdownSignal, RegexTerminated, RegexWsrepLoad, RegexWsrepRecovery, RegexUnknownConf, RegexBindAddressAlreadyUsed, RegexAssertionFailure}
@@ -137,23 +153,45 @@ var (
 	regexSourceNodeHandler = regexp.MustCompile("\\(" + regexNodeHash + ", '.+'\\).+" + regexNodeIPMethod)
 	RegexSourceNode        = LogRegex{
 		Regex: regexp.MustCompile("(local endpoint for a connection, blacklisting address)|(points to own listening address, blacklisting)"),
-		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
+		Handler: func(ctx LogCtx, log string) (LogCtx, LogDisplayer) {
 			r := regexSourceNodeHandler.FindAllStringSubmatch(log, -1)[0]
 
-			ctx.SourceNodeIP = append(ctx.SourceNodeIP, r[regexSourceNodeHandler.SubexpIndex(groupNodeIP)])
-			ctx.HashToIP[r[regexSourceNodeHandler.SubexpIndex(groupNodeHash)]] = ctx.SourceNodeIP[len(ctx.SourceNodeIP)-1]
-			return ctx, ctx.SourceNodeIP[len(ctx.SourceNodeIP)-1] + " is local"
+			ip := r[regexSourceNodeHandler.SubexpIndex(groupNodeIP)]
+			ctx.SourceNodeIP = append(ctx.SourceNodeIP, ip)
+			ctx.HashToIP[r[regexSourceNodeHandler.SubexpIndex(groupNodeHash)]] = ip
+			return ctx, func(ctx LogCtx) string { return ip + " is local" }
 		},
 		Verbosity: DebugMySQL,
 	}
+
+	// 2022-12-18T01:03:17.950545Z 0 [Note] [MY-000000] [Galera] Passing config to GCS: base_dir = /var/lib/mysql/; base_host = 127.0.0.1;
 	regexBaseHostHandler = regexp.MustCompile("base_host = " + regexNodeIP)
 	RegexBaseHost        = LogRegex{
 		Regex: regexp.MustCompile("base_host"),
-		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
+		Handler: func(ctx LogCtx, log string) (LogCtx, LogDisplayer) {
 			r := regexBaseHostHandler.FindAllStringSubmatch(log, -1)[0]
 
 			ctx.SourceNodeIP = append(ctx.SourceNodeIP, r[regexBaseHostHandler.SubexpIndex(groupNodeIP)])
-			return ctx, ctx.SourceNodeIP[len(ctx.SourceNodeIP)-1] + " is local"
+			return ctx, SimpleDisplayer(ctx.SourceNodeIP[len(ctx.SourceNodeIP)-1] + " is local")
+		},
+		Verbosity: DebugMySQL,
+	}
+
+	//        0: 015702fc-32f5-11ed-a4ca-267f97316394, node-1
+	//	      1: 08dd5580-32f7-11ed-a9eb-af5e3d01519e, garb
+	regexMemberHandler = regexp.MustCompile("[0-9]: " + regexNodeHash4Dash + ", " + regexNodeName)
+	RegexMember        = LogRegex{
+		Regex: regexp.MustCompile("[0-9]: " + regexNodeHash4Dash + ","),
+		Handler: func(ctx LogCtx, log string) (LogCtx, LogDisplayer) {
+			r := regexMemberHandler.FindAllStringSubmatch(log, -1)[0]
+
+			hash := r[regexMemberHandler.SubexpIndex(groupNodeHash)]
+			nodename := r[regexMemberHandler.SubexpIndex(groupNodeName)]
+			splitted := strings.Split(hash, "-")
+			shorthash := splitted[0] + "-" + splitted[3]
+			ctx.HashToNodeName[shorthash] = nodename
+
+			return ctx, SimpleDisplayer(shorthash + " is " + nodename)
 		},
 		Verbosity: DebugMySQL,
 	}
@@ -161,14 +199,14 @@ var (
 
 var (
 	regexShiftHandler = regexp.MustCompile("[A-Z]+ -> [A-Z]+")
-	shiftFunc         = func(ctx LogCtx, log string) (LogCtx, string) {
+	shiftFunc         = func(ctx LogCtx, log string) (LogCtx, LogDisplayer) {
 		log = regexShiftHandler.FindString(log)
 
 		splitted := strings.Split(log, " -> ")
 		ctx.State = splitted[1]
 		log = ColorForState(splitted[0], splitted[0]) + " -> " + ColorForState(splitted[1], splitted[1])
 
-		return ctx, log
+		return ctx, SimpleDisplayer(log)
 	}
 	RegexShift = LogRegex{
 		Regex:   regexp.MustCompile("Shifting"),
@@ -178,10 +216,11 @@ var (
 
 	RegexRestoredState = LogRegex{
 		Regex: regexp.MustCompile("Restored state"),
-		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
-			ctx, log = shiftFunc(ctx, log)
+		Handler: func(ctx LogCtx, log string) (LogCtx, LogDisplayer) {
+			var displayer LogDisplayer
+			ctx, displayer = shiftFunc(ctx, log)
 
-			return ctx, "(restored)" + log
+			return ctx, SimpleDisplayer("(restored)" + displayer(ctx))
 		},
 	}
 	// 2022-09-22T20:01:32.505660Z 0 [Note] [MY-000000] [Galera] Restored state OPEN -> SYNCED (13361114)
@@ -189,57 +228,59 @@ var (
 
 // "galera views" regexes
 var (
-	regexNodeEstablishedHandler = regexSourceNodeHandler
+	regexNodeEstablishedHandler = regexp.MustCompile("established to " + regexNodeHash + " " + regexNodeIPMethod)
 	RegexNodeEstablished        = LogRegex{
 		Regex: regexp.MustCompile("connection established"),
-		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
+		Handler: func(ctx LogCtx, log string) (LogCtx, LogDisplayer) {
 			r := regexNodeEstablishedHandler.FindAllStringSubmatch(log, -1)[0]
 
 			ip := r[regexNodeEstablishedHandler.SubexpIndex(groupNodeIP)]
 			ctx.HashToIP[r[regexNodeEstablishedHandler.SubexpIndex(groupNodeHash)]] = ip
 			if sliceContains(ctx.SourceNodeIP, ip) {
-				return ctx, ""
+				return ctx, nil
 			}
-			return ctx, DisplayNodeSimplestForm(ip, ctx) + " established"
+			return ctx, func(ctx LogCtx) string { return DisplayNodeSimplestForm(ip, ctx) + " established" }
 		},
 	}
 
 	regexNodeJoinedHandler = regexp.MustCompile("declaring " + regexNodeHash + " at " + regexNodeIPMethod)
 	RegexNodeJoined        = LogRegex{
 		Regex: regexp.MustCompile("declaring .* stable"),
-		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
+		Handler: func(ctx LogCtx, log string) (LogCtx, LogDisplayer) {
 			r := regexNodeJoinedHandler.FindAllStringSubmatch(log, -1)[0]
 
 			ip := r[regexNodeJoinedHandler.SubexpIndex(groupNodeIP)]
 			ctx.HashToIP[r[regexNodeJoinedHandler.SubexpIndex(groupNodeHash)]] = ip
 			ctx.IPToMethod[ip] = r[regexNodeJoinedHandler.SubexpIndex(groupMethod)]
-			return ctx, DisplayNodeSimplestForm(ip, ctx) + Paint(GreenText, " has joined")
+			return ctx, func(ctx LogCtx) string { return DisplayNodeSimplestForm(ip, ctx) + Paint(GreenText, " has joined") }
 		},
 	}
 
 	regexNodeLeftHandler = regexp.MustCompile("forgetting" + regexNodeHash + "\\(" + regexNodeIPMethod)
 	RegexNodeLeft        = LogRegex{
 		Regex: regexp.MustCompile("forgetting"),
-		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
+		Handler: func(ctx LogCtx, log string) (LogCtx, LogDisplayer) {
 			r := regexNodeLeftHandler.FindAllStringSubmatch(log, -1)[0]
 
 			ip := r[regexNodeLeftHandler.SubexpIndex(groupNodeIP)]
-			return ctx, DisplayNodeSimplestForm(ip, ctx) + Paint(RedText, " has left")
+			return ctx, func(ctx LogCtx) string { return DisplayNodeSimplestForm(ip, ctx) + Paint(RedText, " has left") }
 		},
 	}
 
 	regexNodeSuspectHandler = regexp.MustCompile("suspecting node: " + regexNodeHash)
 	RegexNodeSuspect        = LogRegex{
 		Regex: regexp.MustCompile("suspecting node"),
-		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
+		Handler: func(ctx LogCtx, log string) (LogCtx, LogDisplayer) {
 			r := regexNodeSuspectHandler.FindAllStringSubmatch(log, -1)[0]
 
 			hash := r[regexNodeSuspectHandler.SubexpIndex(groupNodeHash)]
 			ip, ok := ctx.HashToIP[hash]
 			if ok {
-				return ctx, DisplayNodeSimplestForm(ip, ctx) + Paint(YellowText, " suspected to be down")
+				return ctx, func(ctx LogCtx) string {
+					return DisplayNodeSimplestForm(ip, ctx) + Paint(YellowText, " suspected to be down")
+				}
 			}
-			return ctx, hash + Paint(YellowText, " suspected to be down")
+			return ctx, SimpleDisplayer(hash + Paint(YellowText, " suspected to be down"))
 		},
 		Verbosity: Detailed,
 	}
@@ -247,7 +288,7 @@ var (
 	regexNodeChangedIdentityHandler = regexp.MustCompile("remote endpoint " + regexNodeIPMethod + " changed identity " + regexNodeHash + " -> " + strings.Replace(regexNodeHash, groupNodeHash, groupNodeHash+"2", -1))
 	RegexNodeChangedIdentity        = LogRegex{
 		Regex: regexp.MustCompile("remote endpoint.*changed identity"),
-		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
+		Handler: func(ctx LogCtx, log string) (LogCtx, LogDisplayer) {
 
 			r := regexNodeChangedIdentityHandler.FindAllStringSubmatch(log, -1)[0]
 
@@ -259,36 +300,38 @@ var (
 
 				// there could have additional corner case to discover yet
 				if !ok {
-					return ctx, hash + Paint(YellowText, " changed identity ")
+					return ctx, SimpleDisplayer(hash + Paint(YellowText, " changed identity "))
 				}
 			}
 			hash2 := r[regexNodeChangedIdentityHandler.SubexpIndex(groupNodeHash+"2")]
 			ctx.HashToIP[hash2] = ip
-			return ctx, DisplayNodeSimplestForm(ip, ctx) + Paint(YellowText, " changed identity ")
+			return ctx, func(ctx LogCtx) string {
+				return DisplayNodeSimplestForm(ip, ctx) + Paint(YellowText, " changed identity ")
+			}
 		},
 		Verbosity: Detailed,
 	}
 
 	RegexWsrepUnsafeBootstrap = LogRegex{
 		Regex: regexp.MustCompile("ERROR.*not be safe to bootstrap"),
-		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
+		Handler: func(ctx LogCtx, log string) (LogCtx, LogDisplayer) {
 			ctx.State = "CLOSED"
 
-			return ctx, Paint(RedText, "not safe to bootstrap")
+			return ctx, SimpleDisplayer(Paint(RedText, "not safe to bootstrap"))
 		},
 	}
 	RegexWsrepConsistenctyCompromised = LogRegex{
 		Regex: regexp.MustCompile(".ode consistency compromi.ed"),
-		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
+		Handler: func(ctx LogCtx, log string) (LogCtx, LogDisplayer) {
 			ctx.State = "CLOSED"
 
-			return ctx, Paint(RedText, "consistencty compromised")
+			return ctx, SimpleDisplayer(Paint(RedText, "consistencty compromised"))
 		},
 	}
 	RegexWsrepNonPrimary = LogRegex{
 		Regex: regexp.MustCompile("failed to reach primary view"),
-		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
-			return ctx, Paint(RedText, "non primary")
+		Handler: func(ctx LogCtx, log string) (LogCtx, LogDisplayer) {
+			return ctx, SimpleDisplayer(Paint(RedText, "non primary"))
 		},
 	}
 )
@@ -324,84 +367,84 @@ REGEX_SST_NOTES="\(Note\|Warning\). WSREP.*\($REGEX_SST_REQ\|$REGEX_SST_TRANSFER
 var (
 	RegexShutdownComplete = LogRegex{
 		Regex: regexp.MustCompile("mysqld: Shutdown complete"),
-		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
+		Handler: func(ctx LogCtx, log string) (LogCtx, LogDisplayer) {
 			ctx.State = "CLOSED"
 
-			return ctx, Paint(RedText, "shutdown complete")
+			return ctx, SimpleDisplayer(Paint(RedText, "shutdown complete"))
 		},
 	}
 	RegexTerminated = LogRegex{
 		Regex: regexp.MustCompile("mysqld: Terminated"),
-		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
+		Handler: func(ctx LogCtx, log string) (LogCtx, LogDisplayer) {
 			ctx.State = "CLOSED"
 
-			return ctx, Paint(RedText, "terminated")
+			return ctx, SimpleDisplayer(Paint(RedText, "terminated"))
 		},
 	}
 	RegexShutdownSignal = LogRegex{
 		Regex: regexp.MustCompile("Normal|Received shutdown"),
-		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
+		Handler: func(ctx LogCtx, log string) (LogCtx, LogDisplayer) {
 			ctx.State = "CLOSED"
 
-			return ctx, Paint(RedText, "received shutdown")
+			return ctx, SimpleDisplayer(Paint(RedText, "received shutdown"))
 		},
 	}
 	RegexAborting = LogRegex{
 		Regex: regexp.MustCompile("[ERROR] Aborting"),
-		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
+		Handler: func(ctx LogCtx, log string) (LogCtx, LogDisplayer) {
 			ctx.State = "CLOSED"
 
-			return ctx, Paint(RedText, "ABORTING")
+			return ctx, SimpleDisplayer(Paint(RedText, "ABORTING"))
 		},
 	}
 
 	regexWsrepLoadNone = regexp.MustCompile("none")
 	RegexWsrepLoad     = LogRegex{
 		Regex: regexp.MustCompile("wsrep_load\\(\\): loading provider library"),
-		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
+		Handler: func(ctx LogCtx, log string) (LogCtx, LogDisplayer) {
 			ctx.State = "OPEN"
 			if regexWsrepLoadNone.MatchString(log) {
-				return ctx, Paint(GreenText, "started(standalone)")
+				return ctx, SimpleDisplayer(Paint(GreenText, "started(standalone)"))
 			}
-			return ctx, Paint(GreenText, "started(cluster)")
+			return ctx, SimpleDisplayer(Paint(GreenText, "started(cluster)"))
 		},
 	}
 	RegexWsrepRecovery = LogRegex{
 		//  INFO: WSREP: Recovered position 00000000-0000-0000-0000-000000000000:-1
 		Regex: regexp.MustCompile("WSREP: Recovered position"),
-		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
+		Handler: func(ctx LogCtx, log string) (LogCtx, LogDisplayer) {
 			ctx.State = "RECOVERY"
 
-			return ctx, "wsrep recovery"
+			return ctx, SimpleDisplayer("wsrep recovery")
 		},
 	}
 
 	RegexUnknownConf = LogRegex{
 		Regex: regexp.MustCompile("unknown variable"),
-		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
+		Handler: func(ctx LogCtx, log string) (LogCtx, LogDisplayer) {
 			split := strings.Split(log, "'")
 			v := "?"
 			if len(split) > 0 {
 				v = split[1]
 			}
-			return ctx, Paint(YellowText, "unknown variable") + ": " + v
+			return ctx, SimpleDisplayer(Paint(YellowText, "unknown variable") + ": " + v)
 		},
 	}
 
 	RegexAssertionFailure = LogRegex{
 		Regex: regexp.MustCompile("Assertion failure"),
-		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
+		Handler: func(ctx LogCtx, log string) (LogCtx, LogDisplayer) {
 			ctx.State = "CLOSED"
 
-			return ctx, Paint(RedText, "ASSERTION FAILURE")
+			return ctx, SimpleDisplayer(Paint(RedText, "ASSERTION FAILURE"))
 		},
 	}
 	RegexBindAddressAlreadyUsed = LogRegex{
 		Regex: regexp.MustCompile("asio error .bind: Address already in use"),
-		Handler: func(ctx LogCtx, log string) (LogCtx, string) {
+		Handler: func(ctx LogCtx, log string) (LogCtx, LogDisplayer) {
 			ctx.State = "CLOSED"
 
-			return ctx, Paint(RedText, "bind address already used")
+			return ctx, SimpleDisplayer(Paint(RedText, "bind address already used"))
 		},
 	}
 )

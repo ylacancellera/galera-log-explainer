@@ -72,10 +72,10 @@ type Timeline map[string]LocalTimeline
 // LogInfo is to store a single event in log. This is something that should be displayed ultimately, this is what we want when we launch this tool
 type LogInfo struct {
 	Date       time.Time
-	DateLayout string // Per LogInfo and not global, because it could be useful in case a major version upgrade happened
-	Msg        string // what to show
-	Log        string // the raw log
-	Ctx        LogCtx // the context is copied for each logInfo, so that it is easier to handle some info (current state), and this is also interesting to check how it evolved
+	DateLayout string       // Per LogInfo and not global, because it could be useful in case a major version upgrade happened
+	Msg        LogDisplayer // what to show
+	Log        string       // the raw log
+	Ctx        LogCtx       // the context is copied for each logInfo, so that it is easier to handle some info (current state), and this is also interesting to check how it evolved
 	Verbosity  Verbosity
 }
 
@@ -140,7 +140,7 @@ func search(path string, regexes ...LogRegex) (string, LocalTimeline, error) {
 	}
 	var grepRegex string
 	if CLI.List.Since != nil || CLI.List.Until != nil {
-		grepRegex += BetweenDateRegex(CLI.List.Since, CLI.List.Until) + ".*"
+		grepRegex += "(" + BetweenDateRegex(CLI.List.Since, CLI.List.Until) + "|" + NoDatesRegex() + ").*"
 	}
 	grepRegex += "(" + strings.Join(regexToSendSlice, "|") + ")"
 
@@ -159,8 +159,9 @@ func search(path string, regexes ...LogRegex) (string, LocalTimeline, error) {
 	// grep treatment
 	s := bufio.NewScanner(out)
 	var (
-		line      string
-		toDisplay string
+		line         string
+		displayer    LogDisplayer
+		recentEnough bool
 	)
 	ctx := newLogCtx()
 	ctx.FilePath = path
@@ -170,15 +171,17 @@ func search(path string, regexes ...LogRegex) (string, LocalTimeline, error) {
 SCAN:
 	for s.Scan() {
 		line = s.Text()
-		toDisplay = line
 		t, dateLayout := searchDateFromLog(line)
 
-		if CLI.List.Since != nil && CLI.List.Since.After(t) {
+		// If it's recentEnough, it means we already validated a log: every next logs necessarily happened later
+		// this is useful because not every logs have a date attached, and some without date are very useful
+		if CLI.List.Since != nil && !recentEnough && CLI.List.Since.After(t) {
 			continue
 		}
 		if CLI.List.Until != nil && CLI.List.Until.Before(t) {
 			break SCAN
 		}
+		recentEnough = true
 
 		// We have to find again what regex worked to get this log line
 		for _, regex := range regexes {
@@ -188,12 +191,12 @@ SCAN:
 			if regex.Handler == nil {
 				continue
 			}
-			ctx, toDisplay = regex.Handler(ctx, line)
+			ctx, displayer = regex.Handler(ctx, line)
 			lt = append(lt, LogInfo{
 				Date:       t,
 				DateLayout: dateLayout,
 				Log:        line,
-				Msg:        toDisplay,
+				Msg:        displayer,
 				Ctx:        ctx,
 				Verbosity:  regex.Verbosity,
 			})

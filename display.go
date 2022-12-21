@@ -46,7 +46,7 @@ func DisplayColumnar(timeline Timeline) {
 		args       []string
 	)
 	// to hold the current context for each node
-	keys, currentContext := initKeysContext(timeline)
+	keys, currentContext, latestContext := initKeysContext(timeline)
 	lastContext := map[string]LogCtx{}
 
 	w := tabwriter.NewWriter(os.Stdout, 8, 8, 3, ' ', tabwriter.AlignRight)
@@ -84,8 +84,8 @@ func DisplayColumnar(timeline Timeline) {
 				timeline[node] = timeline[node][1:]
 			}
 
-			if CLI.List.Verbosity > nl.Verbosity {
-				args = append(args, nl.Msg)
+			if CLI.List.Verbosity > nl.Verbosity && nl.Msg != nil {
+				args = append(args, nl.Msg(latestContext[node]))
 				displayedValue++
 			} else {
 				args = append(args, ColorForState("| ", nl.Ctx.State))
@@ -122,8 +122,9 @@ func DisplayColumnar(timeline Timeline) {
 	fmt.Fprintln(w, headerHostname(keys, currentContext))
 }
 
-func initKeysContext(timeline Timeline) ([]string, map[string]LogCtx) {
+func initKeysContext(timeline Timeline) ([]string, map[string]LogCtx, map[string]LogCtx) {
 	currentContext := map[string]LogCtx{}
+	latestContext := map[string]LogCtx{}
 
 	// keys will be used to access the timeline map with an ordered manner
 	// without this, we would not print on the correct column as the order of a map is guaranteed to be random each time
@@ -132,13 +133,15 @@ func initKeysContext(timeline Timeline) ([]string, map[string]LogCtx) {
 		keys = append(keys, node)
 		if len(timeline[node]) > 0 {
 			currentContext[node] = timeline[node][0].Ctx
+			latestContext[node] = timeline[node][len(timeline[node])-1].Ctx
 		} else {
 			// Avoid crashing, but not ideal: we could have a better default Ctx with filepath at least
 			currentContext[node] = LogCtx{}
+			latestContext[node] = LogCtx{}
 		}
 	}
 	sort.Strings(keys)
-	return keys, currentContext
+	return keys, currentContext, MergeContextsInfo(latestContext)
 }
 
 var timeBlocks = []struct {

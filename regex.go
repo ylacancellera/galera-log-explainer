@@ -127,7 +127,7 @@ func SetVerbosity(verbosity Verbosity, regexes ...LogRegex) []LogRegex {
 
 // Grouped LogRegex per functions
 var (
-	IdentRegexes  = []LogRegex{RegexSourceNode, RegexBaseHost, RegexMember}
+	IdentRegexes  = []LogRegex{RegexSourceNode, RegexBaseHost, RegexMember, RegexOwnUUID}
 	StatesRegexes = []LogRegex{RegexShift, RegexRestoredState}
 	ViewsRegexes  = []LogRegex{RegexNodeEstablished, RegexNodeJoined, RegexNodeLeft, RegexNodeSuspect, RegexNodeChangedIdentity, RegexWsrepUnsafeBootstrap, RegexWsrepConsistenctyCompromised, RegexWsrepNonPrimary}
 	EventsRegexes = []LogRegex{RegexShutdownComplete, RegexShutdownSignal, RegexTerminated, RegexWsrepLoad, RegexWsrepRecovery, RegexUnknownConf, RegexBindAddressAlreadyUsed, RegexAssertionFailure}
@@ -181,7 +181,7 @@ var (
 	//	      1: 08dd5580-32f7-11ed-a9eb-af5e3d01519e, garb
 	regexMemberHandler = regexp.MustCompile("[0-9]: " + regexNodeHash4Dash + ", " + regexNodeName)
 	RegexMember        = LogRegex{
-		Regex: regexp.MustCompile("[0-9]: " + regexNodeHash4Dash + ","),
+		Regex: regexMemberHandler,
 		Handler: func(ctx LogCtx, log string) (LogCtx, LogDisplayer) {
 			r := regexMemberHandler.FindAllStringSubmatch(log, -1)[0]
 
@@ -192,6 +192,27 @@ var (
 			ctx.HashToNodeName[shorthash] = nodename
 
 			return ctx, SimpleDisplayer(shorthash + " is " + nodename)
+		},
+		Verbosity: DebugMySQL,
+	}
+
+	// My UUID: 6938f4ae-32f4-11ed-be8d-8a0f53f88872
+	regexOwnUUIDHandler = regexp.MustCompile("My UUID: " + regexNodeHash4Dash)
+	RegexOwnUUID        = LogRegex{
+		Regex: regexp.MustCompile("My UUID"),
+		Handler: func(ctx LogCtx, log string) (LogCtx, LogDisplayer) {
+			r := regexOwnUUIDHandler.FindAllStringSubmatch(log, -1)[0]
+
+			hash := r[regexOwnUUIDHandler.SubexpIndex(groupNodeHash)]
+			splitted := strings.Split(hash, "-")
+			shorthash := splitted[0] + "-" + splitted[3]
+
+			ctx.OwnHashes = append(ctx.OwnHashes, shorthash)
+			for _, ip := range ctx.SourceNodeIP {
+				ctx.HashToIP[shorthash] = ip
+			}
+
+			return ctx, SimpleDisplayer(shorthash + " is local")
 		},
 		Verbosity: DebugMySQL,
 	}

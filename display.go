@@ -55,7 +55,7 @@ func DisplayColumnar(timeline Timeline) {
 	// header
 	fmt.Fprintln(w, headerNodes(keys))
 	fmt.Fprintln(w, headerFilePath(keys, currentContext))
-	fmt.Fprintln(w, headerHostname(keys, currentContext))
+	fmt.Fprintln(w, headerIP(keys, currentContext))
 	fmt.Fprintln(w, separator(keys))
 
 	// as long as there is a next event to print
@@ -119,7 +119,7 @@ func DisplayColumnar(timeline Timeline) {
 	fmt.Fprintln(w, separator(keys))
 	fmt.Fprintln(w, headerNodes(keys))
 	fmt.Fprintln(w, headerFilePath(keys, currentContext))
-	fmt.Fprintln(w, headerHostname(keys, currentContext))
+	fmt.Fprintln(w, headerIP(keys, currentContext))
 }
 
 func initKeysContext(timeline Timeline) ([]string, map[string]LogCtx, map[string]LogCtx) {
@@ -207,11 +207,11 @@ func separator(keys []string) string {
 }
 
 func headerNodes(keys []string) string {
-	return "DATE\t" + strings.Join(keys, "\t") + "\t"
+	return "identifier\t" + strings.Join(keys, "\t") + "\t"
 }
 
 func headerFilePath(keys []string, ctxs map[string]LogCtx) string {
-	header := " \t"
+	header := "path\t"
 	for _, node := range keys {
 		if ctx, ok := ctxs[node]; ok {
 			header += ctx.FilePath + "\t"
@@ -222,11 +222,11 @@ func headerFilePath(keys []string, ctxs map[string]LogCtx) string {
 	return header
 }
 
-func headerHostname(keys []string, ctxs map[string]LogCtx) string {
-	header := " \t"
+func headerIP(keys []string, ctxs map[string]LogCtx) string {
+	header := "ip\t"
 	for _, node := range keys {
-		if ctx, ok := ctxs[node]; ok {
-			header += DisplayLocalNodeSimplestForm(ctx) + "\t"
+		if ctx, ok := ctxs[node]; ok && len(ctx.SourceNodeIP) > 0 {
+			header += ctx.SourceNodeIP[len(ctx.SourceNodeIP)-1] + "\t"
 		} else {
 			header += " \t"
 		}

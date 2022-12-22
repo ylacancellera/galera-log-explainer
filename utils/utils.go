@@ -1,8 +1,10 @@
-package main
+package utils
 
 import (
 	"fmt"
 	"strings"
+
+	"github.com/ylacancellera/galera-log-explainer/types"
 )
 
 // Color is given its own type for safe function signatures
@@ -30,25 +32,18 @@ const (
 	BrightWhiteText         = "\x1b[1;37m"
 )
 
+var SkipColor bool
+
 // Color implements the Stringer interface for interoperability with string
 func (c *Color) String() string {
 	return string(*c)
 }
 
 func Paint(color Color, value string) string {
-	if CLI.NoColor {
+	if SkipColor {
 		return value
 	}
 	return fmt.Sprintf("%v%v%v", color, value, ResetText)
-}
-
-func sliceContains(s []string, str string) bool {
-	for _, v := range s {
-		if v == str {
-			return true
-		}
-	}
-	return false
 }
 
 func ColorForState(text, state string) string {
@@ -63,6 +58,15 @@ func ColorForState(text, state string) string {
 	default:
 		return text
 	}
+}
+
+func SliceContains(s []string, str string) bool {
+	for _, v := range s {
+		if v == str {
+			return true
+		}
+	}
+	return false
 }
 
 // StringsReplaceReversed is similar to strings.Replace, but replacing the
@@ -80,14 +84,14 @@ func StringsReplaceReversed(s, old, new string, n int) string {
 	return s2
 }
 
-func DisplayLocalNodeSimplestForm(ctx LogCtx) string {
+func DisplayLocalNodeSimplestForm(ctx types.LogCtx) string {
 	if len(ctx.SourceNodeIP) > 0 {
 		return DisplayNodeSimplestForm(ctx.SourceNodeIP[len(ctx.SourceNodeIP)-1], ctx)
 	}
 	return ctx.FilePath
 }
 
-func DisplayNodeSimplestForm(ip string, ctx LogCtx) string {
+func DisplayNodeSimplestForm(ip string, ctx types.LogCtx) string {
 	if nodename, ok := ctx.IPToNodeName[ip]; ok {
 		return nodename
 	}
@@ -105,7 +109,7 @@ func DisplayNodeSimplestForm(ip string, ctx LogCtx) string {
 	return ip
 }
 
-func MergeContextsInfo(ctxs map[string]LogCtx) map[string]LogCtx {
+func MergeContextsInfo(ctxs map[string]types.LogCtx) map[string]types.LogCtx {
 	if len(ctxs) == 1 {
 		return ctxs
 	}

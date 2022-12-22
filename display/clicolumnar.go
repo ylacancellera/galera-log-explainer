@@ -1,4 +1,4 @@
-package main
+package display
 
 import (
 	"fmt"
@@ -11,12 +11,14 @@ import (
 
 	// regular tabwriter do not work with color, this is a forked versions that ignores color special characters
 	"github.com/Ladicle/tabwriter"
+	"github.com/ylacancellera/galera-log-explainer/types"
+	"github.com/ylacancellera/galera-log-explainer/utils"
 )
 
 // iterateNode is used to search the source node(s) that contains the next chronological events
 // it returns a slice in case 2 nodes have their next event precisely at the same time, which
 // happens a lot on some versions
-func iterateNode(timeline Timeline) ([]string, time.Time) {
+func iterateNode(timeline types.Timeline) ([]string, time.Time) {
 	var (
 		nextDate  time.Time
 		nextNodes []string
@@ -39,7 +41,7 @@ func iterateNode(timeline Timeline) ([]string, time.Time) {
 
 // DisplayColumnar is the main function to print
 // It will print header and footers, and dequeue the timeline chronologically
-func DisplayColumnar(timeline Timeline) {
+func DisplayColumnar(timeline types.Timeline, verbosity types.Verbosity) {
 	var (
 		lastDate   time.Time
 		lastLayout string
@@ -47,7 +49,7 @@ func DisplayColumnar(timeline Timeline) {
 	)
 	// to hold the current context for each node
 	keys, currentContext, latestContext := initKeysContext(timeline)
-	lastContext := map[string]LogCtx{}
+	lastContext := map[string]types.LogCtx{}
 
 	w := tabwriter.NewWriter(os.Stdout, 8, 8, 3, ' ', tabwriter.AlignRight)
 	defer w.Flush()
@@ -69,10 +71,10 @@ func DisplayColumnar(timeline Timeline) {
 		// node values
 		for _, node := range keys {
 
-			if !sliceContains(nextNodes, node) {
+			if !utils.SliceContains(nextNodes, node) {
 				// if there are no events, having a | is needed for tabwriter
 				// A few color can also help highlighting how the node is doing
-				args = append(args, ColorForState("| ", currentContext[node].State))
+				args = append(args, utils.ColorForState("| ", currentContext[node].State))
 				continue
 			}
 			nl := timeline[node][0]
@@ -84,11 +86,11 @@ func DisplayColumnar(timeline Timeline) {
 				timeline[node] = timeline[node][1:]
 			}
 
-			if CLI.List.Verbosity > nl.Verbosity && nl.Msg != nil {
+			if verbosity > nl.Verbosity && nl.Msg != nil {
 				args = append(args, nl.Msg(latestContext[node]))
 				displayedValue++
 			} else {
-				args = append(args, ColorForState("| ", nl.Ctx.State))
+				args = append(args, utils.ColorForState("| ", nl.Ctx.State))
 			}
 		}
 
@@ -122,9 +124,9 @@ func DisplayColumnar(timeline Timeline) {
 	fmt.Fprintln(w, headerIP(keys, currentContext))
 }
 
-func initKeysContext(timeline Timeline) ([]string, map[string]LogCtx, map[string]LogCtx) {
-	currentContext := map[string]LogCtx{}
-	latestContext := map[string]LogCtx{}
+func initKeysContext(timeline types.Timeline) ([]string, map[string]types.LogCtx, map[string]types.LogCtx) {
+	currentContext := map[string]types.LogCtx{}
+	latestContext := map[string]types.LogCtx{}
 
 	// keys will be used to access the timeline map with an ordered manner
 	// without this, we would not print on the correct column as the order of a map is guaranteed to be random each time
@@ -136,12 +138,12 @@ func initKeysContext(timeline Timeline) ([]string, map[string]LogCtx, map[string
 			latestContext[node] = timeline[node][len(timeline[node])-1].Ctx
 		} else {
 			// Avoid crashing, but not ideal: we could have a better default Ctx with filepath at least
-			currentContext[node] = LogCtx{}
-			latestContext[node] = LogCtx{}
+			currentContext[node] = types.LogCtx{}
+			latestContext[node] = types.LogCtx{}
 		}
 	}
 	sort.Strings(keys)
-	return keys, currentContext, MergeContextsInfo(latestContext)
+	return keys, currentContext, utils.MergeContextsInfo(latestContext)
 }
 
 var timeBlocks = []struct {
@@ -163,9 +165,10 @@ var timeBlocks = []struct {
 }
 
 func dateBlock(nextDate, lastDate time.Time, layout, lastLayout string) (string, string) {
-	if !CLI.List.GroupByTime {
-		return nextDate.Format(layout), layout
-	}
+	//if !CLI.List.GroupByTime {
+	return nextDate.Format(layout), layout
+	//	}
+
 	// To avoid having a complete datetime everytime, we partially print some dates to make them looked "grouped"
 	// It highlights that some events happened during the same second/minute/hour
 	//
@@ -181,7 +184,7 @@ func dateBlock(nextDate, lastDate time.Time, layout, lastLayout string) (string,
 	return nextDate.Format(layout), layout
 }
 
-func printMetadata(timeline Timeline) {
+func PrintMetadata(timeline types.Timeline) {
 	ip2hash := make(map[string][]string)
 	ipToHostname := make(map[string]string)
 	for _, nodetl := range timeline {
@@ -210,7 +213,7 @@ func headerNodes(keys []string) string {
 	return "identifier\t" + strings.Join(keys, "\t") + "\t"
 }
 
-func headerFilePath(keys []string, ctxs map[string]LogCtx) string {
+func headerFilePath(keys []string, ctxs map[string]types.LogCtx) string {
 	header := "path\t"
 	for _, node := range keys {
 		if ctx, ok := ctxs[node]; ok {
@@ -222,7 +225,7 @@ func headerFilePath(keys []string, ctxs map[string]LogCtx) string {
 	return header
 }
 
-func headerIP(keys []string, ctxs map[string]LogCtx) string {
+func headerIP(keys []string, ctxs map[string]types.LogCtx) string {
 	header := "ip\t"
 	for _, node := range keys {
 		if ctx, ok := ctxs[node]; ok && len(ctx.SourceNodeIP) > 0 {
@@ -234,7 +237,7 @@ func headerIP(keys []string, ctxs map[string]LogCtx) string {
 	return header
 }
 
-func fileTransitionSeparator(keys []string, oldctxs, ctxs map[string]LogCtx) string {
+func fileTransitionSeparator(keys []string, oldctxs, ctxs map[string]types.LogCtx) string {
 	sep1 := " \t"
 	sep2 := " \t"
 	sep3 := " \t"
@@ -243,9 +246,9 @@ func fileTransitionSeparator(keys []string, oldctxs, ctxs map[string]LogCtx) str
 		ctx, ok1 := ctxs[node]
 		oldctx, ok2 := oldctxs[node]
 		if ok1 && ok2 && ctx.FilePath != oldctx.FilePath {
-			sep1 += Paint(BrightBlueText, oldctx.FilePath) + "\t"
-			sep2 += Paint(BrightBlueText, " V ") + "\t"
-			sep3 += Paint(BrightBlueText, ctx.FilePath) + "\t"
+			sep1 += utils.Paint(utils.BrightBlueText, oldctx.FilePath) + "\t"
+			sep2 += utils.Paint(utils.BrightBlueText, " V ") + "\t"
+			sep3 += utils.Paint(utils.BrightBlueText, ctx.FilePath) + "\t"
 			found = true
 		} else {
 			sep1 += " \t"

@@ -58,7 +58,7 @@ func ColorForState(text, state string) string {
 		return Paint(YellowText, text)
 	case "SYNCED":
 		return Paint(GreenText, text)
-	case "CLOSED":
+	case "CLOSED", "NON-PRIMARY":
 		return Paint(RedText, text)
 	default:
 		return text

@@ -129,7 +129,7 @@ func SetVerbosity(verbosity Verbosity, regexes ...LogRegex) []LogRegex {
 var (
 	IdentRegexes  = []LogRegex{RegexSourceNode, RegexBaseHost, RegexMember, RegexOwnUUID}
 	StatesRegexes = []LogRegex{RegexShift, RegexRestoredState}
-	ViewsRegexes  = []LogRegex{RegexNodeEstablished, RegexNodeJoined, RegexNodeLeft, RegexNodeSuspect, RegexNodeChangedIdentity, RegexWsrepUnsafeBootstrap, RegexWsrepConsistenctyCompromised, RegexWsrepNonPrimary}
+	ViewsRegexes  = []LogRegex{RegexNodeEstablished, RegexNodeJoined, RegexNodeLeft, RegexNodeSuspect, RegexNodeChangedIdentity, RegexWsrepUnsafeBootstrap, RegexWsrepConsistenctyCompromised, RegexWsrepNonPrimary, RegexNewComponent}
 	EventsRegexes = []LogRegex{RegexShutdownComplete, RegexShutdownSignal, RegexTerminated, RegexWsrepLoad, RegexWsrepRecovery, RegexUnknownConf, RegexBindAddressAlreadyUsed, RegexAssertionFailure}
 )
 
@@ -262,6 +262,7 @@ var (
 			}
 			return ctx, func(ctx LogCtx) string { return DisplayNodeSimplestForm(ip, ctx) + " established" }
 		},
+		Verbosity: Detailed,
 	}
 
 	regexNodeJoinedHandler = regexp.MustCompile("declaring " + regexNodeHash + " at " + regexNodeIPMethod)
@@ -285,6 +286,32 @@ var (
 
 			ip := r[regexNodeLeftHandler.SubexpIndex(groupNodeIP)]
 			return ctx, func(ctx LogCtx) string { return DisplayNodeSimplestForm(ip, ctx) + Paint(RedText, " has left") }
+		},
+	}
+
+	// New COMPONENT: primary = yes, bootstrap = no, my_idx = 1, memb_num = 5
+	regexNewComponentHandler = regexp.MustCompile("New COMPONENT: primary = (?P<primary>.+), bootstrap = (?P<bootstrap>.*), my_idx = .*, memb_num = (?P<memb_num>[0-9]{1,2})")
+	RegexNewComponent        = LogRegex{
+		Regex: regexp.MustCompile("New COMPONENT:"),
+		Handler: func(ctx LogCtx, log string) (LogCtx, LogDisplayer) {
+			r := regexNewComponentHandler.FindAllStringSubmatch(log, -1)[0]
+
+			primary := r[regexNewComponentHandler.SubexpIndex("primary")] == "yes"
+			memb_num := r[regexNewComponentHandler.SubexpIndex("memb_num")]
+			bootstrap := r[regexNewComponentHandler.SubexpIndex("bootstrap")] == "yes"
+
+			if primary {
+				msg := Paint(GreenText, "PRIMARY") + "(n=" + memb_num + ")"
+				if bootstrap {
+					msg += " ,bootstrap=yes"
+				}
+				return ctx, SimpleDisplayer(msg)
+			}
+
+			// We stores nonprim as state, but not PRIMARY because we should find DONOR/JOINER/SYNCED/DESYNCED when it is primary
+			// and we do not want to override these as they have more value
+			ctx.State = "NON-PRIMARY"
+			return ctx, SimpleDisplayer(Paint(RedText, "NON-PRIMARY") + "(n=" + memb_num + ")")
 		},
 	}
 

@@ -17,10 +17,10 @@ var CLI struct {
 		Paths                  []string   `arg:"" name:"paths" help:"paths of the log to use"`
 		Verbosity              Verbosity  `default:"1" help:"0: Info, 1: Detailed, 2: DebugMySQL (every mysql info the tool used), 3: Debug (internal tool debug)"`
 		SkipStateColoredColumn bool       `help:"avoid having the placeholder colored with mysql state, which is guessed using several regexes that will not be displayed"`
-		ListStates             bool       `help:"List WSREP state changes(SYNCED, DONOR, ...)"`
-		ListViews              bool       `help:"List how Galera views evolved (who joined, who left)"`
-		ListEvents             bool       `help:"List generic mysql events (start, shutdown, assertion failures)"`
-		ListSST                bool       `help:"List Galera synchronization event"`
+		States                 bool       `help:"List WSREP state changes(SYNCED, DONOR, ...)"`
+		Views                  bool       `help:"List how Galera views evolved (who joined, who left)"`
+		Events                 bool       `help:"List generic mysql events (start, shutdown, assertion failures)"`
+		SST                    bool       `help:"List Galera synchronization event"`
 		GroupByTime            bool       `default:"false" help:"Avoid printing complete date to highlight which events happened close to each others. eg: if two events happened the same minute, only show the seconds part (unstable, only works with UTC rfc3339 micro format, as in 2006-01-02T15:04:05.000000Z)"`
 		Since                  *time.Time `help:"Only list events after this date, you can copy-paste a date from mysql error log"`
 		Until                  *time.Time `help:"Only list events before this date, you can copy-paste a date from mysql error log"`
@@ -37,15 +37,15 @@ func main() {
 	case "list <paths>":
 		// IdentRegexes is always needed: we would not be able to identify the node where the file come from
 		toCheck := IdentRegexes
-		if CLI.List.ListStates {
+		if CLI.List.States {
 			toCheck = append(toCheck, StatesRegexes...)
 		} else if !CLI.List.SkipStateColoredColumn {
 			toCheck = append(toCheck, SetVerbosity(DebugMySQL, StatesRegexes...)...)
 		}
-		if CLI.List.ListViews {
+		if CLI.List.Views {
 			toCheck = append(toCheck, ViewsRegexes...)
 		}
-		if CLI.List.ListEvents {
+		if CLI.List.Events {
 			toCheck = append(toCheck, EventsRegexes...)
 		} else if !CLI.List.SkipStateColoredColumn {
 			toCheck = append(toCheck, SetVerbosity(DebugMySQL, EventsRegexes...)...)

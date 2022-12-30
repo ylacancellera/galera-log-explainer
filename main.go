@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"log"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -118,7 +119,7 @@ func search(path string, regexes ...regex.LogRegex) (string, types.LocalTimeline
 		recentEnough bool
 	)
 	ctx := types.NewLogCtx()
-	ctx.FilePath = path
+	ctx.FilePath = filepath.Base(path)
 	lt := []types.LogInfo{}
 
 	// Scan for each grep results

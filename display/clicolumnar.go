@@ -18,7 +18,7 @@ import (
 // iterateNode is used to search the source node(s) that contains the next chronological events
 // it returns a slice in case 2 nodes have their next event precisely at the same time, which
 // happens a lot on some versions
-func iterateNode(timeline types.Timeline) ([]string, time.Time) {
+func iterateNode(timeline types.Timeline) []string {
 	var (
 		nextDate  time.Time
 		nextNodes []string
@@ -28,7 +28,7 @@ func iterateNode(timeline types.Timeline) ([]string, time.Time) {
 		if len(timeline[node]) == 0 {
 			continue
 		}
-		curDate := timeline[node][0].Date
+		curDate := timeline[node][0].Date.Time
 		if curDate.Before(nextDate) {
 			nextDate = curDate
 			nextNodes = []string{node}
@@ -36,17 +36,14 @@ func iterateNode(timeline types.Timeline) ([]string, time.Time) {
 			nextNodes = append(nextNodes, node)
 		}
 	}
-	return nextNodes, nextDate
+	return nextNodes
 }
 
 // DisplayColumnar is the main function to print
 // It will print header and footers, and dequeue the timeline chronologically
 func DisplayColumnar(timeline types.Timeline, verbosity types.Verbosity) {
-	var (
-		lastDate   time.Time
-		lastLayout string
-		args       []string
-	)
+	var args []string
+
 	// to hold the current context for each node
 	keys, currentContext, latestContext := initKeysContext(timeline)
 	lastContext := map[string]types.LogCtx{}
@@ -61,11 +58,13 @@ func DisplayColumnar(timeline types.Timeline, verbosity types.Verbosity) {
 	fmt.Fprintln(w, separator(keys))
 
 	// as long as there is a next event to print
-	for nextNodes, nextDate := iterateNode(timeline); len(nextNodes) != 0; nextNodes, nextDate = iterateNode(timeline) {
+	for nextNodes := iterateNode(timeline); len(nextNodes) != 0; nextNodes = iterateNode(timeline) {
 
 		// Date column
-		dateCol, tmpLastLayout := dateBlock(nextDate, lastDate, timeline[nextNodes[0]][0].DateLayout, lastLayout)
-		args = []string{dateCol}
+		//formattedDate, tmpLastLayout := dateBlock(nextDate, lastDate, timeline[nextNodes[0]][0].DateLayout, lastLayout)
+		date := timeline[nextNodes[0]][0].Date
+
+		args = []string{date.DisplayTime}
 		displayedValue := 0
 
 		// node values
@@ -109,11 +108,6 @@ func DisplayColumnar(timeline types.Timeline, verbosity types.Verbosity) {
 		if err != nil {
 			log.Println("Failed to write a line", err)
 		}
-
-		// a tmp value was stored because we could not know if it was going to be displayed yet
-		lastLayout = tmpLastLayout
-		lastDate = nextDate
-
 	}
 
 	// footer
@@ -144,44 +138,6 @@ func initKeysContext(timeline types.Timeline) ([]string, map[string]types.LogCtx
 	}
 	sort.Strings(keys)
 	return keys, currentContext, utils.MergeContextsInfo(latestContext)
-}
-
-var timeBlocks = []struct {
-	layout   string
-	duration time.Duration
-}{
-	{
-		layout:   ".000000Z",
-		duration: time.Second,
-	},
-	{
-		layout:   "05.000000Z",
-		duration: time.Minute,
-	},
-	{
-		layout:   "04:05.000000Z",
-		duration: time.Hour,
-	},
-}
-
-func dateBlock(nextDate, lastDate time.Time, layout, lastLayout string) (string, string) {
-	//if !CLI.List.GroupByTime {
-	return nextDate.Format(layout), layout
-	//	}
-
-	// To avoid having a complete datetime everytime, we partially print some dates to make them looked "grouped"
-	// It highlights that some events happened during the same second/minute/hour
-	//
-	// comparing last layout and current to avoid having a date shorter than the last one, it would create unreadable cascades of partial dates
-	for _, tb := range timeBlocks {
-		if nextDate.Truncate(tb.duration).Equal(lastDate.Truncate(tb.duration)) && len(lastLayout) >= len(tb.layout) {
-			return nextDate.Format(tb.layout), tb.layout
-		}
-	}
-	// Taking the first next event to log for the date format
-	// It could be troublesome if some nodes do not have the same one (mysql versions, different timezone) but it's good enough for now.
-	// nextNodes[0] is always supposed to exist, else we would not have anything to print anymore, same for timeline[nextNodes[0]][0] which is the next log to print for the nextnode
-	return nextDate.Format(layout), layout
 }
 
 func PrintMetadata(timeline types.Timeline) {

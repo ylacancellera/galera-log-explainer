@@ -140,7 +140,7 @@ var (
 		handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			ctx.State = "CLOSED"
 
-			return ctx, types.SimpleDisplayer(utils.Paint(utils.RedText, "consistencty compromised"))
+			return ctx, types.SimpleDisplayer(utils.Paint(utils.RedText, "consistency compromised"))
 		},
 	}
 	RegexWsrepNonPrimary = LogRegex{
@@ -155,7 +155,6 @@ var (
 var (
 	"SELF-LEAVE."
 	"2022-10-29T12:00:34.449023Z 0 [Note] WSREP: Found saved state: 8e862473-455e-11e8-a0ca-3fcd8faf3209:-1, safe_to_bootstrap: 0"
-	REGEX_NEW_VIEW          = "New cluster view"
 	REGEX_NODE_INACTIVE     = "declaring inactive"
 	REGEX_NODE_TIMEOUT      = "timed out, no messages seen in"
 	REGEX_INCONSISTENT_VIEW = "node uuid:.*is inconsistent to restored view"

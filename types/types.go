@@ -1,6 +1,8 @@
 package types
 
-import "time"
+import (
+	"time"
+)
 
 type Verbosity int
 
@@ -15,12 +17,25 @@ const (
 
 // LogInfo is to store a single event in log. This is something that should be displayed ultimately, this is what we want when we launch this tool
 type LogInfo struct {
-	Date       time.Time
-	DateLayout string       // Per LogInfo and not global, because it could be useful in case a major version upgrade happened
-	Msg        LogDisplayer // what to show
-	Log        string       // the raw log
-	Ctx        LogCtx       // the context is copied for each logInfo, so that it is easier to handle some info (current state), and this is also interesting to check how it evolved
-	Verbosity  Verbosity
+	Date      Date
+	Msg       LogDisplayer // what to show
+	Log       string       // the raw log
+	Ctx       LogCtx       // the context is copied for each logInfo, so that it is easier to handle some info (current state), and this is also interesting to check how it evolved
+	Verbosity Verbosity
+}
+
+type Date struct {
+	Time        time.Time
+	DisplayTime string
+	Layout      string
+}
+
+func NewDate(t time.Time, layout string) Date {
+	return Date{
+		Time:        t,
+		Layout:      layout,
+		DisplayTime: t.Format(layout),
+	}
 }
 
 // LogCtx is a context for a given file.
@@ -67,7 +82,7 @@ func MergeTimeline(t1, t2 LocalTimeline) LocalTimeline {
 	if len(t2) == 0 {
 		return t1
 	}
-	if t1[0].Date.Before(t2[0].Date) {
+	if t1[0].Date.Time.Before(t2[0].Date.Time) {
 		return append(t1, t2...)
 	}
 	return append(t2, t1...)

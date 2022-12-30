@@ -25,7 +25,6 @@ var CLI struct {
 		Views                  bool            `help:"List how Galera views evolved (who joined, who left)"`
 		Events                 bool            `help:"List generic mysql events (start, shutdown, assertion failures)"`
 		SST                    bool            `help:"List Galera synchronization event"`
-		GroupByTime            bool            `default:"false" help:"Avoid printing complete date to highlight which events happened close to each others. eg: if two events happened the same minute, only show the seconds part (unstable, only works with UTC rfc3339 micro format, as in 2006-01-02T15:04:05.000000Z)"`
 		Since                  *time.Time      `help:"Only list events after this date, you can copy-paste a date from mysql error log"`
 		Until                  *time.Time      `help:"Only list events before this date, you can copy-paste a date from mysql error log"`
 	} `cmd:""`
@@ -126,14 +125,14 @@ func search(path string, regexes ...regex.LogRegex) (string, types.LocalTimeline
 SCAN:
 	for s.Scan() {
 		line = s.Text()
-		t, dateLayout := regex.SearchDateFromLog(line)
+		date := types.NewDate(regex.SearchDateFromLog(line))
 
 		// If it's recentEnough, it means we already validated a log: every next logs necessarily happened later
 		// this is useful because not every logs have a date attached, and some without date are very useful
-		if CLI.List.Since != nil && !recentEnough && CLI.List.Since.After(t) {
+		if CLI.List.Since != nil && !recentEnough && CLI.List.Since.After(date.Time) {
 			continue
 		}
-		if CLI.List.Until != nil && CLI.List.Until.Before(t) {
+		if CLI.List.Until != nil && CLI.List.Until.Before(date.Time) {
 			break SCAN
 		}
 		recentEnough = true
@@ -145,12 +144,11 @@ SCAN:
 			}
 			ctx, displayer = regex.Handle(ctx, line)
 			lt = append(lt, types.LogInfo{
-				Date:       t,
-				DateLayout: dateLayout,
-				Log:        line,
-				Msg:        displayer,
-				Ctx:        ctx,
-				Verbosity:  regex.Verbosity,
+				Date:      date,
+				Log:       line,
+				Msg:       displayer,
+				Ctx:       ctx,
+				Verbosity: regex.Verbosity,
 			})
 		}
 	}

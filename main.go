@@ -155,7 +155,7 @@ SCAN:
 	}
 
 	if len(lt) > 0 {
-		return utils.DisplayLocalNodeSimplestForm(lt[len(lt)-1].Ctx), lt, nil
+		return types.DisplayLocalNodeSimplestForm(lt[len(lt)-1].Ctx), lt, nil
 	}
-	return path, lt, nil
+	return filepath.Base(path), lt, nil
 }

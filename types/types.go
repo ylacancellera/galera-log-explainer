@@ -2,6 +2,8 @@ package types
 
 import (
 	"time"
+
+	"github.com/ylacancellera/galera-log-explainer/utils"
 )
 
 type Verbosity int
@@ -42,7 +44,7 @@ func NewDate(t time.Time, layout string) Date {
 // It used to keep track of what is going on at each new event.
 type LogCtx struct {
 	FilePath         string
-	SourceNodeIP     []string
+	SourceNodeIPs    []string
 	State            string
 	ResyncingNode    string
 	ResyncedFromNode string
@@ -56,6 +58,23 @@ type LogCtx struct {
 
 func NewLogCtx() LogCtx {
 	return LogCtx{HashToIP: map[string]string{}, IPToHostname: map[string]string{}, IPToMethod: map[string]string{}, IPToNodeName: map[string]string{}, HashToNodeName: map[string]string{}}
+}
+
+func (ctx *LogCtx) OwnNames() []string {
+	names := []string{}
+
+	for _, hash := range ctx.OwnHashes {
+		if name, ok := ctx.HashToNodeName[hash]; ok && !utils.SliceContains(names, name) {
+			names = append(names, name)
+		}
+	}
+
+	for _, hash := range ctx.SourceNodeIPs {
+		if name, ok := ctx.IPToNodeName[hash]; ok && !utils.SliceContains(names, name) {
+			names = append(names, name)
+		}
+	}
+	return names
 }
 
 // LogDisplayer is the handler to generate messages thanks to a context

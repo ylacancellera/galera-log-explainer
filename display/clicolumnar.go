@@ -132,12 +132,12 @@ func initKeysContext(timeline types.Timeline) ([]string, map[string]types.LogCtx
 			latestContext[node] = timeline[node][len(timeline[node])-1].Ctx
 		} else {
 			// Avoid crashing, but not ideal: we could have a better default Ctx with filepath at least
-			currentContext[node] = types.LogCtx{}
-			latestContext[node] = types.LogCtx{}
+			currentContext[node] = types.NewLogCtx()
+			latestContext[node] = types.NewLogCtx()
 		}
 	}
 	sort.Strings(keys)
-	return keys, currentContext, utils.MergeContextsInfo(latestContext)
+	return keys, currentContext, types.MergeContextsInfo(latestContext)
 }
 
 func PrintMetadata(timeline types.Timeline) {
@@ -184,8 +184,8 @@ func headerFilePath(keys []string, ctxs map[string]types.LogCtx) string {
 func headerIP(keys []string, ctxs map[string]types.LogCtx) string {
 	header := "ip\t"
 	for _, node := range keys {
-		if ctx, ok := ctxs[node]; ok && len(ctx.SourceNodeIP) > 0 {
-			header += ctx.SourceNodeIP[len(ctx.SourceNodeIP)-1] + "\t"
+		if ctx, ok := ctxs[node]; ok && len(ctx.SourceNodeIPs) > 0 {
+			header += ctx.SourceNodeIPs[len(ctx.SourceNodeIPs)-1] + "\t"
 		} else {
 			header += " \t"
 		}

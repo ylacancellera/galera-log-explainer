@@ -19,7 +19,7 @@ var (
 			r := internalRegex.FindAllStringSubmatch(log, -1)[0]
 
 			ip := r[internalRegex.SubexpIndex(groupNodeIP)]
-			ctx.SourceNodeIP = append(ctx.SourceNodeIP, ip)
+			ctx.SourceNodeIPs = append(ctx.SourceNodeIPs, ip)
 			ctx.HashToIP[r[internalRegex.SubexpIndex(groupNodeHash)]] = ip
 			return ctx, types.SimpleDisplayer(ip + " is local")
 		},
@@ -36,8 +36,8 @@ var (
 		handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			r := internalRegex.FindAllStringSubmatch(log, -1)[0]
 
-			ctx.SourceNodeIP = append(ctx.SourceNodeIP, r[internalRegex.SubexpIndex(groupNodeIP)])
-			return ctx, types.SimpleDisplayer(ctx.SourceNodeIP[len(ctx.SourceNodeIP)-1] + " is local")
+			ctx.SourceNodeIPs = append(ctx.SourceNodeIPs, r[internalRegex.SubexpIndex(groupNodeIP)])
+			return ctx, types.SimpleDisplayer(ctx.SourceNodeIPs[len(ctx.SourceNodeIPs)-1] + " is local")
 		},
 		Verbosity: types.DebugMySQL,
 	}
@@ -73,7 +73,7 @@ var (
 			shorthash := splitted[0] + "-" + splitted[3]
 
 			ctx.OwnHashes = append(ctx.OwnHashes, shorthash)
-			for _, ip := range ctx.SourceNodeIP {
+			for _, ip := range ctx.SourceNodeIPs {
 				ctx.HashToIP[shorthash] = ip
 			}
 

@@ -20,10 +20,10 @@ var (
 
 			ip := r[internalRegex.SubexpIndex(groupNodeIP)]
 			ctx.HashToIP[r[internalRegex.SubexpIndex(groupNodeHash)]] = ip
-			if utils.SliceContains(ctx.SourceNodeIP, ip) {
+			if utils.SliceContains(ctx.SourceNodeIPs, ip) {
 				return ctx, nil
 			}
-			return ctx, func(ctx types.LogCtx) string { return utils.DisplayNodeSimplestForm(ip, ctx) + " established" }
+			return ctx, func(ctx types.LogCtx) string { return types.DisplayNodeSimplestForm(ip, ctx) + " established" }
 		},
 		Verbosity: types.Detailed,
 	}
@@ -38,7 +38,7 @@ var (
 			ctx.HashToIP[r[internalRegex.SubexpIndex(groupNodeHash)]] = ip
 			ctx.IPToMethod[ip] = r[internalRegex.SubexpIndex(groupMethod)]
 			return ctx, func(ctx types.LogCtx) string {
-				return utils.DisplayNodeSimplestForm(ip, ctx) + utils.Paint(utils.GreenText, " has joined")
+				return types.DisplayNodeSimplestForm(ip, ctx) + utils.Paint(utils.GreenText, " has joined")
 			}
 		},
 	}
@@ -51,7 +51,7 @@ var (
 
 			ip := r[internalRegex.SubexpIndex(groupNodeIP)]
 			return ctx, func(ctx types.LogCtx) string {
-				return utils.DisplayNodeSimplestForm(ip, ctx) + utils.Paint(utils.RedText, " has left")
+				return types.DisplayNodeSimplestForm(ip, ctx) + utils.Paint(utils.RedText, " has left")
 			}
 		},
 	}
@@ -92,7 +92,7 @@ var (
 			ip, ok := ctx.HashToIP[hash]
 			if ok {
 				return ctx, func(ctx types.LogCtx) string {
-					return utils.DisplayNodeSimplestForm(ip, ctx) + utils.Paint(utils.YellowText, " suspected to be down")
+					return types.DisplayNodeSimplestForm(ip, ctx) + utils.Paint(utils.YellowText, " suspected to be down")
 				}
 			}
 			return ctx, types.SimpleDisplayer(hash + utils.Paint(utils.YellowText, " suspected to be down"))
@@ -121,7 +121,7 @@ var (
 			hash2 := r[internalRegex.SubexpIndex(groupNodeHash+"2")]
 			ctx.HashToIP[hash2] = ip
 			return ctx, func(ctx types.LogCtx) string {
-				return utils.DisplayNodeSimplestForm(ip, ctx) + utils.Paint(utils.YellowText, " changed identity ")
+				return types.DisplayNodeSimplestForm(ip, ctx) + utils.Paint(utils.YellowText, " changed identity ")
 			}
 		},
 		Verbosity: types.Detailed,
@@ -162,6 +162,9 @@ var (
 */
 
 /*
+
+2023-01-05T03:49:55.653891Z 0 [Note] WSREP: gcomm: bootstrapping new group 'group'
+
 
 2022-11-25T17:05:00.693591-05:00 468765 [Warning] [MY-000000] [WSREP] Toggling wsrep_on to OFF will affect sql_log_bin. Check manual for more details
 

@@ -50,6 +50,9 @@ func main() {
 		if CLI.List.Views {
 			toCheck = append(toCheck, regex.ViewsRegexes...)
 		}
+		if CLI.List.SST {
+			toCheck = append(toCheck, regex.SSTRegexes...)
+		}
 		if CLI.List.Events {
 			toCheck = append(toCheck, regex.EventsRegexes...)
 		} else if !CLI.List.SkipStateColoredColumn {

@@ -2,6 +2,7 @@ package regex
 
 import (
 	"regexp"
+	"strings"
 
 	"github.com/ylacancellera/galera-log-explainer/types"
 )
@@ -39,10 +40,14 @@ var (
 	groupNodeIP        = "nodeip"
 	groupNodeHash      = "nodehash"
 	groupNodeName      = "nodename"
+	groupNodeName2     = "nodename2"
+	groupSeqno         = "seqno"
 	regexNodeHash      = "(?P<" + groupNodeHash + ">.+)"
 	regexNodeName      = "(?P<" + groupNodeName + ">.+)"
+	regexNodeName2     = strings.Replace(regexNodeName, groupNodeName, groupNodeName2, 1)
 	regexNodeHash4Dash = "(?P<" + groupNodeHash + ">[a-z0-9]+-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]+)" // eg ed97c863-d5c9-11ec-8ab7-671bbd2d70ef
 	regexNodeHash1Dash = "(?P<" + groupNodeHash + ">[a-z0-9]+-[a-z0-9]{4})"                                   // eg ed97c863-8ab7
+	regexSeqno         = "(?P<" + groupSeqno + ">[0-9]+)"
 	regexNodeIP        = "(?P<" + groupNodeIP + ">[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})"
 	regexNodeIPMethod  = "(?P<" + groupMethod + ">.+)://" + regexNodeIP + ":[0-9]{1,6}"
 )

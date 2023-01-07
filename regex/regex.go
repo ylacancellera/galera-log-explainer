@@ -41,6 +41,7 @@ var (
 	groupNodeHash      = "nodehash"
 	groupNodeName      = "nodename"
 	groupNodeName2     = "nodename2"
+	groupMyIdx         = "myidx"
 	groupSeqno         = "seqno"
 	regexNodeHash      = "(?P<" + groupNodeHash + ">.+)"
 	regexNodeName      = "(?P<" + groupNodeName + ">.+)"
@@ -50,4 +51,5 @@ var (
 	regexSeqno         = "(?P<" + groupSeqno + ">[0-9]+)"
 	regexNodeIP        = "(?P<" + groupNodeIP + ">[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})"
 	regexNodeIPMethod  = "(?P<" + groupMethod + ">.+)://" + regexNodeIP + ":[0-9]{1,6}"
+	regexMyIdx         = "(?P<" + groupMyIdx + ">[0-9]{1,2})"
 )

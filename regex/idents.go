@@ -1,13 +1,14 @@
 package regex
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 
 	"github.com/ylacancellera/galera-log-explainer/types"
 )
 
-var IdentRegexes = []LogRegex{RegexSourceNode, RegexBaseHost, RegexMember, RegexOwnUUID}
+var IdentRegexes = []LogRegex{RegexSourceNode, RegexBaseHost, RegexMember, RegexOwnUUID, RegexMyIDXFromComponent, RegexMyIDXFromClusterView, RegexOwnNameFromStateExchange, RegexOwnUUIDFromEstablished, RegexOwnUUIDFromMessageRelay}
 
 var (
 	// sourceNode is to identify from which node this log was taken
@@ -19,8 +20,7 @@ var (
 			r := internalRegex.FindAllStringSubmatch(log, -1)[0]
 
 			ip := r[internalRegex.SubexpIndex(groupNodeIP)]
-			ctx.SourceNodeIPs = append(ctx.SourceNodeIPs, ip)
-			ctx.HashToIP[r[internalRegex.SubexpIndex(groupNodeHash)]] = ip
+			ctx.AddOwnIP(ip)
 			return ctx, types.SimpleDisplayer(ip + " is local")
 		},
 		Verbosity: types.DebugMySQL,
@@ -36,8 +36,9 @@ var (
 		handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			r := internalRegex.FindAllStringSubmatch(log, -1)[0]
 
-			ctx.SourceNodeIPs = append(ctx.SourceNodeIPs, r[internalRegex.SubexpIndex(groupNodeIP)])
-			return ctx, types.SimpleDisplayer(ctx.SourceNodeIPs[len(ctx.SourceNodeIPs)-1] + " is local")
+			ip := r[internalRegex.SubexpIndex(groupNodeIP)]
+			ctx.AddOwnIP(ip)
+			return ctx, types.SimpleDisplayer(ctx.OwnIPs[len(ctx.OwnIPs)-1] + " is local")
 		},
 		Verbosity: types.DebugMySQL,
 	}
@@ -72,12 +73,78 @@ var (
 			splitted := strings.Split(hash, "-")
 			shorthash := splitted[0] + "-" + splitted[3]
 
-			ctx.OwnHashes = append(ctx.OwnHashes, shorthash)
-			for _, ip := range ctx.SourceNodeIPs {
-				ctx.HashToIP[shorthash] = ip
-			}
+			ctx.AddOwnHash(shorthash)
 
 			return ctx, types.SimpleDisplayer(shorthash + " is local")
+		},
+		Verbosity: types.DebugMySQL,
+	}
+
+	// 2023-01-06T06:59:26.527748Z 0 [Note] WSREP: (9509c194, 'tcp://0.0.0.0:4567') turning message relay requesting on, nonlive peers:
+	RegexOwnUUIDFromMessageRelay = LogRegex{
+		Regex:         regexp.MustCompile("turning message relay requesting"),
+		internalRegex: regexp.MustCompile("\\(" + regexNodeHash + ", '" + regexNodeIPMethod + "'\\)"),
+		handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+			r := internalRegex.FindAllStringSubmatch(log, -1)[0]
+
+			hash := r[internalRegex.SubexpIndex(groupNodeHash)]
+			ctx.AddOwnHash(hash)
+
+			return ctx, types.SimpleDisplayer(hash + " is local")
+		},
+		Verbosity: types.DebugMySQL,
+	}
+
+	// 2023-01-06T07:05:34.035959Z 0 [Note] WSREP: (9509c194, 'tcp://0.0.0.0:4567') connection established to 838ebd6d tcp://ip:4567
+	RegexOwnUUIDFromEstablished = LogRegex{
+		Regex:         regexp.MustCompile("connection established to"),
+		internalRegex: RegexOwnUUIDFromMessageRelay.internalRegex,
+		handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+			return RegexOwnUUIDFromMessageRelay.handler(internalRegex, ctx, log)
+		},
+		Verbosity: types.DebugMySQL,
+	}
+
+	// 2023-01-06T07:05:35.693861Z 0 [Note] WSREP: New COMPONENT: primary = yes, bootstrap = no, my_idx = 0, memb_num = 2
+	RegexMyIDXFromComponent = LogRegex{
+		Regex:         regexp.MustCompile("New COMPONENT:"),
+		internalRegex: regexp.MustCompile("New COMPONENT:.*my_idx = " + regexMyIdx),
+		handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+			r := internalRegex.FindAllStringSubmatch(log, -1)[0]
+
+			idx := r[internalRegex.SubexpIndex(groupMyIdx)]
+			ctx.MyIdx = idx
+			return ctx, types.SimpleDisplayer("my_idx=" + idx)
+		},
+		Verbosity: types.DebugMySQL,
+	}
+
+	// 2023-01-06T07:05:35.698869Z 7 [Note] WSREP: New cluster view: global state: 00000000-0000-0000-0000-000000000000:0, view# 10: Primary, number of nodes: 2, my index: 0, protocol version 3
+	RegexMyIDXFromClusterView = LogRegex{
+		Regex:         regexp.MustCompile("New cluster view:"),
+		internalRegex: regexp.MustCompile("New cluster view:.*my index: " + regexMyIdx + ","),
+		handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+			return RegexMyIDXFromComponent.handler(internalRegex, ctx, log)
+		},
+		Verbosity: types.DebugMySQL,
+	}
+
+	RegexOwnNameFromStateExchange = LogRegex{
+		Regex:         regexp.MustCompile("STATE EXCHANGE: got state msg"),
+		internalRegex: regexp.MustCompile("STATE EXCHANGE:.* from " + regexMyIdx + " \\(" + regexNodeName + "\\)"),
+		handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+			fmt.Println(log)
+			r := internalRegex.FindAllStringSubmatch(log, -1)[0]
+
+			idx := r[internalRegex.SubexpIndex(groupMyIdx)]
+			name := r[internalRegex.SubexpIndex(groupNodeName)]
+			if idx != ctx.MyIdx {
+				return ctx, types.SimpleDisplayer("name from unknown idx")
+			}
+			fmt.Println(ctx.HashToNodeName)
+			ctx.AddOwnName(name)
+			fmt.Println(ctx.HashToNodeName)
+			return ctx, types.SimpleDisplayer("local name:" + name)
 		},
 		Verbosity: types.DebugMySQL,
 	}

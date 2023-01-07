@@ -1,13 +1,24 @@
 package types
 
 func DisplayLocalNodeSimplestForm(ctx LogCtx) string {
-	if len(ctx.SourceNodeIPs) > 0 {
-		return DisplayNodeSimplestForm(ctx.SourceNodeIPs[len(ctx.SourceNodeIPs)-1], ctx)
+	if len(ctx.OwnNames) > 0 {
+		return ctx.OwnNames[len(ctx.OwnNames)-1]
+	}
+	if len(ctx.OwnIPs) > 0 {
+		return DisplayNodeSimplestForm(ctx, ctx.OwnIPs[len(ctx.OwnIPs)-1])
+	}
+	if len(ctx.OwnHashes) > 0 {
+		if name, ok := ctx.HashToNodeName[ctx.OwnHashes[0]]; ok {
+			return name
+		}
+		if ip, ok := ctx.HashToIP[ctx.OwnHashes[0]]; ok {
+			return DisplayNodeSimplestForm(ctx, ip)
+		}
 	}
 	return ctx.FilePath
 }
 
-func DisplayNodeSimplestForm(ip string, ctx LogCtx) string {
+func DisplayNodeSimplestForm(ctx LogCtx, ip string) string {
 	if nodename, ok := ctx.IPToNodeName[ip]; ok {
 		return nodename
 	}

@@ -18,13 +18,12 @@ var (
 
 			joiner := r[internalRegex.SubexpIndex(groupNodeName)]
 			donor := r[internalRegex.SubexpIndex(groupNodeName2)]
-			ownNames := ctx.OwnNames()
 
-			if utils.SliceContains(ownNames, joiner) {
+			if utils.SliceContains(ctx.OwnNames, joiner) {
 				ctx.ResyncedFromNode = donor
 				return ctx, types.SimpleDisplayer(donor + utils.Paint(utils.GreenText, " accepted to resync local node"))
 			}
-			if utils.SliceContains(ownNames, donor) {
+			if utils.SliceContains(ctx.OwnNames, donor) {
 				ctx.ResyncingNode = joiner
 				return ctx, types.SimpleDisplayer(utils.Paint(utils.GreenText, "local node accepted to resync ") + joiner)
 			}
@@ -41,7 +40,7 @@ var (
 			r := internalRegex.FindAllStringSubmatch(log, -1)[0]
 
 			joiner := r[internalRegex.SubexpIndex(groupNodeName)]
-			if utils.SliceContains(ctx.OwnNames(), joiner) {
+			if utils.SliceContains(ctx.OwnNames, joiner) {
 
 				return ctx, types.SimpleDisplayer(utils.Paint(utils.YellowText, "cannot find donor"))
 			}
@@ -59,12 +58,11 @@ var (
 
 			donor := r[internalRegex.SubexpIndex(groupNodeName)]
 			joiner := r[internalRegex.SubexpIndex(groupNodeName2)]
-			ownNames := ctx.OwnNames()
-			if utils.SliceContains(ownNames, joiner) {
+			if utils.SliceContains(ctx.OwnNames, joiner) {
 				ctx.ResyncedFromNode = ""
 				return ctx, types.SimpleDisplayer(utils.Paint(utils.GreenText, "finished resyncing from ") + donor)
 			}
-			if utils.SliceContains(ownNames, donor) {
+			if utils.SliceContains(ctx.OwnNames, donor) {
 				ctx.ResyncingNode = ""
 				return ctx, types.SimpleDisplayer(utils.Paint(utils.GreenText, "finished sending SST to ") + joiner)
 			}
@@ -107,7 +105,7 @@ var (
 			node := r[internalRegex.SubexpIndex(groupNodeIP)]
 
 			return ctx, func(ctx types.LogCtx) string {
-				return utils.Paint(utils.YellowText, "SST to ") + types.DisplayNodeSimplestForm(node, ctx)
+				return utils.Paint(utils.YellowText, "SST to ") + types.DisplayNodeSimplestForm(ctx, node)
 			}
 		},
 	}
@@ -136,7 +134,7 @@ var (
 			node := r[internalRegex.SubexpIndex(groupNodeIP)]
 
 			return ctx, func(ctx types.LogCtx) string {
-				return utils.Paint(utils.YellowText, "IST to ") + types.DisplayNodeSimplestForm(node, ctx) + "(seqno:" + seqno + ")"
+				return utils.Paint(utils.YellowText, "IST to ") + types.DisplayNodeSimplestForm(ctx, node) + "(seqno:" + seqno + ")"
 			}
 		},
 	}

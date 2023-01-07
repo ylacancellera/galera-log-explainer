@@ -184,8 +184,8 @@ func headerFilePath(keys []string, ctxs map[string]types.LogCtx) string {
 func headerIP(keys []string, ctxs map[string]types.LogCtx) string {
 	header := "ip\t"
 	for _, node := range keys {
-		if ctx, ok := ctxs[node]; ok && len(ctx.SourceNodeIPs) > 0 {
-			header += ctx.SourceNodeIPs[len(ctx.SourceNodeIPs)-1] + "\t"
+		if ctx, ok := ctxs[node]; ok && len(ctx.OwnIPs) > 0 {
+			header += ctx.OwnIPs[len(ctx.OwnIPs)-1] + "\t"
 		} else {
 			header += " \t"
 		}

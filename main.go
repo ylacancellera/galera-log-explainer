@@ -157,7 +157,9 @@ SCAN:
 		}
 	}
 
+	// If we found anything
 	if len(lt) > 0 {
+		// identify the node with the easiest to read information
 		return types.DisplayLocalNodeSimplestForm(lt[len(lt)-1].Ctx), lt, nil
 	}
 	return filepath.Base(path), lt, nil

@@ -45,7 +45,8 @@ func DisplayColumnar(timeline types.Timeline, verbosity types.Verbosity) {
 	var args []string
 
 	// to hold the current context for each node
-	keys, currentContext, latestContext := initKeysContext(timeline)
+	keys, currentContext := initKeysContext(timeline)
+	latestContext := timeline.GetLatestUpdatedContextsByNodes()
 	lastContext := map[string]types.LogCtx{}
 
 	w := tabwriter.NewWriter(os.Stdout, 8, 8, 3, ' ', tabwriter.AlignRight)
@@ -118,9 +119,8 @@ func DisplayColumnar(timeline types.Timeline, verbosity types.Verbosity) {
 	fmt.Fprintln(w, headerIP(keys, currentContext))
 }
 
-func initKeysContext(timeline types.Timeline) ([]string, map[string]types.LogCtx, map[string]types.LogCtx) {
+func initKeysContext(timeline types.Timeline) ([]string, map[string]types.LogCtx) {
 	currentContext := map[string]types.LogCtx{}
-	latestContext := map[string]types.LogCtx{}
 
 	// keys will be used to access the timeline map with an ordered manner
 	// without this, we would not print on the correct column as the order of a map is guaranteed to be random each time
@@ -129,36 +129,13 @@ func initKeysContext(timeline types.Timeline) ([]string, map[string]types.LogCtx
 		keys = append(keys, node)
 		if len(timeline[node]) > 0 {
 			currentContext[node] = timeline[node][0].Ctx
-			latestContext[node] = timeline[node][len(timeline[node])-1].Ctx
 		} else {
 			// Avoid crashing, but not ideal: we could have a better default Ctx with filepath at least
 			currentContext[node] = types.NewLogCtx()
-			latestContext[node] = types.NewLogCtx()
 		}
 	}
 	sort.Strings(keys)
-	return keys, currentContext, types.MergeContextsInfo(latestContext)
-}
-
-func PrintMetadata(timeline types.Timeline) {
-	ip2hash := make(map[string][]string)
-	ipToHostname := make(map[string]string)
-	for _, nodetl := range timeline {
-
-		lastCtx := nodetl[len(nodetl)-1].Ctx
-		for hash, ip := range lastCtx.HashToIP {
-			ip2hash[ip] = append(ip2hash[ip], hash)
-			h, ok := lastCtx.IPToHostname[ip]
-			if ok {
-				ipToHostname[ip] = h
-			}
-
-		}
-	}
-
-	for ip, hash := range ip2hash {
-		fmt.Println(ip+"("+ipToHostname[ip]+"): ", strings.Join(hash, ", "))
-	}
+	return keys, currentContext
 }
 
 func separator(keys []string) string {

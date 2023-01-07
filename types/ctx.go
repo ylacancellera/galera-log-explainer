@@ -56,3 +56,23 @@ func (ctx *LogCtx) AddOwnIP(ip string) {
 		ctx.IPToNodeName[ip] = name
 	}
 }
+
+func (base *LogCtx) MergeMapsWith(ctxs []LogCtx) {
+	for _, ctx := range ctxs {
+		for hash, ip := range ctx.HashToIP {
+			base.HashToIP[hash] = ip
+		}
+		for hash, nodename := range ctx.HashToNodeName {
+			base.HashToNodeName[hash] = nodename
+		}
+		for ip, hostname := range ctx.IPToHostname {
+			base.IPToHostname[ip] = hostname
+		}
+		for ip, nodename := range ctx.IPToNodeName {
+			base.IPToNodeName[ip] = nodename
+		}
+		for ip, method := range ctx.IPToMethod {
+			base.IPToMethod[ip] = method
+		}
+	}
+}

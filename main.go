@@ -29,9 +29,6 @@ var CLI struct {
 		Since                  *time.Time      `help:"Only list events after this date, you can copy-paste a date from mysql error log"`
 		Until                  *time.Time      `help:"Only list events before this date, you can copy-paste a date from mysql error log"`
 	} `cmd:""`
-	Metadata struct {
-		Paths []string `arg:"" name:"paths" help:"paths of the log to use"`
-	} `cmd:""`
 }
 
 func main() {
@@ -60,11 +57,6 @@ func main() {
 		}
 		timeline := createTimeline(CLI.List.Paths, toCheck)
 		display.DisplayColumnar(timeline, CLI.List.Verbosity)
-
-	case "metadata <paths>":
-		toCheck := append(append(regex.IdentRegexes, regex.StatesRegexes...), regex.ViewsRegexes...)
-		timeline := createTimeline(CLI.Metadata.Paths, toCheck)
-		display.PrintMetadata(timeline)
 
 	default:
 		log.Fatal("Command not known:", ctx.Command())

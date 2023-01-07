@@ -43,34 +43,3 @@ func DisplayNodeSimplestForm(ctx LogCtx, ip string) string {
 	}
 	return ip
 }
-
-func MergeContextsInfo(ctxs map[string]LogCtx) map[string]LogCtx {
-	if len(ctxs) == 1 {
-		return ctxs
-	}
-	//base := ctxs[]
-	//ctxs = ctxs[1:]
-	for i, base := range ctxs {
-		for j, ctx := range ctxs {
-			if i == j {
-				continue
-			}
-			for hash, ip := range ctx.HashToIP {
-				base.HashToIP[hash] = ip
-			}
-			for hash, nodename := range ctx.HashToNodeName {
-				base.HashToNodeName[hash] = nodename
-			}
-			for ip, hostname := range ctx.IPToHostname {
-				base.IPToHostname[ip] = hostname
-			}
-			for ip, nodename := range ctx.IPToNodeName {
-				base.IPToNodeName[ip] = nodename
-			}
-			for ip, method := range ctx.IPToMethod {
-				base.IPToMethod[ip] = method
-			}
-		}
-	}
-	return ctxs
-}

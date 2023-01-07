@@ -62,6 +62,14 @@ func MergeTimeline(t1, t2 LocalTimeline) LocalTimeline {
 	if len(t2) == 0 {
 		return t1
 	}
+
+	// if t2 is an updated version of t1, or t1 an updated of t2, or t1=t2
+	if t1[0].Date.Time.Equal(t2[0].Date.Time) {
+		if t1[len(t1)-1].Date.Time.Before(t2[len(t2)-1].Date.Time) {
+			return t2
+		}
+		return t1
+	}
 	if t1[0].Date.Time.Before(t2[0].Date.Time) {
 		return append(t1, t2...)
 	}

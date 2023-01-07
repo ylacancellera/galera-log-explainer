@@ -1,7 +1,6 @@
 package regex
 
 import (
-	"fmt"
 	"regexp"
 	"strings"
 
@@ -133,7 +132,6 @@ var (
 		Regex:         regexp.MustCompile("STATE EXCHANGE: got state msg"),
 		internalRegex: regexp.MustCompile("STATE EXCHANGE:.* from " + regexMyIdx + " \\(" + regexNodeName + "\\)"),
 		handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			fmt.Println(log)
 			r := internalRegex.FindAllStringSubmatch(log, -1)[0]
 
 			idx := r[internalRegex.SubexpIndex(groupMyIdx)]
@@ -141,9 +139,7 @@ var (
 			if idx != ctx.MyIdx {
 				return ctx, types.SimpleDisplayer("name from unknown idx")
 			}
-			fmt.Println(ctx.HashToNodeName)
 			ctx.AddOwnName(name)
-			fmt.Println(ctx.HashToNodeName)
 			return ctx, types.SimpleDisplayer("local name:" + name)
 		},
 		Verbosity: types.DebugMySQL,

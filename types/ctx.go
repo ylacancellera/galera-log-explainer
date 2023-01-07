@@ -1,9 +1,5 @@
 package types
 
-import (
-	"fmt"
-)
-
 // LogCtx is a context for a given file.
 // It used to keep track of what is going on at each new event.
 type LogCtx struct {
@@ -35,7 +31,6 @@ func (ctx *LogCtx) AddOwnName(name string) {
 	for _, ip := range ctx.OwnIPs {
 		ctx.IPToNodeName[ip] = name
 	}
-	fmt.Println("inside ", ctx.HashToNodeName)
 }
 
 // AddOwnHash propagates a hash into the translation maps

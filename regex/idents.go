@@ -7,7 +7,7 @@ import (
 	"github.com/ylacancellera/galera-log-explainer/types"
 )
 
-var IdentRegexes = []LogRegex{RegexSourceNode, RegexBaseHost, RegexMember, RegexOwnUUID, RegexMyIDXFromComponent, RegexMyIDXFromClusterView, RegexOwnNameFromStateExchange, RegexOwnUUIDFromEstablished, RegexOwnUUIDFromMessageRelay}
+var IdentRegexes = []LogRegex{RegexSourceNode, RegexBaseHost, RegexMember, RegexOwnUUID, RegexMyIDXFromComponent, RegexOwnNameFromStateExchange, RegexOwnUUIDFromEstablished, RegexOwnUUIDFromMessageRelay}
 
 var (
 	// sourceNode is to identify from which node this log was taken
@@ -119,6 +119,8 @@ var (
 	}
 
 	// 2023-01-06T07:05:35.698869Z 7 [Note] WSREP: New cluster view: global state: 00000000-0000-0000-0000-000000000000:0, view# 10: Primary, number of nodes: 2, my index: 0, protocol version 3
+	// WARN: my index seems to always be 0 on this log on certain version. It had broken some nodenames
+	// Curently disabled, not present in identsRegexes slice
 	RegexMyIDXFromClusterView = LogRegex{
 		Regex:         regexp.MustCompile("New cluster view:"),
 		internalRegex: regexp.MustCompile("New cluster view:.*my index: -?" + regexMyIdx + ","),

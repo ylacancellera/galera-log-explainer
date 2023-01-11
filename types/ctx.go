@@ -1,5 +1,7 @@
 package types
 
+import "github.com/ylacancellera/galera-log-explainer/utils"
+
 // LogCtx is a context for a given file.
 // It used to keep track of what is going on at each new event.
 type LogCtx struct {
@@ -22,8 +24,25 @@ func NewLogCtx() LogCtx {
 	return LogCtx{HashToIP: map[string]string{}, IPToHostname: map[string]string{}, IPToMethod: map[string]string{}, IPToNodeName: map[string]string{}, HashToNodeName: map[string]string{}}
 }
 
+func (ctx *LogCtx) OwnHostname() string {
+	for _, ip := range ctx.OwnIPs {
+		if hn, ok := ctx.IPToHostname[ip]; ok {
+			return hn
+		}
+	}
+	for _, hash := range ctx.OwnHashes {
+		if hn, ok := ctx.IPToHostname[ctx.HashToIP[hash]]; ok {
+			return hn
+		}
+	}
+	return ""
+}
+
 // AddOwnName propagates a name into the translation maps using the trusted node's known own hashes and ips
 func (ctx *LogCtx) AddOwnName(name string) {
+	if utils.SliceContains(ctx.OwnNames, name) {
+		return
+	}
 	ctx.OwnNames = append(ctx.OwnNames, name)
 	for _, hash := range ctx.OwnHashes {
 		ctx.HashToNodeName[hash] = name
@@ -35,6 +54,9 @@ func (ctx *LogCtx) AddOwnName(name string) {
 
 // AddOwnHash propagates a hash into the translation maps
 func (ctx *LogCtx) AddOwnHash(hash string) {
+	if utils.SliceContains(ctx.OwnHashes, hash) {
+		return
+	}
 	ctx.OwnHashes = append(ctx.OwnHashes, hash)
 
 	for _, ip := range ctx.OwnIPs {
@@ -47,7 +69,9 @@ func (ctx *LogCtx) AddOwnHash(hash string) {
 
 // AddOwnIP propagates a ip into the translation maps
 func (ctx *LogCtx) AddOwnIP(ip string) {
-
+	if utils.SliceContains(ctx.OwnIPs, ip) {
+		return
+	}
 	ctx.OwnIPs = append(ctx.OwnIPs, ip)
 	for _, hash := range ctx.OwnHashes {
 		ctx.HashToIP[hash] = ip

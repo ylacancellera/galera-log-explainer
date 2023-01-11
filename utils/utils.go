@@ -67,6 +67,15 @@ func SliceContains(s []string, str string) bool {
 	return false
 }
 
+func SliceMergeDeduplicate(s, s2 []string) []string {
+	for _, str := range s2 {
+		if !SliceContains(s, str) {
+			s = append(s, str)
+		}
+	}
+	return s
+}
+
 // StringsReplaceReversed is similar to strings.Replace, but replacing the
 // right-most elements instead of left-most
 func StringsReplaceReversed(s, old, new string, n int) string {

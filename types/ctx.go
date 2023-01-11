@@ -38,6 +38,51 @@ func (ctx *LogCtx) OwnHostname() string {
 	return ""
 }
 
+func (ctx *LogCtx) HashesFromIP(ip string) []string {
+	hashes := []string{}
+	for hash, ip2 := range ctx.HashToIP {
+		if ip == ip2 {
+			hashes = append(hashes, hash)
+		}
+	}
+	return hashes
+}
+
+func (ctx *LogCtx) HashesFromNodeName(nodename string) []string {
+	hashes := []string{}
+	for hash, nodename2 := range ctx.HashToNodeName {
+		if nodename == nodename2 {
+			hashes = append(hashes, hash)
+		}
+	}
+	return hashes
+}
+
+func (ctx *LogCtx) IPsFromNodeName(nodename string) []string {
+	ips := []string{}
+	for ip, nodename2 := range ctx.IPToNodeName {
+		if nodename == nodename2 {
+			ips = append(ips, ip)
+		}
+	}
+	return ips
+}
+
+func (ctx *LogCtx) AllNodeNames() []string {
+	nodenames := ctx.OwnNames
+	for _, nn := range ctx.HashToNodeName {
+		if !utils.SliceContains(nodenames, nn) {
+			nodenames = append(nodenames, nn)
+		}
+	}
+	for _, nn := range ctx.IPToNodeName {
+		if !utils.SliceContains(nodenames, nn) {
+			nodenames = append(nodenames, nn)
+		}
+	}
+	return nodenames
+}
+
 // AddOwnName propagates a name into the translation maps using the trusted node's known own hashes and ips
 func (ctx *LogCtx) AddOwnName(name string) {
 	if utils.SliceContains(ctx.OwnNames, name) {

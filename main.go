@@ -64,7 +64,9 @@ func main() {
 		display.DisplayColumnar(timeline, CLI.List.Verbosity)
 
 	case "whois <search> <paths>":
-		timeline := createTimeline(CLI.Whois.Paths, regex.IdentRegexes)
+
+		toCheck := append(regex.IdentRegexes, regex.SetVerbosity(types.DebugMySQL, regex.ViewsRegexes...)...)
+		timeline := createTimeline(CLI.Whois.Paths, toCheck)
 		ctxs := timeline.GetLatestUpdatedContextsByNodes()
 		s := WhoIs(ctxs, CLI.Whois.Search)
 		fmt.Println(s)

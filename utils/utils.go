@@ -81,3 +81,9 @@ func StringsReplaceReversed(s, old, new string, n int) string {
 	}
 	return s2
 }
+
+func UUIDToShortUUID(uuid string) string {
+	splitted := strings.Split(uuid, "-")
+	return splitted[0] + "-" + splitted[3]
+
+}

@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"log"
 	"os/exec"
 	"path/filepath"
@@ -28,6 +29,10 @@ var CLI struct {
 		SST                    bool            `help:"List Galera synchronization event"`
 		Since                  *time.Time      `help:"Only list events after this date, you can copy-paste a date from mysql error log"`
 		Until                  *time.Time      `help:"Only list events before this date, you can copy-paste a date from mysql error log"`
+	} `cmd:""`
+	Whois struct {
+		Search string   `arg:"" name:"search" help:"the identifier (node name, ip, uuid, hash) to search"`
+		Paths  []string `arg:"" name:"paths" help:"paths of the log to use"`
 	} `cmd:""`
 }
 
@@ -57,6 +62,12 @@ func main() {
 		}
 		timeline := createTimeline(CLI.List.Paths, toCheck)
 		display.DisplayColumnar(timeline, CLI.List.Verbosity)
+
+	case "whois <search> <paths>":
+		timeline := createTimeline(CLI.Whois.Paths, regex.IdentRegexes)
+		ctxs := timeline.GetLatestUpdatedContextsByNodes()
+		s := WhoIs(ctxs, CLI.Whois.Search)
+		fmt.Println(s)
 
 	default:
 		log.Fatal("Command not known:", ctx.Command())

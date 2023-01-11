@@ -53,3 +53,8 @@ var (
 	regexNodeIPMethod  = "(?P<" + groupMethod + ">.+)://" + regexNodeIP + ":[0-9]{1,6}"
 	regexMyIdx         = "(?P<" + groupMyIdx + ">[0-9]{1,2})"
 )
+
+func IsNodeUUID(s string) bool {
+	b, _ := regexp.MatchString(regexNodeHash4Dash, s)
+	return b
+}

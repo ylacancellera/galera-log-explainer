@@ -107,7 +107,7 @@ var (
 	// 2023-01-06T07:05:35.693861Z 0 [Note] WSREP: New COMPONENT: primary = yes, bootstrap = no, my_idx = 0, memb_num = 2
 	RegexMyIDXFromComponent = LogRegex{
 		Regex:         regexp.MustCompile("New COMPONENT:"),
-		internalRegex: regexp.MustCompile("New COMPONENT:.*my_idx = " + regexMyIdx),
+		internalRegex: regexp.MustCompile("New COMPONENT:.*my_idx = -?" + regexMyIdx),
 		handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			r := internalRegex.FindAllStringSubmatch(log, -1)[0]
 
@@ -121,7 +121,7 @@ var (
 	// 2023-01-06T07:05:35.698869Z 7 [Note] WSREP: New cluster view: global state: 00000000-0000-0000-0000-000000000000:0, view# 10: Primary, number of nodes: 2, my index: 0, protocol version 3
 	RegexMyIDXFromClusterView = LogRegex{
 		Regex:         regexp.MustCompile("New cluster view:"),
-		internalRegex: regexp.MustCompile("New cluster view:.*my index: " + regexMyIdx + ","),
+		internalRegex: regexp.MustCompile("New cluster view:.*my index: -?" + regexMyIdx + ","),
 		handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			return RegexMyIDXFromComponent.handler(internalRegex, ctx, log)
 		},

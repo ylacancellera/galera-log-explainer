@@ -2,8 +2,10 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -34,6 +36,15 @@ var CLI struct {
 		Search string   `arg:"" name:"search" help:"the identifier (node name, ip, uuid, hash) to search"`
 		Paths  []string `arg:"" name:"paths" help:"paths of the log to use"`
 	} `cmd:""`
+
+	Sed struct {
+		Paths  []string `arg:"" name:"paths" help:"paths of the log to use"`
+		ByName bool     `required xor:"ByName,ByIP"`
+		ByIP   bool     `required xor:"ByName,ByIP"`
+	} `cmd:"" help:"Use like so:
+	cat node1.log | galera-log-explainer sed --by-name *.log | less
+	galera-log-explainer sed --by-name *.log < node1.log | less
+	"`
 }
 
 func main() {
@@ -68,8 +79,41 @@ func main() {
 		toCheck := append(regex.IdentRegexes, regex.SetVerbosity(types.DebugMySQL, regex.ViewsRegexes...)...)
 		timeline := createTimeline(CLI.Whois.Paths, toCheck)
 		ctxs := timeline.GetLatestUpdatedContextsByNodes()
-		s := WhoIs(ctxs, CLI.Whois.Search)
-		fmt.Println(s)
+		ni := whoIs(ctxs, CLI.Whois.Search)
+
+		json, err := json.MarshalIndent(ni, "", "\t")
+		if err != nil {
+			log.Fatal("Failed to marshall to json: %v", err)
+		}
+		fmt.Println(json)
+
+	case "sed <paths>":
+		toCheck := append(regex.IdentRegexes, regex.SetVerbosity(types.DebugMySQL, regex.ViewsRegexes...)...)
+		timeline := createTimeline(CLI.Sed.Paths, toCheck)
+		ctxs := timeline.GetLatestUpdatedContextsByNodes()
+
+		args := []string{}
+		for key := range ctxs {
+
+			ni := whoIs(ctxs, key)
+
+			switch {
+			case CLI.Sed.ByName:
+				args = append(args, sedByName(ni)...)
+			case CLI.Sed.ByIP:
+				args = append(args, sedByIP(ni)...)
+			}
+
+		}
+
+		cmd := exec.Command("sed", args...)
+		cmd.Stdin = os.Stdin
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		err := cmd.Start()
+		if err != nil {
+			log.Fatal(err)
+		}
 
 	default:
 		log.Fatal("Command not known:", ctx.Command())

@@ -1,8 +1,6 @@
 package main
 
 import (
-	"encoding/json"
-
 	"github.com/ylacancellera/galera-log-explainer/regex"
 	"github.com/ylacancellera/galera-log-explainer/types"
 	"github.com/ylacancellera/galera-log-explainer/utils"
@@ -14,16 +12,6 @@ type NodeInfo struct {
 	NodeNames []string `json:"nodeNames"`
 	Hostname  string   `json:"hostname"`
 	NodeUUIDs []string `json:"nodeUUIDs:"`
-}
-
-func WhoIs(ctxs map[string]types.LogCtx, search string) string {
-
-	ni := whoIs(ctxs, search)
-	json, err := json.MarshalIndent(ni, "", "\t")
-	if err != nil {
-		return ""
-	}
-	return string(json)
 }
 
 func whoIs(ctxs map[string]types.LogCtx, search string) NodeInfo {

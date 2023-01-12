@@ -16,7 +16,10 @@ var (
 		internalRegex: regexp.MustCompile("\\(" + regexNodeHash + ", '.+'\\).+" + regexNodeIPMethod),
 		handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 
-			r := internalRegex.FindAllStringSubmatch(log, -1)[0]
+			r, err := internalRegexSubmatch(internalRegex, log)
+			if err != nil {
+				return ctx, nil
+			}
 
 			ip := r[internalRegex.SubexpIndex(groupNodeIP)]
 			ctx.AddOwnIP(ip)
@@ -33,7 +36,10 @@ var (
 		Regex:         regexp.MustCompile("base_host"),
 		internalRegex: regexp.MustCompile("base_host = " + regexNodeIP),
 		handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			r := internalRegex.FindAllStringSubmatch(log, -1)[0]
+			r, err := internalRegexSubmatch(internalRegex, log)
+			if err != nil {
+				return ctx, nil
+			}
 
 			ip := r[internalRegex.SubexpIndex(groupNodeIP)]
 			ctx.AddOwnIP(ip)
@@ -48,7 +54,10 @@ var (
 		Regex:         regexp.MustCompile("[0-9]: " + regexNodeHash4Dash + ", " + regexNodeName),
 		internalRegex: regexp.MustCompile("[0-9]: " + regexNodeHash4Dash + ", " + regexNodeName),
 		handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			r := internalRegex.FindAllStringSubmatch(log, -1)[0]
+			r, err := internalRegexSubmatch(internalRegex, log)
+			if err != nil {
+				return ctx, nil
+			}
 
 			hash := r[internalRegex.SubexpIndex(groupNodeHash)]
 			nodename := r[internalRegex.SubexpIndex(groupNodeName)]
@@ -66,7 +75,10 @@ var (
 		Regex:         regexp.MustCompile("My UUID"),
 		internalRegex: regexp.MustCompile("My UUID: " + regexNodeHash4Dash),
 		handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			r := internalRegex.FindAllStringSubmatch(log, -1)[0]
+			r, err := internalRegexSubmatch(internalRegex, log)
+			if err != nil {
+				return ctx, nil
+			}
 
 			hash := r[internalRegex.SubexpIndex(groupNodeHash)]
 			splitted := strings.Split(hash, "-")
@@ -84,7 +96,10 @@ var (
 		Regex:         regexp.MustCompile("turning message relay requesting"),
 		internalRegex: regexp.MustCompile("\\(" + regexNodeHash + ", '" + regexNodeIPMethod + "'\\)"),
 		handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			r := internalRegex.FindAllStringSubmatch(log, -1)[0]
+			r, err := internalRegexSubmatch(internalRegex, log)
+			if err != nil {
+				return ctx, nil
+			}
 
 			hash := r[internalRegex.SubexpIndex(groupNodeHash)]
 			ctx.AddOwnHash(hash)
@@ -109,7 +124,10 @@ var (
 		Regex:         regexp.MustCompile("New COMPONENT:"),
 		internalRegex: regexp.MustCompile("New COMPONENT:.*my_idx = -?" + regexMyIdx),
 		handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			r := internalRegex.FindAllStringSubmatch(log, -1)[0]
+			r, err := internalRegexSubmatch(internalRegex, log)
+			if err != nil {
+				return ctx, nil
+			}
 
 			idx := r[internalRegex.SubexpIndex(groupMyIdx)]
 			ctx.MyIdx = idx
@@ -134,7 +152,10 @@ var (
 		Regex:         regexp.MustCompile("STATE EXCHANGE: got state msg"),
 		internalRegex: regexp.MustCompile("STATE EXCHANGE:.* from " + regexMyIdx + " \\(" + regexNodeName + "\\)"),
 		handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			r := internalRegex.FindAllStringSubmatch(log, -1)[0]
+			r, err := internalRegexSubmatch(internalRegex, log)
+			if err != nil {
+				return ctx, nil
+			}
 
 			idx := r[internalRegex.SubexpIndex(groupMyIdx)]
 			name := r[internalRegex.SubexpIndex(groupNodeName)]

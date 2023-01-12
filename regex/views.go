@@ -16,7 +16,10 @@ var (
 		Regex:         regexp.MustCompile("connection established"),
 		internalRegex: regexp.MustCompile("established to " + regexNodeHash + " " + regexNodeIPMethod),
 		handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			r := internalRegex.FindAllStringSubmatch(log, -1)[0]
+			r, err := internalRegexSubmatch(internalRegex, log)
+			if err != nil {
+				return ctx, nil
+			}
 
 			ip := r[internalRegex.SubexpIndex(groupNodeIP)]
 			ctx.HashToIP[r[internalRegex.SubexpIndex(groupNodeHash)]] = ip
@@ -32,7 +35,10 @@ var (
 		Regex:         regexp.MustCompile("declaring .* stable"),
 		internalRegex: regexp.MustCompile("declaring " + regexNodeHash + " at " + regexNodeIPMethod),
 		handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			r := internalRegex.FindAllStringSubmatch(log, -1)[0]
+			r, err := internalRegexSubmatch(internalRegex, log)
+			if err != nil {
+				return ctx, nil
+			}
 
 			ip := r[internalRegex.SubexpIndex(groupNodeIP)]
 			ctx.HashToIP[r[internalRegex.SubexpIndex(groupNodeHash)]] = ip
@@ -47,7 +53,10 @@ var (
 		Regex:         regexp.MustCompile("forgetting"),
 		internalRegex: regexp.MustCompile("forgetting" + regexNodeHash + "\\(" + regexNodeIPMethod),
 		handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			r := internalRegex.FindAllStringSubmatch(log, -1)[0]
+			r, err := internalRegexSubmatch(internalRegex, log)
+			if err != nil {
+				return ctx, nil
+			}
 
 			ip := r[internalRegex.SubexpIndex(groupNodeIP)]
 			return ctx, func(ctx types.LogCtx) string {
@@ -61,7 +70,10 @@ var (
 		Regex:         regexp.MustCompile("New COMPONENT:"),
 		internalRegex: regexp.MustCompile("New COMPONENT: primary = (?P<primary>.+), bootstrap = (?P<bootstrap>.*), my_idx = .*, memb_num = (?P<memb_num>[0-9]{1,2})"),
 		handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			r := internalRegex.FindAllStringSubmatch(log, -1)[0]
+			r, err := internalRegexSubmatch(internalRegex, log)
+			if err != nil {
+				return ctx, nil
+			}
 
 			primary := r[internalRegex.SubexpIndex("primary")] == "yes"
 			memb_num := r[internalRegex.SubexpIndex("memb_num")]
@@ -86,7 +98,10 @@ var (
 		Regex:         regexp.MustCompile("suspecting node"),
 		internalRegex: regexp.MustCompile("suspecting node: " + regexNodeHash),
 		handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			r := internalRegex.FindAllStringSubmatch(log, -1)[0]
+			r, err := internalRegexSubmatch(internalRegex, log)
+			if err != nil {
+				return ctx, nil
+			}
 
 			hash := r[internalRegex.SubexpIndex(groupNodeHash)]
 			ip, ok := ctx.HashToIP[hash]
@@ -104,8 +119,10 @@ var (
 		Regex:         regexp.MustCompile("remote endpoint.*changed identity"),
 		internalRegex: regexp.MustCompile("remote endpoint " + regexNodeIPMethod + " changed identity " + regexNodeHash + " -> " + strings.Replace(regexNodeHash, groupNodeHash, groupNodeHash+"2", -1)),
 		handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-
-			r := internalRegex.FindAllStringSubmatch(log, -1)[0]
+			r, err := internalRegexSubmatch(internalRegex, log)
+			if err != nil {
+				return ctx, nil
+			}
 
 			hash := r[internalRegex.SubexpIndex(groupNodeHash)]
 			ip, ok := ctx.HashToIP[hash]

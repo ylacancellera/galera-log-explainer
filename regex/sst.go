@@ -14,7 +14,10 @@ var (
 		Regex:         regexp.MustCompile("requested state transfer.*Selected"),
 		internalRegex: regexp.MustCompile("Member .* \\(" + regexNodeName + "\\) requested state transfer.*Selected .* \\(" + regexNodeName2 + "\\)\\("),
 		handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			r := internalRegex.FindAllStringSubmatch(log, -1)[0]
+			r, err := internalRegexSubmatch(internalRegex, log)
+			if err != nil {
+				return ctx, nil
+			}
 
 			joiner := r[internalRegex.SubexpIndex(groupNodeName)]
 			donor := r[internalRegex.SubexpIndex(groupNodeName2)]
@@ -37,7 +40,10 @@ var (
 		Regex:         regexp.MustCompile("requested state transfer.*Resource temporarily unavailable"),
 		internalRegex: regexp.MustCompile("Member .* \\(" + regexNodeName + "\\) requested state transfer"),
 		handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			r := internalRegex.FindAllStringSubmatch(log, -1)[0]
+			r, err := internalRegexSubmatch(internalRegex, log)
+			if err != nil {
+				return ctx, nil
+			}
 
 			joiner := r[internalRegex.SubexpIndex(groupNodeName)]
 			if utils.SliceContains(ctx.OwnNames, joiner) {
@@ -54,7 +60,10 @@ var (
 		Regex:         regexp.MustCompile("State transfer to.*complete"),
 		internalRegex: regexp.MustCompile("\\(" + regexNodeName + "\\): State transfer.*\\(" + regexNodeName2 + "\\) complete"),
 		handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			r := internalRegex.FindAllStringSubmatch(log, -1)[0]
+			r, err := internalRegexSubmatch(internalRegex, log)
+			if err != nil {
+				return ctx, nil
+			}
 
 			donor := r[internalRegex.SubexpIndex(groupNodeName)]
 			joiner := r[internalRegex.SubexpIndex(groupNodeName2)]
@@ -100,7 +109,11 @@ var (
 		Regex:         regexp.MustCompile("Streaming the backup to"),
 		internalRegex: regexp.MustCompile("Streaming the backup to joiner at " + regexNodeIP),
 		handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			r := internalRegex.FindAllStringSubmatch(log, -1)[0]
+			r, err := internalRegexSubmatch(internalRegex, log)
+			if err != nil {
+				return ctx, nil
+			}
+
 			ctx.State = "DONOR"
 			node := r[internalRegex.SubexpIndex(groupNodeIP)]
 
@@ -116,7 +129,10 @@ var (
 		// the UUID here is not from a node, it's a cluster state UUID, this is only used to ensure it's correctly parsed
 		internalRegex: regexp.MustCompile("IST received: " + regexNodeHash4Dash + ":" + regexSeqno),
 		handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			r := internalRegex.FindAllStringSubmatch(log, -1)[0]
+			r, err := internalRegexSubmatch(internalRegex, log)
+			if err != nil {
+				return ctx, nil
+			}
 
 			seqno := r[internalRegex.SubexpIndex(groupSeqno)]
 			return ctx, types.SimpleDisplayer(utils.Paint(utils.GreenText, "IST received") + "(seqno:" + seqno + ")")
@@ -128,7 +144,10 @@ var (
 
 		internalRegex: regexp.MustCompile("IST sender starting to serve " + regexNodeIPMethod + " sending [0-9]+-" + regexSeqno),
 		handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			r := internalRegex.FindAllStringSubmatch(log, -1)[0]
+			r, err := internalRegexSubmatch(internalRegex, log)
+			if err != nil {
+				return ctx, nil
+			}
 
 			seqno := r[internalRegex.SubexpIndex(groupSeqno)]
 			node := r[internalRegex.SubexpIndex(groupNodeIP)]

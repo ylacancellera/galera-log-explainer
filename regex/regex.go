@@ -1,6 +1,8 @@
 package regex
 
 import (
+	"errors"
+	"fmt"
 	"regexp"
 	"strings"
 
@@ -20,6 +22,14 @@ type LogRegex struct {
 
 func (l *LogRegex) Handle(ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 	return l.handler(l.internalRegex, ctx, log)
+}
+
+func internalRegexSubmatch(regex *regexp.Regexp, log string) ([]string, error) {
+	slice := regex.FindStringSubmatch(log)
+	if len(slice) == 0 {
+		return nil, errors.New(fmt.Sprintf("Could not find submatch from log \"%s\" using pattern \"%s\"", log, regex.String()))
+	}
+	return slice, nil
 }
 
 // SetVerbosity accepts any LogRegex

@@ -13,9 +13,8 @@ type LogRegex struct {
 	Regex         *regexp.Regexp
 	internalRegex *regexp.Regexp
 
-	// Taking into arguments the current context and log line, returning an updated context and a handler to get the msg to display
-	// The message is not a string, but a function taking a context to return a string
-	// this is to be able to display information using the latest updated context containing most hash/ip/nodenames information
+	// Taking into arguments the current context and log line, returning an updated context and a closure to get the msg to display
+	// Why a closure: to later inject an updated context instead of the current partial context, to ensure hash/ip/nodenames are known
 	handler   func(*regexp.Regexp, types.LogCtx, string) (types.LogCtx, types.LogDisplayer)
 	Verbosity types.Verbosity
 }

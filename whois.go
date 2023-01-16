@@ -31,7 +31,6 @@ func whoIs(ctxs map[string]types.LogCtx, search string) NodeInfo {
 			ni.NodeUUIDs = ctx.OwnHashes
 			ni.IPs = ctx.OwnIPs
 			ni.Hostname = ctx.OwnHostname()
-			return ni
 		}
 
 		if nodename, ok := ctx.HashToNodeName[search]; ok {
@@ -48,7 +47,7 @@ func whoIs(ctxs map[string]types.LogCtx, search string) NodeInfo {
 			ips = utils.SliceMergeDeduplicate(ips, []string{search})
 
 		} else if utils.SliceContains(ctx.AllNodeNames(), search) {
-			nodenames = []string{search}
+			nodenames = utils.SliceMergeDeduplicate(nodenames, []string{search})
 		}
 
 		for _, nodename := range nodenames {

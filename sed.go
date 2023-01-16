@@ -24,7 +24,7 @@ func sedSliceWith(elems []string, replace string) []string {
 	args := []string{}
 	for _, elem := range elems {
 		args = append(args, "-e")
-		args = append(args, "s/"+elem+"/"+replace+"/")
+		args = append(args, "s/"+elem+"/"+replace+"/g")
 	}
 	return args
 }

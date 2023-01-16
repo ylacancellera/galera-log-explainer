@@ -106,11 +106,21 @@ func main() {
 
 		}
 
+		fstat, err := os.Stdin.Stat()
+		if err != nil {
+			log.Fatal(err)
+		}
+		if fstat.Size() == 0 {
+			fmt.Println("No files found in stdin, returning the sed command instead:")
+			fmt.Println("sed", strings.Join(args, " "))
+			return
+		}
+
 		cmd := exec.Command("sed", args...)
 		cmd.Stdin = os.Stdin
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
-		err := cmd.Start()
+		err = cmd.Start()
 		if err != nil {
 			log.Fatal(err)
 		}

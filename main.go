@@ -39,7 +39,7 @@ var CLI struct {
 
 	Sed struct {
 		Paths  []string `arg:"" name:"paths" help:"paths of the log to use"`
-		ByName bool     `required xor:"ByName,ByIP"`
+		ByName bool     `required xor:"ByName,ByIP" default:"true"`
 		ByIP   bool     `required xor:"ByName,ByIP"`
 	} `cmd:"" help:"Use like so:
 	cat node1.log | galera-log-explainer sed --by-name *.log | less
@@ -85,7 +85,7 @@ func main() {
 		if err != nil {
 			log.Fatal("Failed to marshall to json: %v", err)
 		}
-		fmt.Println(json)
+		fmt.Println(string(json))
 
 	case "sed <paths>":
 		toCheck := append(regex.IdentRegexes, regex.SetVerbosity(types.DebugMySQL, regex.ViewsRegexes...)...)

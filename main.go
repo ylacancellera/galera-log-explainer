@@ -38,11 +38,11 @@ var CLI struct {
 	} `cmd:""`
 
 	Sed struct {
-		Paths  []string `arg:"" name:"paths" help:"paths of the log to use"`
-		ByName bool     `required xor:"ByName,ByIP" default:"true"`
-		ByIP   bool     `required xor:"ByName,ByIP"`
-	} `cmd:"" help:"Use like so:
-	cat node1.log | galera-log-explainer sed --by-name *.log | less
+		Paths []string `arg:"" name:"paths" help:"paths of the log to use"`
+		ByIP  bool     `help:"Replace by IP instead of name"`
+	} `cmd:"" help:"sed translates a log, replacing node UUID, IPS, names with either name or IP everywhere. By default it replaces by name.
+	Use like so:
+	cat node1.log | galera-log-explainer sed *.log | less
 	galera-log-explainer sed --by-name *.log < node1.log | less
 	"`
 }
@@ -98,10 +98,10 @@ func main() {
 			ni := whoIs(ctxs, key)
 
 			switch {
-			case CLI.Sed.ByName:
-				args = append(args, sedByName(ni)...)
 			case CLI.Sed.ByIP:
 				args = append(args, sedByIP(ni)...)
+			default:
+				args = append(args, sedByName(ni)...)
 			}
 
 		}

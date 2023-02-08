@@ -1,5 +1,7 @@
 package types
 
+import "strings"
+
 // DisplayLocalNodeSimplestForm is used to identify a node timeline.
 // This has impacts on how logs are identified in the global timelines,
 // It will also impacts how logs are merged if we have multiple logs per nodes
@@ -28,13 +30,13 @@ func DisplayLocalNodeSimplestForm(ctx LogCtx) string {
 // In order of preference: wsrep_node_name (or galera "node" name), hostname, ip
 func DisplayNodeSimplestForm(ctx LogCtx, ip string) string {
 	if nodename, ok := ctx.IPToNodeName[ip]; ok {
-		return nodename
+		return ShortNodeName(nodename)
 	}
 
 	for hash, storedip := range ctx.HashToIP {
 		if ip == storedip {
 			if nodename, ok := ctx.HashToNodeName[hash]; ok {
-				return nodename
+				return ShortNodeName(nodename)
 			}
 		}
 	}
@@ -42,4 +44,15 @@ func DisplayNodeSimplestForm(ctx LogCtx, ip string) string {
 		return hostname
 	}
 	return ip
+}
+
+// ShortNodeName helps reducing the node name when it is the default value (node hostname)
+// It only keeps the top-level domain
+func ShortNodeName(s string) string {
+	// short enough
+	if len(s) < 10 {
+		return s
+	}
+	before, _, _ := strings.Cut(s, ".")
+	return before
 }

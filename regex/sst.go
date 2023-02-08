@@ -21,17 +21,18 @@ var (
 
 			joiner := r[internalRegex.SubexpIndex(groupNodeName)]
 			donor := r[internalRegex.SubexpIndex(groupNodeName2)]
-
+			displayJoiner := types.ShortNodeName(joiner)
+			displayDonor := types.ShortNodeName(donor)
 			if utils.SliceContains(ctx.OwnNames, joiner) {
 				ctx.ResyncedFromNode = donor
-				return ctx, types.SimpleDisplayer(donor + utils.Paint(utils.GreenText, " accepted to resync local node"))
+				return ctx, types.SimpleDisplayer(displayDonor + utils.Paint(utils.GreenText, " accepted to resync local node"))
 			}
 			if utils.SliceContains(ctx.OwnNames, donor) {
 				ctx.ResyncingNode = joiner
-				return ctx, types.SimpleDisplayer(utils.Paint(utils.GreenText, "local node accepted to resync ") + joiner)
+				return ctx, types.SimpleDisplayer(utils.Paint(utils.GreenText, "local node accepted to resync ") + displayJoiner)
 			}
 
-			return ctx, types.SimpleDisplayer(donor + utils.Paint(utils.GreenText, " accepted to resync ") + joiner)
+			return ctx, types.SimpleDisplayer(displayDonor + utils.Paint(utils.GreenText, " accepted to resync ") + displayJoiner)
 		},
 		Verbosity: types.Detailed,
 	}
@@ -56,6 +57,7 @@ var (
 		Verbosity: types.Detailed,
 	}
 
+	// 2022-12-24T03:28:22.444125Z 0 [Note] WSREP: 0.0 (name): State transfer to 2.0 (name2) complete.
 	RegexSSTComplete = LogRegex{
 		Regex:         regexp.MustCompile("State transfer to.*complete"),
 		internalRegex: regexp.MustCompile("\\(" + regexNodeName + "\\): State transfer.*\\(" + regexNodeName2 + "\\) complete"),
@@ -67,16 +69,23 @@ var (
 
 			donor := r[internalRegex.SubexpIndex(groupNodeName)]
 			joiner := r[internalRegex.SubexpIndex(groupNodeName2)]
+			displayJoiner := types.ShortNodeName(joiner)
+			displayDonor := types.ShortNodeName(donor)
 			if utils.SliceContains(ctx.OwnNames, joiner) {
 				ctx.ResyncedFromNode = ""
-				return ctx, types.SimpleDisplayer(utils.Paint(utils.GreenText, "finished resyncing from ") + donor)
+				return ctx, types.SimpleDisplayer(utils.Paint(utils.GreenText, "finished resyncing from ") + displayDonor)
 			}
 			if utils.SliceContains(ctx.OwnNames, donor) {
 				ctx.ResyncingNode = ""
-				return ctx, types.SimpleDisplayer(utils.Paint(utils.GreenText, "finished sending SST to ") + joiner)
+				return ctx, types.SimpleDisplayer(utils.Paint(utils.GreenText, "finished sending SST to ") + displayJoiner)
 			}
 
-			return ctx, types.SimpleDisplayer(joiner + utils.Paint(utils.GreenText, " finished resyncing from ") + donor)
+			// some weird ones:
+			// 2022-12-24T03:27:41.966118Z 0 [Note] WSREP: 0.0 (name): State transfer to -1.-1 (left the group) complete.
+			if displayJoiner == "left the group" {
+				return ctx, types.SimpleDisplayer(displayDonor + utils.Paint(utils.RedText, " synced ??(node left)"))
+			}
+			return ctx, types.SimpleDisplayer(displayDonor + utils.Paint(utils.GreenText, " synced ") + displayJoiner)
 		},
 	}
 

@@ -25,10 +25,11 @@ var CLI struct {
 		Paths                  []string        `arg:"" name:"paths" help:"paths of the log to use"`
 		Verbosity              types.Verbosity `default:"1" help:"0: Info, 1: Detailed, 2: DebugMySQL (every mysql info the tool used), 3: Debug (internal tool debug)"`
 		SkipStateColoredColumn bool            `help:"avoid having the placeholder colored with mysql state, which is guessed using several regexes that will not be displayed"`
-		States                 bool            `help:"List WSREP state changes(SYNCED, DONOR, ...)"`
-		Views                  bool            `help:"List how Galera views evolved (who joined, who left)"`
-		Events                 bool            `help:"List generic mysql events (start, shutdown, assertion failures)"`
-		SST                    bool            `help:"List Galera synchronization event"`
+		All                    bool            `help:"List everything" group:"default" xor:"default,specific" required`
+		States                 bool            `help:"List WSREP state changes(SYNCED, DONOR, ...)" group:"specific" xor:"default,specific" required`
+		Views                  bool            `help:"List how Galera views evolved (who joined, who left)" group:"specific" xor:"default,specific" required`
+		Events                 bool            `help:"List generic mysql events (start, shutdown, assertion failures)" group:"specific" xor:"default,specific" required`
+		SST                    bool            `help:"List Galera synchronization event" group:"specific" xor:"default,specific" required`
 		Since                  *time.Time      `help:"Only list events after this date, you can copy-paste a date from mysql error log"`
 		Until                  *time.Time      `help:"Only list events before this date, you can copy-paste a date from mysql error log"`
 	} `cmd:""`
@@ -55,18 +56,18 @@ func main() {
 	case "list <paths>":
 		// IdentRegexes is always needed: we would not be able to identify the node where the file come from
 		toCheck := regex.IdentRegexes
-		if CLI.List.States {
+		if CLI.List.States || CLI.List.All {
 			toCheck = append(toCheck, regex.StatesRegexes...)
 		} else if !CLI.List.SkipStateColoredColumn {
 			toCheck = append(toCheck, regex.SetVerbosity(types.DebugMySQL, regex.StatesRegexes...)...)
 		}
-		if CLI.List.Views {
+		if CLI.List.Views || CLI.List.All {
 			toCheck = append(toCheck, regex.ViewsRegexes...)
 		}
-		if CLI.List.SST {
+		if CLI.List.SST || CLI.List.All {
 			toCheck = append(toCheck, regex.SSTRegexes...)
 		}
-		if CLI.List.Events {
+		if CLI.List.Events || CLI.List.All {
 			toCheck = append(toCheck, regex.EventsRegexes...)
 		} else if !CLI.List.SkipStateColoredColumn {
 			toCheck = append(toCheck, regex.SetVerbosity(types.DebugMySQL, regex.EventsRegexes...)...)

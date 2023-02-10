@@ -16,7 +16,7 @@ var (
 
 		splitted := strings.Split(log, " -> ")
 		ctx.State = splitted[1]
-		log = utils.ColorForState(splitted[0], splitted[0]) + " -> " + utils.ColorForState(splitted[1], splitted[1])
+		log = utils.PaintForState(splitted[0], splitted[0]) + " -> " + utils.PaintForState(splitted[1], splitted[1])
 
 		return ctx, types.SimpleDisplayer(log)
 	}

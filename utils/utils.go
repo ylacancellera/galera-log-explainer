@@ -30,6 +30,12 @@ const (
 	BrightWhiteText         = "\x1b[1;37m"
 )
 
+var colorsToTextColor = map[string]Color{
+	"yellow": YellowText,
+	"green":  GreenText,
+	"red":    RedText,
+}
+
 var SkipColor bool
 
 // Color implements the Stringer interface for interoperability with string
@@ -44,17 +50,26 @@ func Paint(color Color, value string) string {
 	return fmt.Sprintf("%v%v%v", color, value, ResetText)
 }
 
-func ColorForState(text, state string) string {
+func PaintForState(text, state string) string {
 
+	c := ColorForState(state)
+	if c != "" {
+		return Paint(colorsToTextColor[c], text)
+	}
+
+	return text
+}
+
+func ColorForState(state string) string {
 	switch state {
 	case "DONOR", "JOINER", "DESYNCED":
-		return Paint(YellowText, text)
+		return "yellow"
 	case "SYNCED":
-		return Paint(GreenText, text)
+		return "green"
 	case "CLOSED", "NON-PRIMARY":
-		return Paint(RedText, text)
+		return "red"
 	default:
-		return text
+		return ""
 	}
 }
 

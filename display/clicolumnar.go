@@ -74,7 +74,7 @@ func DisplayColumnar(timeline types.Timeline, verbosity types.Verbosity) {
 			if !utils.SliceContains(nextNodes, node) {
 				// if there are no events, having a | is needed for tabwriter
 				// A few color can also help highlighting how the node is doing
-				args = append(args, utils.ColorForState("| ", currentContext[node].State))
+				args = append(args, utils.PaintForState("| ", currentContext[node].State))
 				continue
 			}
 			nl := timeline[node][0]
@@ -90,7 +90,7 @@ func DisplayColumnar(timeline types.Timeline, verbosity types.Verbosity) {
 				args = append(args, nl.Msg(latestContext[node]))
 				displayedValue++
 			} else {
-				args = append(args, utils.ColorForState("| ", nl.Ctx.State))
+				args = append(args, utils.PaintForState("| ", nl.Ctx.State))
 			}
 		}
 

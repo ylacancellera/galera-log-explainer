@@ -23,6 +23,7 @@ var CLI struct {
 	NoColor bool
 	List    struct {
 		Paths                  []string        `arg:"" name:"paths" help:"paths of the log to use"`
+		Format                 string          `help:"Types of output format" enum:"cli,svg" default:"cli"`
 		Verbosity              types.Verbosity `default:"1" help:"0: Info, 1: Detailed, 2: DebugMySQL (every mysql info the tool used), 3: Debug (internal tool debug)"`
 		SkipStateColoredColumn bool            `help:"avoid having the placeholder colored with mysql state, which is guessed using several regexes that will not be displayed"`
 		All                    bool            `help:"List everything" group:"default" xor:"default,specific" required`
@@ -72,8 +73,16 @@ func main() {
 		} else if !CLI.List.SkipStateColoredColumn {
 			toCheck = append(toCheck, regex.SetVerbosity(types.DebugMySQL, regex.EventsRegexes...)...)
 		}
-		timeline := createTimeline(CLI.List.Paths, toCheck)
-		display.DisplayColumnar(timeline, CLI.List.Verbosity)
+		switch CLI.List.Format {
+		case "cli":
+			timeline := createTimeline(CLI.List.Paths, toCheck)
+			display.DisplayColumnar(timeline, CLI.List.Verbosity)
+			break
+		case "svg":
+			utils.SkipColor = true
+			timeline := createTimeline(CLI.List.Paths, toCheck)
+			display.Svg(timeline, CLI.List.Verbosity)
+		}
 
 	case "whois <search> <paths>":
 

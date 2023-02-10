@@ -10,6 +10,10 @@ import (
 
 var StatesRegexes = []LogRegex{RegexShift, RegexRestoredState}
 
+func init() {
+	StatesRegexes = setType(types.StatesRegexType, StatesRegexes...)
+}
+
 var (
 	shiftFunc = func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 		log = internalRegex.FindString(log)

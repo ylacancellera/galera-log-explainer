@@ -20,7 +20,8 @@ type LogInfo struct {
 	Date      Date
 	Msg       LogDisplayer // what to show
 	Log       string       // the raw log
-	Ctx       LogCtx       // the context is copied for each logInfo, so that it is easier to handle some info (current state), and this is also interesting to check how it evolved
+	RegexType RegexType
+	Ctx       LogCtx // the context is copied for each logInfo, so that it is easier to handle some info (current state), and this is also interesting to check how it evolved
 	Verbosity Verbosity
 }
 

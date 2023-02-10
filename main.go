@@ -221,6 +221,7 @@ SCAN:
 				Log:       line,
 				Msg:       displayer,
 				Ctx:       ctx,
+				RegexType: regex.Type,
 				Verbosity: regex.Verbosity,
 			})
 		}

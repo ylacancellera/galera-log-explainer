@@ -10,6 +10,10 @@ import (
 
 var EventsRegexes = []LogRegex{RegexShutdownComplete, RegexShutdownSignal, RegexTerminated, RegexWsrepLoad, RegexWsrepRecovery, RegexUnknownConf, RegexBindAddressAlreadyUsed, RegexAssertionFailure}
 
+func init() {
+	EventsRegexes = setType(types.EventsRegexType, EventsRegexes...)
+}
+
 var (
 	RegexShutdownComplete = LogRegex{
 		Regex: regexp.MustCompile("mysqld: Shutdown complete"),

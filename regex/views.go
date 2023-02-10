@@ -10,6 +10,10 @@ import (
 
 var ViewsRegexes = []LogRegex{RegexNodeEstablished, RegexNodeJoined, RegexNodeLeft, RegexNodeSuspect, RegexNodeChangedIdentity, RegexWsrepUnsafeBootstrap, RegexWsrepConsistenctyCompromised, RegexWsrepNonPrimary, RegexNewComponent}
 
+func init() {
+	ViewsRegexes = setType(types.ViewsRegexType, ViewsRegexes...)
+}
+
 // "galera views" regexes
 var (
 	RegexNodeEstablished = LogRegex{

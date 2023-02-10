@@ -12,6 +12,7 @@ import (
 type LogRegex struct {
 	Regex         *regexp.Regexp
 	internalRegex *regexp.Regexp
+	Type          types.RegexType
 
 	// Taking into arguments the current context and log line, returning an updated context and a closure to get the msg to display
 	// Why a closure: to later inject an updated context instead of the current partial context, to ensure hash/ip/nodenames are known
@@ -31,15 +32,24 @@ func internalRegexSubmatch(regex *regexp.Regexp, log string) ([]string, error) {
 	return slice, nil
 }
 
+func setType(t types.RegexType, regexes ...LogRegex) []LogRegex {
+	rs := regexes[:0]
+	for _, regex := range regexes {
+		regex.Type = t
+		rs = append(rs, regex)
+	}
+	return rs
+}
+
 // SetVerbosity accepts any LogRegex
 // Some can be useful to construct context, but we can choose not to display them
 func SetVerbosity(verbosity types.Verbosity, regexes ...LogRegex) []LogRegex {
-	silenced := []LogRegex{}
+	rs := regexes[:0]
 	for _, regex := range regexes {
 		regex.Verbosity = verbosity
-		silenced = append(silenced, regex)
+		rs = append(rs, regex)
 	}
-	return silenced
+	return rs
 }
 
 // general buidling block wsrep regexes

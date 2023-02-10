@@ -9,6 +9,10 @@ import (
 
 var IdentRegexes = []LogRegex{RegexSourceNode, RegexBaseHost, RegexMember, RegexOwnUUID, RegexMyIDXFromComponent, RegexOwnNameFromStateExchange, RegexOwnUUIDFromEstablished, RegexOwnUUIDFromMessageRelay}
 
+func init() {
+	IdentRegexes = setType(types.IdentRegexType, IdentRegexes...)
+}
+
 var (
 	// sourceNode is to identify from which node this log was taken
 	RegexSourceNode = LogRegex{

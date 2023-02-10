@@ -9,6 +9,10 @@ import (
 
 var SSTRegexes = []LogRegex{RegexSSTRequestSuccess, RegexSSTResourceUnavailable, RegexSSTComplete, RegexSSTError, RegexISTReceived, RegexSSTCancellation, RegexSSTProceeding, RegexISTSender, RegexSSTStreamingTo}
 
+func init() {
+	SSTRegexes = setType(types.SSTRegexType, SSTRegexes...)
+}
+
 var (
 	RegexSSTRequestSuccess = LogRegex{
 		Regex:         regexp.MustCompile("requested state transfer.*Selected"),

@@ -26,11 +26,11 @@ var CLI struct {
 		Format                 string          `help:"Types of output format" enum:"cli,svg" default:"cli"`
 		Verbosity              types.Verbosity `default:"1" help:"0: Info, 1: Detailed, 2: DebugMySQL (every mysql info the tool used), 3: Debug (internal tool debug)"`
 		SkipStateColoredColumn bool            `help:"avoid having the placeholder colored with mysql state, which is guessed using several regexes that will not be displayed"`
-		All                    bool            `help:"List everything" group:"default" xor:"default,specific" required`
-		States                 bool            `help:"List WSREP state changes(SYNCED, DONOR, ...)" group:"specific" xor:"default,specific" required`
-		Views                  bool            `help:"List how Galera views evolved (who joined, who left)" group:"specific" xor:"default,specific" required`
-		Events                 bool            `help:"List generic mysql events (start, shutdown, assertion failures)" group:"specific" xor:"default,specific" required`
-		SST                    bool            `help:"List Galera synchronization event" group:"specific" xor:"default,specific" required`
+		All                    bool            `help:"List everything" xor:"states,views,events,sst"`
+		States                 bool            `help:"List WSREP state changes(SYNCED, DONOR, ...)" xor:"states"`
+		Views                  bool            `help:"List how Galera views evolved (who joined, who left)" xor:"views"`
+		Events                 bool            `help:"List generic mysql events (start, shutdown, assertion failures)" xor:"events"`
+		SST                    bool            `help:"List Galera synchronization event" xor:"sst"`
 		Since                  *time.Time      `help:"Only list events after this date, you can copy-paste a date from mysql error log"`
 		Until                  *time.Time      `help:"Only list events before this date, you can copy-paste a date from mysql error log"`
 	} `cmd:""`

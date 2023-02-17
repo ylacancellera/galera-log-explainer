@@ -65,6 +65,11 @@ var (
 
 			hash := r[internalRegex.SubexpIndex(groupNodeHash)]
 			nodename := r[internalRegex.SubexpIndex(groupNodeName)]
+
+			// nodenames are truncated after 32 characters ...
+			if len(nodename) == 31 {
+				return ctx, nil
+			}
 			splitted := strings.Split(hash, "-")
 			shorthash := splitted[0] + "-" + splitted[3]
 			ctx.HashToNodeName[shorthash] = nodename

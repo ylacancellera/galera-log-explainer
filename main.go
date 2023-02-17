@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -98,39 +97,7 @@ func main() {
 		fmt.Println(string(json))
 
 	case "sed <paths>":
-		toCheck := append(regex.IdentRegexes, regex.SetVerbosity(types.DebugMySQL, regex.ViewsRegexes...)...)
-		timeline := createTimeline(CLI.Sed.Paths, toCheck)
-		ctxs := timeline.GetLatestUpdatedContextsByNodes()
-
-		args := []string{}
-		for key := range ctxs {
-
-			ni := whoIs(ctxs, key)
-
-			switch {
-			case CLI.Sed.ByIP:
-				args = append(args, sedByIP(ni)...)
-			default:
-				args = append(args, sedByName(ni)...)
-			}
-
-		}
-
-		fstat, err := os.Stdin.Stat()
-		if err != nil {
-			log.Fatal(err)
-		}
-		if fstat.Size() == 0 {
-			fmt.Println("No files found in stdin, returning the sed command instead:")
-			fmt.Println("sed", strings.Join(args, " "))
-			return
-		}
-
-		cmd := exec.Command("sed", args...)
-		cmd.Stdin = os.Stdin
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		err = cmd.Start()
+		err := sedHandler()
 		if err != nil {
 			log.Fatal(err)
 		}

@@ -1,7 +1,9 @@
 package display
 
 import (
+	"fmt"
 	"os"
+	"strings"
 
 	svg "github.com/ajstarks/svgo"
 	"github.com/ylacancellera/galera-log-explainer/types"
@@ -15,9 +17,10 @@ const (
 
 	rectY     = 100
 	rectX     = 300
-	rectstyle = "stroke:grey; fill:white; stroke-width:1"
-	roundRY   = 10
-	roundRX   = 10
+	rectstyle = "style=\"stroke:grey; fill:white; stroke-width:1; cursor:crosshair\" "
+
+	roundRY = 10
+	roundRX = 10
 
 	stepY = rectY + 50
 	stepX = rectX + 50
@@ -40,6 +43,7 @@ var (
 
 type svgnode struct {
 	x, y      int
+	id        uint64
 	prevNode  *svgnode
 	nodeident string
 	li        *types.LogInfo
@@ -50,14 +54,27 @@ func (n *svgnode) draw(canvas *svg.SVG) {
 
 	canvas.Text(timestampX, n.y+int(rectY/2), n.li.Date.DisplayTime)
 
-	if n.prevNode != nil {
-		x, y := lineStartPointFromRectPos(n.x, n.y)
-		prevx, prevy := lineStartPointFromRectPos(n.prevNode.x, n.prevNode.y)
-		canvas.Line(x, y, prevx, prevy, linestyle)
-	}
-	canvas.Roundrect(n.x, n.y, rectX, rectY, roundRX, roundRY, rectstyle)
-	y := n.y + textSpacingY
+	canvas.Roundrect(n.x, n.y, rectX, rectY, roundRX, roundRY, n.extras())
+	y := n.y + (2 * textSpacingY)
+	canvas.Text(n.x+textSpacingX, y, "type: "+string(n.li.RegexType))
+
+	y += (2 * textSpacingY)
 	canvas.Text(n.x+textSpacingX, y, n.li.Msg(n.latestCtx))
+
+	y += (2 * textSpacingY)
+	canvas.Text(n.x+textSpacingX, y, "click for details")
+}
+
+func (n *svgnode) extras() string {
+	return strings.Join([]string{rectstyle, n.onclick(), n.dynamicMetadatas()}, " ")
+}
+
+func (n *svgnode) dynamicMetadatas() string {
+	return fmt.Sprintf("id=\"%d\"", n.id)
+}
+
+func (n *svgnode) onclick() string {
+	return fmt.Sprintf("onclick=\"scale(%d)\"", n.id)
 }
 
 func lineStartPointFromRectPos(x, y int) (int, int) {
@@ -74,6 +91,25 @@ func Svg(timeline types.Timeline, verbosity types.Verbosity) {
 	canvas := svg.New(os.Stdout)
 	canvas.Start(width, height)
 
+	canvas.Script("application/javascript", `
+
+function scale(id){
+	var elem = document.getElementById(id);
+	let add = 20;
+	var height = elem.getAttribute("height");
+	elem.setAttribute("height", parseInt(height)+add);
+	while (true) {
+		id++
+		var elem = document.getElementById(id);
+		if (elem == null) {
+			return
+		}
+		var y = elem.getAttribute("y");
+		elem.setAttribute("y", parseInt(y)+add);
+	}
+}
+`)
+
 	latestCtxs := timeline.GetLatestUpdatedContextsByNodes()
 
 	relativeX := map[string]int{}
@@ -88,15 +124,18 @@ func Svg(timeline types.Timeline, verbosity types.Verbosity) {
 	}
 
 	y := initY
+	var id uint64
 	for nextNodes := iterateNode(timeline); len(nextNodes) != 0; nextNodes = iterateNode(timeline) {
 		for _, node := range nextNodes {
 
 			nl := &timeline[node][0]
 			if verbosity > nl.Verbosity && nl.Msg != nil {
-				n := &svgnode{x: relativeX[node], y: y, li: nl, prevNode: curSvgnodes[node], nodeident: node, latestCtx: latestCtxs[node]}
+				n := &svgnode{id: id, x: relativeX[node], y: y, li: nl, prevNode: curSvgnodes[node], nodeident: node, latestCtx: latestCtxs[node]}
+				id++
+
 				n.draw(canvas)
 
-				y += stepY
+				y += rectY
 				curSvgnodes[node] = n
 			}
 

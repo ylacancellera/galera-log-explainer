@@ -63,6 +63,10 @@ func MergeTimeline(t1, t2 LocalTimeline) LocalTimeline {
 	// t1: --O----O----
 	// t2: ----O----O--
 	if endt1.After(startt2) {
+		// t1: --O----O----
+		// t2: ----OO--OO--
+		//>t : --O----OOO-- won't try to get things between t1.end and t2.start
+		// we assume they're identical, they're supposed to be from the same server
 		return append(t1, CutTimelineAt(t2, endt1)...)
 	}
 

@@ -54,6 +54,7 @@ var (
 
 	//        0: 015702fc-32f5-11ed-a4ca-267f97316394, node-1
 	//	      1: 08dd5580-32f7-11ed-a9eb-af5e3d01519e, garb
+	// TODO: store indexes to later search for them using SST infos and STATES EXCHANGES logs. Could be unsafe if galera do not log indexes in time though
 	RegexMember = LogRegex{
 		Regex:         regexp.MustCompile("[0-9]: " + regexNodeHash4Dash + ", " + regexNodeName),
 		internalRegex: regexp.MustCompile("[0-9]: " + regexNodeHash4Dash + ", " + regexNodeName),

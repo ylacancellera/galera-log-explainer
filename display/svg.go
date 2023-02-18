@@ -54,23 +54,29 @@ func (n *svgnode) draw(canvas *svg.SVG) {
 
 	canvas.Text(timestampX, n.y+int(rectY/2), n.li.Date.DisplayTime)
 
-	canvas.Roundrect(n.x, n.y, rectX, rectY, roundRX, roundRY, n.extras())
-	y := n.y + (2 * textSpacingY)
-	canvas.Text(n.x+textSpacingX, y, "type: "+string(n.li.RegexType))
+	canvas.Group(n.groupID(), fmt.Sprintf("transform=\"translate(%d,%d)\"", n.x, n.y))
+	canvas.Roundrect(0, 0, rectX, rectY, roundRX, roundRY, n.extras())
+	y := (2 * textSpacingY)
+	canvas.Text(textSpacingX, y, "type: "+string(n.li.RegexType))
 
 	y += (2 * textSpacingY)
-	canvas.Text(n.x+textSpacingX, y, n.li.Msg(n.latestCtx))
+	canvas.Text(textSpacingX, y, n.li.Msg(n.latestCtx))
 
 	y += (2 * textSpacingY)
-	canvas.Text(n.x+textSpacingX, y, "click for details")
+	canvas.Text(textSpacingX, y, "click for details")
+	canvas.Gend()
 }
 
 func (n *svgnode) extras() string {
-	return strings.Join([]string{rectstyle, n.onclick(), n.dynamicMetadatas()}, " ")
+	return strings.Join([]string{rectstyle, n.onclick(), n.rectID()}, " ")
 }
 
-func (n *svgnode) dynamicMetadatas() string {
-	return fmt.Sprintf("id=\"%d\"", n.id)
+func (n *svgnode) groupID() string {
+	return fmt.Sprintf("id=\"group%d\"", n.id)
+}
+
+func (n *svgnode) rectID() string {
+	return fmt.Sprintf("id=\"rect%d\"", n.id)
 }
 
 func (n *svgnode) onclick() string {
@@ -94,19 +100,32 @@ func Svg(timeline types.Timeline, verbosity types.Verbosity) {
 	canvas.Script("application/javascript", `
 
 function scale(id){
-	var elem = document.getElementById(id);
 	let add = 20;
+	var elem = document.getElementById("rect"+id);
 	var height = elem.getAttribute("height");
 	elem.setAttribute("height", parseInt(height)+add);
+
 	while (true) {
 		id++
-		var elem = document.getElementById(id);
+		var elem = document.getElementById("group"+id);
 		if (elem == null) {
 			return
 		}
-		var y = elem.getAttribute("y");
-		elem.setAttribute("y", parseInt(y)+add);
+		groupMoveY(id, add)
 	}
+}
+
+function groupMoveY(id, diff){
+	var elem = document.getElementById("group"+id);
+	console.log(elem);
+	var xforms = elem.getAttribute("transform");
+	var parts  = /translate\(\s*([^\s,)]+)[ ,]([^\s,)]+)/.exec(xforms);
+	var firstX = parts[1], firstY = parts[2];
+
+	var newY = parseInt(firstY) + parseInt(diff)
+
+	elem.setAttribute("transform", "translate(" + firstX + "," + newY +")");
+	console.log(elem);
 }
 `)
 

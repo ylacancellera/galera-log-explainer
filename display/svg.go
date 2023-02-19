@@ -15,9 +15,10 @@ const (
 	initY = 100
 	initX = 280
 
-	rectY     = 100
-	rectX     = 300
-	rectstyle = "style=\"stroke:grey; fill:white; stroke-width:1; cursor:crosshair\" "
+	rectY       = 70
+	rectX       = 300
+	rectExpandY = 30
+	rectstyle   = "style=\"stroke:grey; fill:white; stroke-width:1; cursor:crosshair\" "
 
 	roundRY = 10
 	roundRX = 10
@@ -25,8 +26,11 @@ const (
 	stepY = rectY + 50
 	stepX = rectX + 50
 
-	textSpacingX = 10
-	textSpacingY = 15
+	textSpacingX       = 10
+	textSpacingY       = 15
+	textSizePerChar    = 5
+	textMainStyle      = " style=\"font-size:18px; font-weight:bold\""
+	textRegexTypeStyle = " style=\"font-size:15px; fill:grey\""
 
 	timestampX = 5
 
@@ -54,33 +58,36 @@ func (n *svgnode) draw(canvas *svg.SVG) {
 
 	canvas.Text(timestampX, n.y+int(rectY/2), n.li.Date.DisplayTime)
 
-	canvas.Group(n.groupID(), fmt.Sprintf("transform=\"translate(%d,%d)\"", n.x, n.y))
-	canvas.Roundrect(0, 0, rectX, rectY, roundRX, roundRY, n.extras())
-	y := (2 * textSpacingY)
-	canvas.Text(textSpacingX, y, "type: "+string(n.li.RegexType))
+	canvas.Group(n.typeID("group"), fmt.Sprintf("transform=\"translate(%d,%d)\"", n.x, n.y))
+	canvas.Roundrect(0, 0, rectX, rectY, roundRX, roundRY, n.extras(rectstyle, n.onclick(), n.typeID("rect"), "data-expanded=\"no\""))
+	canvas.Line(0, 16, rectX, 16, linestyle)
 
-	y += (2 * textSpacingY)
-	canvas.Text(textSpacingX, y, n.li.Msg(n.latestCtx))
+	n.text(canvas, string(n.li.RegexType), 14, n.extras(textRegexTypeStyle, n.onclick()))
 
-	y += (2 * textSpacingY)
-	canvas.Text(textSpacingX, y, "click for details")
+	n.text(canvas, n.li.Msg(n.latestCtx), 40, n.extras(textMainStyle, n.onclick()))
+	n.text(canvas, n.li.Log, 65, n.extras("visibility=\"hidden\"", n.typeID("detail")))
+
 	canvas.Gend()
 }
 
-func (n *svgnode) extras() string {
-	return strings.Join([]string{rectstyle, n.onclick(), n.rectID()}, " ")
+func (n *svgnode) text(canvas *svg.SVG, s string, y int, extras ...string) {
+	canvas.Text(n.centerText(rectX, s), y, s, extras...)
 }
 
-func (n *svgnode) groupID() string {
-	return fmt.Sprintf("id=\"group%d\"", n.id)
+func (n *svgnode) centerText(width int, s string) int {
+	return (width / 2) - (len(s)*textSizePerChar + 10)
 }
 
-func (n *svgnode) rectID() string {
-	return fmt.Sprintf("id=\"rect%d\"", n.id)
+func (n *svgnode) extras(s ...string) string {
+	return strings.Join(s, " ")
+}
+
+func (n *svgnode) typeID(t string) string {
+	return fmt.Sprintf("id=\"%s%d\"", t, n.id)
 }
 
 func (n *svgnode) onclick() string {
-	return fmt.Sprintf("onclick=\"scale(%d)\"", n.id)
+	return fmt.Sprintf("onclick=\"expandBy(%d, %d)\"", n.id, rectExpandY)
 }
 
 func lineStartPointFromRectPos(x, y int) (int, int) {
@@ -99,11 +106,21 @@ func Svg(timeline types.Timeline, verbosity types.Verbosity) {
 
 	canvas.Script("application/javascript", `
 
-function scale(id){
-	let add = 20;
+function expandBy(id, diff){
+	diff = parseInt(diff)
 	var elem = document.getElementById("rect"+id);
+	var expanded = elem.getAttribute("data-expanded");
+	if (expanded == "yes") {
+		diff = -diff;
+		elem.setAttribute("data-expanded", "no");
+		detailsHide(id)
+	} else {
+		elem.setAttribute("data-expanded", "yes");
+		detailsShow(id)
+	}
+
 	var height = elem.getAttribute("height");
-	elem.setAttribute("height", parseInt(height)+add);
+	elem.setAttribute("height", parseInt(height)+diff);
 
 	while (true) {
 		id++
@@ -111,13 +128,12 @@ function scale(id){
 		if (elem == null) {
 			return
 		}
-		groupMoveY(id, add)
+		groupMoveY(id, diff)
 	}
 }
 
 function groupMoveY(id, diff){
 	var elem = document.getElementById("group"+id);
-	console.log(elem);
 	var xforms = elem.getAttribute("transform");
 	var parts  = /translate\(\s*([^\s,)]+)[ ,]([^\s,)]+)/.exec(xforms);
 	var firstX = parts[1], firstY = parts[2];
@@ -125,7 +141,16 @@ function groupMoveY(id, diff){
 	var newY = parseInt(firstY) + parseInt(diff)
 
 	elem.setAttribute("transform", "translate(" + firstX + "," + newY +")");
-	console.log(elem);
+}
+
+function detailsHide(id) {
+	var elem = document.getElementById("detail"+id);
+	elem.setAttribute("visibility", "hidden");
+}
+
+function detailsShow(id) {
+	var elem = document.getElementById("detail"+id);
+	elem.setAttribute("visibility", "visible");
 }
 `)
 

@@ -2,8 +2,6 @@ package main
 
 import (
 	"bufio"
-	"encoding/json"
-	"fmt"
 	"log"
 	"os/exec"
 	"path/filepath"
@@ -12,7 +10,6 @@ import (
 
 	"github.com/alecthomas/kong"
 	"github.com/pkg/errors"
-	"github.com/ylacancellera/galera-log-explainer/display"
 	"github.com/ylacancellera/galera-log-explainer/regex"
 	"github.com/ylacancellera/galera-log-explainer/types"
 	"github.com/ylacancellera/galera-log-explainer/utils"
@@ -20,98 +17,36 @@ import (
 
 var CLI struct {
 	NoColor bool
-	List    struct {
-		Paths                  []string        `arg:"" name:"paths" help:"paths of the log to use"`
-		Format                 string          `help:"Types of output format" enum:"cli,svg" default:"cli"`
-		Verbosity              types.Verbosity `default:"1" help:"0: Info, 1: Detailed, 2: DebugMySQL (every mysql info the tool used), 3: Debug (internal tool debug)"`
-		SkipStateColoredColumn bool            `help:"avoid having the placeholder colored with mysql state, which is guessed using several regexes that will not be displayed"`
-		All                    bool            `help:"List everything" xor:"states,views,events,sst"`
-		States                 bool            `help:"List WSREP state changes(SYNCED, DONOR, ...)" xor:"states"`
-		Views                  bool            `help:"List how Galera views evolved (who joined, who left)" xor:"views"`
-		Events                 bool            `help:"List generic mysql events (start, shutdown, assertion failures)" xor:"events"`
-		SST                    bool            `help:"List Galera synchronization event" xor:"sst"`
-		Since                  *time.Time      `help:"Only list events after this date, you can copy-paste a date from mysql error log"`
-		Until                  *time.Time      `help:"Only list events before this date, you can copy-paste a date from mysql error log"`
-	} `cmd:""`
-	Whois struct {
-		Search string   `arg:"" name:"search" help:"the identifier (node name, ip, uuid, hash) to search"`
-		Paths  []string `arg:"" name:"paths" help:"paths of the log to use"`
-	} `cmd:""`
+	Since   *time.Time `help:"Only list events after this date, you can copy-paste a date from mysql error log"`
+	Until   *time.Time `help:"Only list events before this date, you can copy-paste a date from mysql error log"`
 
-	Sed struct {
-		Paths []string `arg:"" name:"paths" help:"paths of the log to use"`
-		ByIP  bool     `help:"Replace by IP instead of name"`
-	} `cmd:"" help:"sed translates a log, replacing node UUID, IPS, names with either name or IP everywhere. By default it replaces by name.
-	Use like so:
-	cat node1.log | galera-log-explainer sed *.log | less
-	galera-log-explainer sed --by-name *.log < node1.log | less
-	"`
+	List  list  `cmd:""`
+	Whois whois `cmd:""`
+	Sed   sed   `cmd:""`
 }
 
 func main() {
-	ctx := kong.Parse(&CLI)
+	ctx := kong.Parse(&CLI,
+		kong.Name("galera-log-explainer"),
+		kong.Description("An utility to transform Galera logs in a readable version"),
+		kong.UsageOnError(),
+	)
 
 	utils.SkipColor = CLI.NoColor
-	switch ctx.Command() {
-	case "list <paths>":
-		// IdentRegexes is always needed: we would not be able to identify the node where the file come from
-		toCheck := regex.IdentRegexes
-		if CLI.List.States || CLI.List.All {
-			toCheck = append(toCheck, regex.StatesRegexes...)
-		} else if !CLI.List.SkipStateColoredColumn {
-			toCheck = append(toCheck, regex.SetVerbosity(types.DebugMySQL, regex.StatesRegexes...)...)
-		}
-		if CLI.List.Views || CLI.List.All {
-			toCheck = append(toCheck, regex.ViewsRegexes...)
-		}
-		if CLI.List.SST || CLI.List.All {
-			toCheck = append(toCheck, regex.SSTRegexes...)
-		}
-		if CLI.List.Events || CLI.List.All {
-			toCheck = append(toCheck, regex.EventsRegexes...)
-		} else if !CLI.List.SkipStateColoredColumn {
-			toCheck = append(toCheck, regex.SetVerbosity(types.DebugMySQL, regex.EventsRegexes...)...)
-		}
-		switch CLI.List.Format {
-		case "cli":
-			timeline := createTimeline(CLI.List.Paths, toCheck)
-			display.DisplayColumnar(timeline, CLI.List.Verbosity)
-			break
-		case "svg":
-			utils.SkipColor = true
-			timeline := createTimeline(CLI.List.Paths, toCheck)
-			display.Svg(timeline, CLI.List.Verbosity)
-		}
-
-	case "whois <search> <paths>":
-
-		toCheck := append(regex.IdentRegexes, regex.SetVerbosity(types.DebugMySQL, regex.ViewsRegexes...)...)
-		timeline := createTimeline(CLI.Whois.Paths, toCheck)
-		ctxs := timeline.GetLatestUpdatedContextsByNodes()
-		ni := whoIs(ctxs, CLI.Whois.Search)
-
-		json, err := json.MarshalIndent(ni, "", "\t")
-		if err != nil {
-			log.Fatal("Failed to marshall to json: %v", err)
-		}
-		fmt.Println(string(json))
-
-	case "sed <paths>":
-		err := sedHandler()
-		if err != nil {
-			log.Fatal(err)
-		}
-
-	default:
-		log.Fatal("Command not known:", ctx.Command())
-	}
+	err := ctx.Run()
+	ctx.FatalIfErrorf(err)
 }
 
-func createTimeline(paths []string, toCheck []regex.LogRegex) types.Timeline {
+// timelineFromPaths takes every path, search them using a list of regexes
+// and organize them in a timeline that will be ready to aggregate or read
+func timelineFromPaths(paths []string, toCheck []regex.LogRegex, since, until *time.Time) types.Timeline {
 	timeline := make(types.Timeline)
 
 	for _, path := range paths {
-		node, localTimeline, err := search(path, toCheck...)
+
+		extr := newExtractor(path, toCheck, since, until)
+
+		node, localTimeline, err := extr.search()
 		if err != nil {
 			log.Println(err)
 		}
@@ -124,80 +59,115 @@ func createTimeline(paths []string, toCheck []regex.LogRegex) types.Timeline {
 	return timeline
 }
 
-// search is the main function to search what we want in a file
-func search(path string, regexes ...regex.LogRegex) (string, types.LocalTimeline, error) {
+type extractor struct {
+	regexes      []regex.LogRegex
+	path         string
+	since, until *time.Time
+}
 
-	// A first pass is done, with every regexes we want compiled in a single one.
+func newExtractor(path string, toCheck []regex.LogRegex, since, until *time.Time) extractor {
+	return extractor{regexes: toCheck, path: path, since: since, until: until}
+}
+
+func (e *extractor) grepArgument() string {
+
 	regexToSendSlice := []string{}
-	for _, regex := range regexes {
+	for _, regex := range e.regexes {
 		regexToSendSlice = append(regexToSendSlice, regex.Regex.String())
 	}
 	var grepRegex string
-	if CLI.List.Since != nil || CLI.List.Until != nil {
-		grepRegex += "(" + regex.BetweenDateRegex(CLI.List.Since, CLI.List.Until) + "|" + regex.NoDatesRegex() + ").*"
+	if e.since != nil || e.until != nil {
+		grepRegex += "(" + regex.BetweenDateRegex(e.since, e.until) + "|" + regex.NoDatesRegex() + ").*"
 	}
-	grepRegex += "(" + strings.Join(regexToSendSlice, "|") + ")"
+	return "(" + strings.Join(regexToSendSlice, "|") + ")"
+}
+
+// search is the main function to search what we want in a file
+func (e *extractor) search() (string, types.LocalTimeline, error) {
+
+	// A first pass is done, with every regexes we want compiled in a single one.
+	grepRegex := e.grepArgument()
 
 	// Regular grep is actually used
 	// There are no great alternatives, even less as golang libraries. grep itself do not have great alternatives: they are less performant for common use-cases, or are not easily portable, or are costlier to execute.
 	// grep is everywhere, grep is good enough, it even enable to use the stdout pipe.
 	// The usual bottleneck with grep is that it is single-threaded, but we actually benefit from a sequential scan here as we will rely on the log order. Being sequential also ensure this program is light enough to run without too much impacts
-	cmd := exec.Command("grep", "-P", grepRegex, path)
+	cmd := exec.Command("grep", "-P", grepRegex, e.path)
 	out, _ := cmd.StdoutPipe()
 	defer out.Close()
 	err := cmd.Start()
 	if err != nil {
-		return "", nil, errors.Wrapf(err, "failed to search in %s", path)
+		return "", nil, errors.Wrapf(err, "failed to search in %s", e.path)
 	}
 
 	// grep treatment
 	s := bufio.NewScanner(out)
-	var (
-		line         string
-		displayer    types.LogDisplayer
-		recentEnough bool
-	)
-	ctx := types.NewLogCtx()
-	ctx.FilePath = filepath.Base(path)
-	lt := []types.LogInfo{}
 
-	// Scan for each grep results
-SCAN:
-	for s.Scan() {
-		line = s.Text()
-		date := types.NewDate(regex.SearchDateFromLog(line))
-
-		// If it's recentEnough, it means we already validated a log: every next logs necessarily happened later
-		// this is useful because not every logs have a date attached, and some without date are very useful
-		if CLI.List.Since != nil && !recentEnough && CLI.List.Since.After(date.Time) {
-			continue
-		}
-		if CLI.List.Until != nil && CLI.List.Until.Before(date.Time) {
-			break SCAN
-		}
-		recentEnough = true
-
-		// We have to find again what regex worked to get this log line
-		for _, regex := range regexes {
-			if !regex.Regex.MatchString(line) {
-				continue
-			}
-			ctx, displayer = regex.Handle(ctx, line)
-			lt = append(lt, types.LogInfo{
-				Date:      date,
-				Log:       line,
-				Msg:       displayer,
-				Ctx:       ctx,
-				RegexType: regex.Type,
-				Verbosity: regex.Verbosity,
-			})
-		}
-	}
+	lt, err := e.iterateOnResults(s)
 
 	// If we found anything
 	if len(lt) > 0 {
 		// identify the node with the easiest to read information
 		return types.DisplayLocalNodeSimplestForm(lt[len(lt)-1].Ctx), lt, nil
 	}
-	return filepath.Base(path), lt, nil
+	return filepath.Base(e.path), lt, nil
+}
+
+func (e *extractor) iterateOnResults(s *bufio.Scanner) ([]types.LogInfo, error) {
+
+	var (
+		line         string
+		li           types.LogInfo
+		lt           []types.LogInfo
+		recentEnough bool
+		err          error
+	)
+	ctx := types.NewLogCtx()
+	ctx.FilePath = filepath.Base(e.path)
+
+	for s.Scan() {
+		line = s.Text()
+
+		date := types.NewDate(regex.SearchDateFromLog(line))
+
+		// If it's recentEnough, it means we already validated a log: every next logs necessarily happened later
+		// this is useful because not every logs have a date attached, and some without date are very useful
+		if !recentEnough && e.since != nil && e.since.After(date.Time) {
+			continue
+		}
+		if e.until != nil && e.until.Before(date.Time) {
+			return lt, nil
+		}
+		recentEnough = true
+
+		ctx, li, err = e.infoAndContextFromLine(ctx, line, date)
+		if err != nil {
+			return nil, err // even though we could actually tolerate errors
+		}
+		lt = append(lt, li)
+
+	}
+	return lt, nil
+}
+
+func (e *extractor) infoAndContextFromLine(ctx types.LogCtx, log string, date types.Date) (types.LogCtx, types.LogInfo, error) {
+
+	// We have to find again what regex worked to get this log line
+	for _, regex := range e.regexes {
+		if !regex.Regex.MatchString(log) {
+			continue
+		}
+		updatedCtx, displayer := regex.Handle(ctx, log)
+		li := types.LogInfo{
+			Date:      date,
+			Log:       log,
+			Msg:       displayer,
+			Ctx:       updatedCtx,
+			RegexType: regex.Type,
+			Verbosity: regex.Verbosity,
+		}
+		return updatedCtx, li, nil
+	}
+
+	return types.LogCtx{}, types.LogInfo{}, errors.Errorf("Could not find regex again: %s", log)
 }

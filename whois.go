@@ -1,21 +1,43 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
+
 	"github.com/ylacancellera/galera-log-explainer/regex"
 	"github.com/ylacancellera/galera-log-explainer/types"
 	"github.com/ylacancellera/galera-log-explainer/utils"
 )
 
-type NodeInfo struct {
-	Input     string   `json:"input"`
-	IPs       []string `json:"IPs"`
-	NodeNames []string `json:"nodeNames"`
-	Hostname  string   `json:"hostname"`
-	NodeUUIDs []string `json:"nodeUUIDs:"`
+type whois struct {
+	Search string   `arg:"" name:"search" help:"the identifier (node name, ip, uuid, hash) to search"`
+	Paths  []string `arg:"" name:"paths" help:"paths of the log to use"`
 }
 
-func whoIs(ctxs map[string]types.LogCtx, search string) NodeInfo {
-	ni := NodeInfo{Input: search}
+func (w *whois) Help() string {
+	return `Take any type of info pasted from error logs and find out about it.
+It will list known node name(s), IP(s), hostname(s), and other known node's UUIDs. 
+`
+}
+
+func (w *whois) Run() error {
+
+	toCheck := append(regex.IdentRegexes, regex.SetVerbosity(types.DebugMySQL, regex.ViewsRegexes...)...)
+	timeline := timelineFromPaths(CLI.Whois.Paths, toCheck, CLI.Since, CLI.Until)
+	ctxs := timeline.GetLatestUpdatedContextsByNodes()
+
+	ni := whoIs(ctxs, CLI.Whois.Search)
+
+	json, err := json.MarshalIndent(ni, "", "\t")
+	if err != nil {
+		return err
+	}
+	fmt.Println(string(json))
+	return nil
+}
+
+func whoIs(ctxs map[string]types.LogCtx, search string) types.NodeInfo {
+	ni := types.NodeInfo{Input: search}
 	if regex.IsNodeUUID(search) {
 		search = utils.UUIDToShortUUID(search)
 	}

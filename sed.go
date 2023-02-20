@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -10,9 +11,22 @@ import (
 	"github.com/ylacancellera/galera-log-explainer/types"
 )
 
-func sedHandler() error {
+type sed struct {
+	Paths []string `arg:"" name:"paths" help:"paths of the log to use"`
+	ByIP  bool     `help:"Replace by IP instead of name"`
+}
+
+func (s *sed) Help() string {
+	return `sed translates a log, replacing node UUID, IPS, names with either name or IP everywhere. By default it replaces by name.
+
+Use like so:
+	cat node1.log | galera-log-explainer sed *.log | less
+	galera-log-explainer sed --by-name *.log < node1.log | less`
+}
+
+func (s *sed) Run() error {
 	toCheck := append(regex.IdentRegexes, regex.SetVerbosity(types.DebugMySQL, regex.ViewsRegexes...)...)
-	timeline := createTimeline(CLI.Sed.Paths, toCheck)
+	timeline := timelineFromPaths(CLI.Sed.Paths, toCheck, CLI.Since, CLI.Until)
 	ctxs := timeline.GetLatestUpdatedContextsByNodes()
 
 	args := []string{}
@@ -34,6 +48,9 @@ func sedHandler() error {
 		}
 
 	}
+	if len(args) == 0 {
+		return errors.New("Could not find informations to replace")
+	}
 
 	fstat, err := os.Stdin.Stat()
 	if err != nil {
@@ -52,7 +69,7 @@ func sedHandler() error {
 	return cmd.Start()
 }
 
-func sedByName(ni NodeInfo) []string {
+func sedByName(ni types.NodeInfo) []string {
 	if len(ni.NodeNames) == 0 {
 		return nil
 	}
@@ -62,7 +79,7 @@ func sedByName(ni NodeInfo) []string {
 	return args
 }
 
-func sedByIP(ni NodeInfo) []string {
+func sedByIP(ni types.NodeInfo) []string {
 	if len(ni.IPs) == 0 {
 		return nil
 	}

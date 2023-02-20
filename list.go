@@ -36,10 +36,10 @@ func (l *list) Run() error {
 
 	switch CLI.List.Format {
 	case "cli":
-		display.DisplayColumnar(timeline, CLI.List.Verbosity)
+		display.TimelineCLI(timeline, CLI.List.Verbosity)
 		break
 	case "svg":
-		display.Svg(timeline, CLI.List.Verbosity)
+		display.TimelineSVG(timeline, CLI.List.Verbosity)
 	}
 
 	return nil

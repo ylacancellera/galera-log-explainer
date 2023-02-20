@@ -94,7 +94,7 @@ func lineStartPointFromRectPos(x, y int) (int, int) {
 	return int(x + (rectX / 2)), y + rectY
 }
 
-func Svg(timeline types.Timeline, verbosity types.Verbosity) {
+func TimelineSVG(timeline types.Timeline, verbosity types.Verbosity) {
 
 	width := 3000
 	height := initY

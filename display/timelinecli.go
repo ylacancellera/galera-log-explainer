@@ -13,9 +13,9 @@ import (
 	"github.com/ylacancellera/galera-log-explainer/utils"
 )
 
-// DisplayColumnar is the main function to print
+// TimelineCLI print a timeline to the terminal using tabulated format
 // It will print header and footers, and dequeue the timeline chronologically
-func DisplayColumnar(timeline types.Timeline, verbosity types.Verbosity) {
+func TimelineCLI(timeline types.Timeline, verbosity types.Verbosity) {
 	var args []string
 
 	// to hold the current context for each node

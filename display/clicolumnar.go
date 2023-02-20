@@ -3,41 +3,15 @@ package display
 import (
 	"fmt"
 	"log"
-	"math"
 	"os"
 	"sort"
 	"strings"
-	"time"
 
 	// regular tabwriter do not work with color, this is a forked versions that ignores color special characters
 	"github.com/Ladicle/tabwriter"
 	"github.com/ylacancellera/galera-log-explainer/types"
 	"github.com/ylacancellera/galera-log-explainer/utils"
 )
-
-// iterateNode is used to search the source node(s) that contains the next chronological events
-// it returns a slice in case 2 nodes have their next event precisely at the same time, which
-// happens a lot on some versions
-func iterateNode(timeline types.Timeline) []string {
-	var (
-		nextDate  time.Time
-		nextNodes []string
-	)
-	nextDate = time.Unix(math.MaxInt32, 0)
-	for node := range timeline {
-		if len(timeline[node]) == 0 {
-			continue
-		}
-		curDate := timeline[node][0].Date.Time
-		if curDate.Before(nextDate) {
-			nextDate = curDate
-			nextNodes = []string{node}
-		} else if curDate.Equal(nextDate) {
-			nextNodes = append(nextNodes, node)
-		}
-	}
-	return nextNodes
-}
 
 // DisplayColumnar is the main function to print
 // It will print header and footers, and dequeue the timeline chronologically

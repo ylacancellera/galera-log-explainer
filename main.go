@@ -113,6 +113,13 @@ func (e *extractor) search() (string, types.LocalTimeline, error) {
 	return filepath.Base(e.path), lt, nil
 }
 
+func (e *extractor) sanitizeLine(s string) string {
+	if len(s) > 0 && s[0] == '\t' {
+		return s[1:]
+	}
+	return s
+}
+
 func (e *extractor) iterateOnResults(s *bufio.Scanner) ([]types.LogInfo, error) {
 
 	var (
@@ -126,7 +133,7 @@ func (e *extractor) iterateOnResults(s *bufio.Scanner) ([]types.LogInfo, error) 
 	ctx.FilePath = filepath.Base(e.path)
 
 	for s.Scan() {
-		line = s.Text()
+		line = e.sanitizeLine(s.Text())
 
 		date := types.NewDate(regex.SearchDateFromLog(line))
 

@@ -28,7 +28,7 @@ func MergeTimeline(t1, t2 LocalTimeline) LocalTimeline {
 		return MergeTimeline(t2, t1)
 	}
 
-	endt1 := t1[len(t2)-1].Date.Time
+	endt1 := t1[len(t1)-1].Date.Time
 	endt2 := t2[len(t2)-1].Date.Time
 
 	// if t2 is an updated version of t1, or t1 an updated of t2, or t1=t2

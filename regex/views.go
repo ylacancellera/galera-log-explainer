@@ -74,6 +74,7 @@ var (
 		Regex:         regexp.MustCompile("New COMPONENT:"),
 		internalRegex: regexp.MustCompile("New COMPONENT: primary = (?P<primary>.+), bootstrap = (?P<bootstrap>.*), my_idx = .*, memb_num = (?P<memb_num>[0-9]{1,2})"),
 		handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+			logger.Debug().Str("log", log).Msg("new component")
 			r, err := internalRegexSubmatch(internalRegex, log)
 			if err != nil {
 				return ctx, nil
@@ -83,6 +84,7 @@ var (
 			memb_num := r[internalRegex.SubexpIndex("memb_num")]
 			bootstrap := r[internalRegex.SubexpIndex("bootstrap")] == "yes"
 
+			logger.Debug().Str("log", log).Bool("primary", primary).Str("memb_num", memb_num).Bool("bootstrap", bootstrap).Msg("new component")
 			if primary {
 				msg := utils.Paint(utils.GreenText, "PRIMARY") + "(n=" + memb_num + ")"
 				if bootstrap {

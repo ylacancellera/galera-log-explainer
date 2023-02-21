@@ -6,6 +6,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/ylacancellera/galera-log-explainer/types"
 )
 
@@ -13,6 +15,7 @@ type LogRegex struct {
 	Regex         *regexp.Regexp
 	internalRegex *regexp.Regexp
 	Type          types.RegexType
+	logger        zerolog.Logger
 
 	// Taking into arguments the current context and log line, returning an updated context and a closure to get the msg to display
 	// Why a closure: to later inject an updated context instead of the current partial context, to ensure hash/ip/nodenames are known
@@ -20,8 +23,18 @@ type LogRegex struct {
 	Verbosity types.Verbosity
 }
 
-func (l *LogRegex) Handle(ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-	return l.handler(l.internalRegex, ctx, log)
+var logger zerolog.Logger
+
+func init() {
+	logger = log.With().Str("component", "regex").Logger()
+}
+
+func (l *LogRegex) Handle(ctx types.LogCtx, line string) (types.LogCtx, types.LogDisplayer) {
+	return l.handler(l.internalRegex, ctx, line)
+}
+
+func AllRegexes() []LogRegex {
+	return append(append(append(append(IdentRegexes, StatesRegexes...), ViewsRegexes...), SSTRegexes...), EventsRegexes...)
 }
 
 func internalRegexSubmatch(regex *regexp.Regexp, log string) ([]string, error) {

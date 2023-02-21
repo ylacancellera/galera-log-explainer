@@ -134,6 +134,7 @@ var (
 		Regex:         regexp.MustCompile("New COMPONENT:"),
 		internalRegex: regexp.MustCompile("New COMPONENT:.*my_idx = -?" + regexMyIdx),
 		handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+			logger.Debug().Str("log", log).Msg("new component ident")
 			r, err := internalRegexSubmatch(internalRegex, log)
 			if err != nil {
 				return ctx, nil

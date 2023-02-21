@@ -2,7 +2,7 @@ package main
 
 import (
 	"bufio"
-	"log"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -10,19 +10,23 @@ import (
 
 	"github.com/alecthomas/kong"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/ylacancellera/galera-log-explainer/regex"
 	"github.com/ylacancellera/galera-log-explainer/types"
 	"github.com/ylacancellera/galera-log-explainer/utils"
 )
 
 var CLI struct {
-	NoColor bool
-	Since   *time.Time `help:"Only list events after this date, you can copy-paste a date from mysql error log"`
-	Until   *time.Time `help:"Only list events before this date, you can copy-paste a date from mysql error log"`
+	NoColor   bool
+	Since     *time.Time      `help:"Only list events after this date, you can copy-paste a date from mysql error log"`
+	Until     *time.Time      `help:"Only list events before this date, you can copy-paste a date from mysql error log"`
+	Verbosity types.Verbosity `default:"1" help:"0: Info, 1: Detailed, 2: DebugMySQL (every mysql info the tool used), 3: Debug (internal tool debug)"`
 
-	List  list  `cmd:""`
-	Whois whois `cmd:""`
-	Sed   sed   `cmd:""`
+	List    list    `cmd:""`
+	Whois   whois   `cmd:""`
+	Sed     sed     `cmd:""`
+	Summary summary `cmd:""`
 }
 
 func main() {
@@ -31,6 +35,13 @@ func main() {
 		kong.Description("An utility to transform Galera logs in a readable version"),
 		kong.UsageOnError(),
 	)
+
+	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
+	zerolog.SetGlobalLevel(zerolog.WarnLevel)
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+	if CLI.Verbosity == types.Debug {
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	}
 
 	utils.SkipColor = CLI.NoColor
 	err := ctx.Run()
@@ -48,7 +59,8 @@ func timelineFromPaths(paths []string, toCheck []regex.LogRegex, since, until *t
 
 		node, localTimeline, err := extr.search()
 		if err != nil {
-			log.Println(err)
+			extr.logger.Warn().Err(err).Msg("Search failed")
+			continue
 		}
 
 		if t, ok := timeline[node]; ok {
@@ -63,10 +75,20 @@ type extractor struct {
 	regexes      []regex.LogRegex
 	path         string
 	since, until *time.Time
+	logger       zerolog.Logger
 }
 
 func newExtractor(path string, toCheck []regex.LogRegex, since, until *time.Time) extractor {
-	return extractor{regexes: toCheck, path: path, since: since, until: until}
+	e := extractor{regexes: toCheck, path: path, since: since, until: until}
+	e.logger = log.With().Str("component", "extractor").Str("path", e.path).Logger()
+	if since != nil {
+		e.logger = e.logger.With().Time("since", *e.since).Logger()
+	}
+	if until != nil {
+		e.logger = e.logger.With().Time("until", *e.until).Logger()
+	}
+
+	return e
 }
 
 func (e *extractor) grepArgument() string {
@@ -87,6 +109,7 @@ func (e *extractor) search() (string, types.LocalTimeline, error) {
 
 	// A first pass is done, with every regexes we want compiled in a single one.
 	grepRegex := e.grepArgument()
+	e.logger.Debug().Str("grepArg", grepRegex).Msg("")
 
 	// Regular grep is actually used
 	// There are no great alternatives, even less as golang libraries. grep itself do not have great alternatives: they are less performant for common use-cases, or are not easily portable, or are costlier to execute.
@@ -104,13 +127,17 @@ func (e *extractor) search() (string, types.LocalTimeline, error) {
 	s := bufio.NewScanner(out)
 
 	lt, err := e.iterateOnResults(s)
+	if err != nil {
+		e.logger.Warn().Err(err).Msg("Failed to iterate on results")
+	}
 
 	// If we found anything
 	if len(lt) > 0 {
 		// identify the node with the easiest to read information
 		return types.DisplayLocalNodeSimplestForm(lt[len(lt)-1].Ctx), lt, nil
 	}
-	return filepath.Base(e.path), lt, nil
+
+	return filepath.Base(e.path), lt, errors.New("Found nothing")
 }
 
 func (e *extractor) sanitizeLine(s string) string {
@@ -124,10 +151,9 @@ func (e *extractor) iterateOnResults(s *bufio.Scanner) ([]types.LogInfo, error) 
 
 	var (
 		line         string
-		li           types.LogInfo
 		lt           []types.LogInfo
 		recentEnough bool
-		err          error
+		displayer    types.LogDisplayer
 	)
 	ctx := types.NewLogCtx()
 	ctx.FilePath = filepath.Base(e.path)
@@ -147,34 +173,22 @@ func (e *extractor) iterateOnResults(s *bufio.Scanner) ([]types.LogInfo, error) 
 		}
 		recentEnough = true
 
-		ctx, li, err = e.infoAndContextFromLine(ctx, line, date)
-		if err != nil {
-			return nil, err // even though we could actually tolerate errors
+		// We have to find again what regex worked to get this log line
+		for _, regex := range e.regexes {
+			if !regex.Regex.MatchString(line) {
+				continue
+			}
+			ctx, displayer = regex.Handle(ctx, line)
+			lt = append(lt, types.LogInfo{
+				Date:      date,
+				Log:       line,
+				Msg:       displayer,
+				Ctx:       ctx,
+				RegexType: regex.Type,
+				Verbosity: regex.Verbosity,
+			})
 		}
-		lt = append(lt, li)
 
 	}
 	return lt, nil
-}
-
-func (e *extractor) infoAndContextFromLine(ctx types.LogCtx, log string, date types.Date) (types.LogCtx, types.LogInfo, error) {
-
-	// We have to find again what regex worked to get this log line
-	for _, regex := range e.regexes {
-		if !regex.Regex.MatchString(log) {
-			continue
-		}
-		updatedCtx, displayer := regex.Handle(ctx, log)
-		li := types.LogInfo{
-			Date:      date,
-			Log:       log,
-			Msg:       displayer,
-			Ctx:       updatedCtx,
-			RegexType: regex.Type,
-			Verbosity: regex.Verbosity,
-		}
-		return updatedCtx, li, nil
-	}
-
-	return types.LogCtx{}, types.LogInfo{}, errors.Errorf("Could not find regex again: %s", log)
 }

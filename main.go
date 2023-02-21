@@ -101,7 +101,7 @@ func (e *extractor) grepArgument() string {
 	if e.since != nil || e.until != nil {
 		grepRegex += "(" + regex.BetweenDateRegex(e.since, e.until) + "|" + regex.NoDatesRegex() + ").*"
 	}
-	return "(" + strings.Join(regexToSendSlice, "|") + ")"
+	return grepRegex + "(" + strings.Join(regexToSendSlice, "|") + ")"
 }
 
 // search is the main function to search what we want in a file

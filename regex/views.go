@@ -8,7 +8,7 @@ import (
 	"github.com/ylacancellera/galera-log-explainer/utils"
 )
 
-var ViewsRegexes = []LogRegex{RegexNodeEstablished, RegexNodeJoined, RegexNodeLeft, RegexNodeSuspect, RegexNodeChangedIdentity, RegexWsrepUnsafeBootstrap, RegexWsrepConsistenctyCompromised, RegexWsrepNonPrimary, RegexNewComponent}
+var ViewsRegexes = []LogRegex{RegexNodeEstablished, RegexNodeJoined, RegexNodeLeft, RegexNodeSuspect, RegexNodeChangedIdentity, RegexWsrepUnsafeBootstrap, RegexWsrepConsistenctyCompromised, RegexWsrepNonPrimary, RegexNewComponent, RegexBootstrap}
 
 func init() {
 	ViewsRegexes = setType(types.ViewsRegexType, ViewsRegexes...)
@@ -169,7 +169,14 @@ var (
 	RegexWsrepNonPrimary = LogRegex{
 		Regex: regexp.MustCompile("failed to reach primary view"),
 		handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			return ctx, types.SimpleDisplayer(utils.Paint(utils.RedText, "non primary"))
+			return ctx, types.SimpleDisplayer("received " + utils.Paint(utils.RedText, "non primary"))
+		},
+	}
+
+	RegexBootstrap = LogRegex{
+		Regex: regexp.MustCompile("gcomm: bootstrapping new group"),
+		handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+			return ctx, types.SimpleDisplayer(utils.Paint(utils.GreenText, "bootstrapping"))
 		},
 	}
 )
@@ -186,7 +193,6 @@ var (
 
 /*
 
-2023-01-05T03:49:55.653891Z 0 [Note] WSREP: gcomm: bootstrapping new group 'group'
 
 
 2022-11-25T17:05:00.693591-05:00 468765 [Warning] [MY-000000] [WSREP] Toggling wsrep_on to OFF will affect sql_log_bin. Check manual for more details

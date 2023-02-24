@@ -111,10 +111,19 @@ func (e *extractor) search() (string, types.LocalTimeline, error) {
 	grepRegex := e.grepArgument()
 	e.logger.Debug().Str("grepArg", grepRegex).Msg("")
 
-	// Regular grep is actually used
-	// There are no great alternatives, even less as golang libraries. grep itself do not have great alternatives: they are less performant for common use-cases, or are not easily portable, or are costlier to execute.
-	// grep is everywhere, grep is good enough, it even enable to use the stdout pipe.
-	// The usual bottleneck with grep is that it is single-threaded, but we actually benefit from a sequential scan here as we will rely on the log order. Being sequential also ensure this program is light enough to run without too much impacts
+	/*
+		Regular grep is actually used
+
+		There are no great alternatives, even less as golang libraries.
+		grep itself do not have great alternatives: they are less performant for common use-cases, or are not easily portable, or are costlier to execute.
+		grep is everywhere, grep is good enough, it even enable to use the stdout pipe.
+
+		The usual bottleneck with grep is that it is single-threaded, but we actually benefit
+		from a sequential scan here as we will rely on the log order.
+
+		Also, being sequential also ensure this program is light enough to run without too much impacts
+		It also helps to be transparent and not provide an obscure tool that work as a blackbox
+	*/
 	cmd := exec.Command("grep", "-P", grepRegex, e.path)
 	out, _ := cmd.StdoutPipe()
 	defer out.Close()

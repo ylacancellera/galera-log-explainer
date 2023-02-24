@@ -16,7 +16,6 @@ import (
 // TimelineCLI print a timeline to the terminal using tabulated format
 // It will print header and footers, and dequeue the timeline chronologically
 func TimelineCLI(timeline types.Timeline, verbosity types.Verbosity) {
-	var args []string
 
 	// to hold the current context for each node
 	keys, currentContext := initKeysContext(timeline)
@@ -31,6 +30,11 @@ func TimelineCLI(timeline types.Timeline, verbosity types.Verbosity) {
 	fmt.Fprintln(w, headerFilePath(keys, currentContext))
 	fmt.Fprintln(w, headerIP(keys, currentContext))
 	fmt.Fprintln(w, separator(keys))
+
+	var (
+		args         []string // stuff to print
+		printedLines int
+	)
 
 	// as long as there is a next event to print
 	for nextNodes := iterateNode(timeline); len(nextNodes) != 0; nextNodes = iterateNode(timeline) {
@@ -83,14 +87,17 @@ func TimelineCLI(timeline types.Timeline, verbosity types.Verbosity) {
 		if err != nil {
 			log.Println("Failed to write a line", err)
 		}
+		printedLines++
 	}
 
 	// footer
 	// only having a header is not fast enough to read when there are too many lines
-	fmt.Fprintln(w, separator(keys))
-	fmt.Fprintln(w, headerNodes(keys))
-	fmt.Fprintln(w, headerFilePath(keys, currentContext))
-	fmt.Fprintln(w, headerIP(keys, currentContext))
+	if printedLines >= 50 {
+		fmt.Fprintln(w, separator(keys))
+		fmt.Fprintln(w, headerNodes(keys))
+		fmt.Fprintln(w, headerFilePath(keys, currentContext))
+		fmt.Fprintln(w, headerIP(keys, currentContext))
+	}
 }
 
 func initKeysContext(timeline types.Timeline) ([]string, map[string]types.LogCtx) {

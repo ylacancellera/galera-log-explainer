@@ -12,15 +12,15 @@ import (
 )
 
 type LogRegex struct {
-	Regex         *regexp.Regexp
-	internalRegex *regexp.Regexp
+	Regex         *regexp.Regexp // to send to grep, should be as simple as possible but without collisions
+	internalRegex *regexp.Regexp // for internal usage in handler func
 	Type          types.RegexType
-	logger        zerolog.Logger
+	logger        zerolog.Logger // wip
 
 	// Taking into arguments the current context and log line, returning an updated context and a closure to get the msg to display
 	// Why a closure: to later inject an updated context instead of the current partial context, to ensure hash/ip/nodenames are known
 	handler   func(*regexp.Regexp, types.LogCtx, string) (types.LogCtx, types.LogDisplayer)
-	Verbosity types.Verbosity
+	Verbosity types.Verbosity // To be able to hide details from summaries
 }
 
 var logger zerolog.Logger

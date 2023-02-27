@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/pkg/errors"
 	"github.com/ylacancellera/galera-log-explainer/display"
 	"github.com/ylacancellera/galera-log-explainer/regex"
 	"github.com/ylacancellera/galera-log-explainer/types"
@@ -20,10 +21,21 @@ type list struct {
 }
 
 func (l *list) Help() string {
-	return "List events for each nodes"
+	return `List events for each nodes
+
+Usage:
+	galera-log-explainer list --all <list of files>
+	galera-log-explainer list --all *.log
+	galera-log-explainer list --sst --views --states <list of files>
+	galera-log-explainer list --events --views *.log
+	`
 }
 
 func (l *list) Run() error {
+
+	if !(l.All || l.Events || l.States || l.SST || l.Views) {
+		return errors.New("Please select a type of logs to search: --all, or any parameters from: --sst --views --events --states")
+	}
 
 	toCheck := l.regexesToUse()
 	if CLI.List.Format == "svg" {

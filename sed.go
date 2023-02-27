@@ -21,7 +21,7 @@ func (s *sed) Help() string {
 
 Use like so:
 	cat node1.log | galera-log-explainer sed *.log | less
-	galera-log-explainer sed --by-name *.log < node1.log | less`
+	galera-log-explainer sed *.log < node1.log | less`
 }
 
 func (s *sed) Run() error {

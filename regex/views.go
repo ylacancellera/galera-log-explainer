@@ -272,4 +272,5 @@ d4397932 at tcp://ip:4567
 {o=0,s=1,i=0,fs=4685894552,}
  }
 
+ Transport endpoint is not connected
 */

@@ -98,3 +98,5 @@ var (
 		},
 	}
 )
+
+// mysqld got signal 6/11

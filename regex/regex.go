@@ -75,8 +75,8 @@ var (
 	groupNodeName2     = "nodename2"
 	groupMyIdx         = "myidx"
 	groupSeqno         = "seqno"
-	regexNodeHash      = "(?P<" + groupNodeHash + ">.+)"
-	regexNodeName      = "(?P<" + groupNodeName + ">.+)"
+	regexNodeHash      = "(?P<" + groupNodeHash + ">[a-zA-Z0-9-_]+)"
+	regexNodeName      = "(?P<" + groupNodeName + ">[a-zA-Z0-9-_]+)"
 	regexNodeName2     = strings.Replace(regexNodeName, groupNodeName, groupNodeName2, 1)
 	regexNodeHash4Dash = "(?P<" + groupNodeHash + ">[a-z0-9]+-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]+)" // eg ed97c863-d5c9-11ec-8ab7-671bbd2d70ef
 	regexNodeHash1Dash = "(?P<" + groupNodeHash + ">[a-z0-9]+-[a-z0-9]{4})"                                   // eg ed97c863-8ab7

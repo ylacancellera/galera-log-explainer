@@ -1,6 +1,10 @@
 package types
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/rs/zerolog/log"
+)
 
 // DisplayLocalNodeSimplestForm is used to identify a node timeline.
 // This has impacts on how logs are identified in the global timelines,
@@ -30,19 +34,25 @@ func DisplayLocalNodeSimplestForm(ctx LogCtx) string {
 // In order of preference: wsrep_node_name (or galera "node" name), hostname, ip
 func DisplayNodeSimplestForm(ctx LogCtx, ip string) string {
 	if nodename, ok := ctx.IPToNodeName[ip]; ok {
-		return ShortNodeName(nodename)
+		s := ShortNodeName(nodename)
+		log.Debug().Str("ip", ip).Str("simplestform", s).Str("from", "IPToNodeName").Msg("nodeSimplestForm")
+		return s
 	}
 
 	for hash, storedip := range ctx.HashToIP {
 		if ip == storedip {
 			if nodename, ok := ctx.HashToNodeName[hash]; ok {
-				return ShortNodeName(nodename)
+				s := ShortNodeName(nodename)
+				log.Debug().Str("ip", ip).Str("simplestform", s).Str("from", "HashToNodeName").Msg("nodeSimplestForm")
+				return s
 			}
 		}
 	}
 	if hostname, ok := ctx.IPToHostname[ip]; ok {
+		log.Debug().Str("ip", ip).Str("simplestform", hostname).Str("from", "IPToHostname").Msg("nodeSimplestForm")
 		return hostname
 	}
+	log.Debug().Str("ip", ip).Str("simplestform", ip).Str("from", "default").Msg("nodeSimplestForm")
 	return ip
 }
 

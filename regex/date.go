@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/rs/zerolog/log"
 	"github.com/ylacancellera/galera-log-explainer/utils"
 )
 
@@ -84,12 +85,18 @@ SYSLOG_DATE="\(Jan\|Feb\|Mar\|Apr\|May\|Jun\|Jul\|Aug\|Sep\|Oct\|Nov\|Dec\) \( \
 REGEX_LOG_PREFIX="$REGEX_DATE \?[0-9]* "
 */
 
-func SearchDateFromLog(log string) (time.Time, string) {
+const k8sprefix = `{"log":"`
+
+func SearchDateFromLog(logline string) (time.Time, string) {
+	if logline[:len(k8sprefix)] == k8sprefix {
+		logline = logline[len(k8sprefix):]
+	}
 	for _, layout := range DateLayouts {
-		t, err := time.Parse(layout, log[:len(layout)])
+		t, err := time.Parse(layout, logline[:len(layout)])
 		if err == nil {
 			return t, layout
 		}
 	}
+	log.Debug().Str("log", logline).Msg("could not find date from log")
 	return time.Time{}, ""
 }

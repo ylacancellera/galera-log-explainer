@@ -97,7 +97,7 @@ func (e *extractor) grepArgument() string {
 	for _, regex := range e.regexes {
 		regexToSendSlice = append(regexToSendSlice, regex.Regex.String())
 	}
-	var grepRegex string
+	grepRegex := "({\"log\":\")?" // to ignore k8s log prefixes. Works without it, but it helps to correctly filter date
 	if e.since != nil || e.until != nil {
 		grepRegex += "(" + regex.BetweenDateRegex(e.since, e.until) + "|" + regex.NoDatesRegex() + ").*"
 	}

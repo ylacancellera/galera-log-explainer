@@ -37,7 +37,7 @@ func TimelineCLI(timeline types.Timeline, verbosity types.Verbosity) {
 	)
 
 	// as long as there is a next event to print
-	for nextNodes := iterateNode(timeline); len(nextNodes) != 0; nextNodes = iterateNode(timeline) {
+	for nextNodes := timeline.IterateNode(); len(nextNodes) != 0; nextNodes = timeline.IterateNode() {
 
 		// Date column
 		//formattedDate, tmpLastLayout := dateBlock(nextDate, lastDate, timeline[nextNodes[0]][0].DateLayout, lastLayout)
@@ -59,10 +59,7 @@ func TimelineCLI(timeline types.Timeline, verbosity types.Verbosity) {
 			lastContext[node] = currentContext[node]
 			currentContext[node] = nl.Ctx
 
-			// dequeue the events
-			if len(timeline[node]) > 0 {
-				timeline[node] = timeline[node][1:]
-			}
+			timeline.Dequeue(node)
 
 			if verbosity > nl.Verbosity && nl.Msg != nil {
 				args = append(args, nl.Msg(latestContext[node]))

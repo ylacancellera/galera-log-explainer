@@ -1,6 +1,9 @@
 package types
 
-import "time"
+import (
+	"math"
+	"time"
+)
 
 // It should be kept already sorted by timestamp
 type LocalTimeline []LogInfo
@@ -106,4 +109,36 @@ func (t *Timeline) GetLatestUpdatedContextsByNodes() map[string]LogCtx {
 		ctx.MergeMapsWith(latestctxs)
 	}
 	return updatedCtxs
+}
+
+// iterateNode is used to search the source node(s) that contains the next chronological events
+// it returns a slice in case 2 nodes have their next event precisely at the same time, which
+// happens a lot on some versions
+func (t Timeline) IterateNode() []string {
+	var (
+		nextDate  time.Time
+		nextNodes []string
+	)
+	nextDate = time.Unix(math.MaxInt32, 0)
+	for node := range t {
+		if len(t[node]) == 0 {
+			continue
+		}
+		curDate := t[node][0].Date.Time
+		if curDate.Before(nextDate) {
+			nextDate = curDate
+			nextNodes = []string{node}
+		} else if curDate.Equal(nextDate) {
+			nextNodes = append(nextNodes, node)
+		}
+	}
+	return nextNodes
+}
+
+func (t Timeline) Dequeue(node string) {
+
+	// dequeue the events
+	if len(t[node]) > 0 {
+		t[node] = t[node][1:]
+	}
 }

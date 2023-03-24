@@ -43,7 +43,10 @@ func (l *list) Run() error {
 		utils.SkipColor = true
 	}
 
-	timeline := timelineFromPaths(CLI.List.Paths, toCheck, CLI.Since, CLI.Until)
+	timeline, err := timelineFromPaths(CLI.List.Paths, toCheck, CLI.Since, CLI.Until)
+	if err != nil {
+		return errors.Wrap(err, "Could not list events")
+	}
 
 	switch CLI.List.Format {
 	case "cli":

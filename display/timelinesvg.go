@@ -169,7 +169,7 @@ function detailsShow(id) {
 
 	y := initY
 	var id uint64
-	for nextNodes := iterateNode(timeline); len(nextNodes) != 0; nextNodes = iterateNode(timeline) {
+	for nextNodes := timeline.IterateNode(); len(nextNodes) != 0; nextNodes = timeline.IterateNode() {
 		for _, node := range nextNodes {
 
 			nl := &timeline[node][0]
@@ -183,7 +183,7 @@ function detailsShow(id) {
 				curSvgnodes[node] = n
 			}
 
-			timeline[node] = timeline[node][1:]
+			timeline.Dequeue(node)
 		}
 	}
 

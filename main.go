@@ -50,8 +50,9 @@ func main() {
 
 // timelineFromPaths takes every path, search them using a list of regexes
 // and organize them in a timeline that will be ready to aggregate or read
-func timelineFromPaths(paths []string, toCheck []regex.LogRegex, since, until *time.Time) types.Timeline {
+func timelineFromPaths(paths []string, toCheck []regex.LogRegex, since, until *time.Time) (types.Timeline, error) {
 	timeline := make(types.Timeline)
+	found := false
 
 	for _, path := range paths {
 
@@ -62,13 +63,17 @@ func timelineFromPaths(paths []string, toCheck []regex.LogRegex, since, until *t
 			extr.logger.Warn().Err(err).Msg("Search failed")
 			continue
 		}
+		found = true
 
 		if t, ok := timeline[node]; ok {
 			localTimeline = types.MergeTimeline(t, localTimeline)
 		}
 		timeline[node] = localTimeline
 	}
-	return timeline
+	if !found {
+		return nil, errors.New("Could not find data")
+	}
+	return timeline, nil
 }
 
 type extractor struct {

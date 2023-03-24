@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/pkg/errors"
 	"github.com/ylacancellera/galera-log-explainer/regex"
 	"github.com/ylacancellera/galera-log-explainer/types"
 	"github.com/ylacancellera/galera-log-explainer/utils"
@@ -23,7 +24,10 @@ It will list known node name(s), IP(s), hostname(s), and other known node's UUID
 func (w *whois) Run() error {
 
 	toCheck := append(regex.IdentRegexes, regex.SetVerbosity(types.DebugMySQL, regex.ViewsRegexes...)...)
-	timeline := timelineFromPaths(CLI.Whois.Paths, toCheck, CLI.Since, CLI.Until)
+	timeline, err := timelineFromPaths(CLI.Whois.Paths, toCheck, CLI.Since, CLI.Until)
+	if err != nil {
+		return errors.Wrap(err, "Found nothing to translate")
+	}
 	ctxs := timeline.GetLatestUpdatedContextsByNodes()
 
 	ni := whoIs(ctxs, CLI.Whois.Search)

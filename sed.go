@@ -1,12 +1,12 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"strings"
 
+	"github.com/pkg/errors"
 	"github.com/ylacancellera/galera-log-explainer/regex"
 	"github.com/ylacancellera/galera-log-explainer/types"
 )
@@ -29,7 +29,10 @@ You can also simply call the command to get a generated sed command to review an
 
 func (s *sed) Run() error {
 	toCheck := append(regex.IdentRegexes, regex.SetVerbosity(types.DebugMySQL, regex.ViewsRegexes...)...)
-	timeline := timelineFromPaths(CLI.Sed.Paths, toCheck, CLI.Since, CLI.Until)
+	timeline, err := timelineFromPaths(CLI.Sed.Paths, toCheck, CLI.Since, CLI.Until)
+	if err != nil {
+		return errors.Wrap(err, "Found nothing worth replacing")
+	}
 	ctxs := timeline.GetLatestUpdatedContextsByNodes()
 
 	args := []string{}

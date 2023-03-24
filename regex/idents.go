@@ -56,7 +56,7 @@ var (
 	//	      1: 08dd5580-32f7-11ed-a9eb-af5e3d01519e, garb
 	// TODO: store indexes to later search for them using SST infos and STATES EXCHANGES logs. Could be unsafe if galera do not log indexes in time though
 	RegexMember = LogRegex{
-		Regex:         regexp.MustCompile("[0-9]: " + regexNodeHash4Dash + ", " + regexNodeName),
+		Regex:         regexp.MustCompile("[0-9]: [a-z0-9]+-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]+, [a-zA-Z0-9-_]+"),
 		internalRegex: regexp.MustCompile("[0-9]: " + regexNodeHash4Dash + ", " + regexNodeName),
 		handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			r, err := internalRegexSubmatch(internalRegex, log)

@@ -176,5 +176,11 @@ var (
 var (
 REGEX_IST_UNAVAILABLE="Failed to prepare for incremental state transfer"
 REGEX_SST_BYPASS="\(Bypassing state dump\|IST sender starting\|IST received\)"
+
+2023-03-20 17:26:27 140666176771840 [Warning] WSREP: 1.0 (node1): State transfer to 0.0 (node2) failed: -255 (Unknown error 255)
+
+2023-03-20 17:26:27 140666176771840 [ERROR] WSREP: gcs/src/gcs_group.cpp:gcs_group_handle_join_msg():736: Will never receive state. Need to abort.
+
+
 )
 */

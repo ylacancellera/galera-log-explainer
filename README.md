@@ -44,15 +44,19 @@ galera-log-explainer whois '172.17.0.3' mysql.log
 galera-log-explainer whois 'galera-node2' mysql.log 
 ```
 
-Automatically translate every information (IP, UUID) to the node name in a file
+Automatically translate every information (IP, UUID) from a log
 ```
-galera-log-explainer sed some/logs/to/analyze.log another/one.log mysql_log_to_translate.log < mysql_log_to_translate.log  | less
+galera-log-explainer sed some/log.log another/one.log to_translate.log < to_translate.log  | less
 
-cat mysql_log_to_translate.log | galera-log-explainer sed some/logs/to/analyze.log another/one.log mysql_log_to_translate.log | less
+cat to_translate.log | galera-log-explainer sed some/log.log another/one.log to_translate.log | less
 ```
-
+Or get the raw `sed` command to do it yourself
+```
+galera-log-explainer sed some/log.log another/one.log to_translate.log
+```
 
 Usage:
+
 	$ galera-log-explainer --help
 	Usage: galera-log-explainer <command>
 	

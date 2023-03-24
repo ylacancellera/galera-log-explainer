@@ -92,6 +92,9 @@ func SearchDateFromLog(logline string) (time.Time, string) {
 		logline = logline[len(k8sprefix):]
 	}
 	for _, layout := range DateLayouts {
+		if len(logline) < len(layout) {
+			continue
+		}
 		t, err := time.Parse(layout, logline[:len(layout)])
 		if err == nil {
 			return t, layout

@@ -7,7 +7,7 @@ import (
 	"github.com/ylacancellera/galera-log-explainer/types"
 )
 
-var IdentRegexes = []LogRegex{RegexSourceNode, RegexBaseHost, RegexMember, RegexOwnUUID, RegexMyIDXFromComponent, RegexOwnNameFromStateExchange, RegexOwnUUIDFromEstablished, RegexOwnUUIDFromMessageRelay}
+var IdentRegexes = []LogRegex{RegexSourceNode, RegexBaseHost, RegexMember, RegexOwnUUID, RegexMyIDXFromComponent, RegexOwnNameFromStateExchange, RegexOwnUUIDFromEstablished, RegexOwnUUIDFromMessageRelay, RegexOwnIndexFromView}
 
 func init() {
 	IdentRegexes = setType(types.IdentRegexType, IdentRegexes...)
@@ -57,13 +57,14 @@ var (
 	// TODO: store indexes to later search for them using SST infos and STATES EXCHANGES logs. Could be unsafe if galera do not log indexes in time though
 	RegexMember = LogRegex{
 		Regex:         regexp.MustCompile("[0-9]: [a-z0-9]+-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]+, [a-zA-Z0-9-_]+"),
-		internalRegex: regexp.MustCompile("[0-9]: " + regexNodeHash4Dash + ", " + regexNodeName),
+		internalRegex: regexp.MustCompile(regexIdx + ": " + regexNodeHash4Dash + ", " + regexNodeName),
 		handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			r, err := internalRegexSubmatch(internalRegex, log)
 			if err != nil {
 				return ctx, nil
 			}
 
+			idx := r[internalRegex.SubexpIndex(groupIdx)]
 			hash := r[internalRegex.SubexpIndex(groupNodeHash)]
 			nodename := r[internalRegex.SubexpIndex(groupNodeName)]
 
@@ -74,6 +75,10 @@ var (
 			splitted := strings.Split(hash, "-")
 			shorthash := splitted[0] + "-" + splitted[3]
 			ctx.HashToNodeName[shorthash] = nodename
+			if ctx.MyIdx == idx {
+				ctx.AddOwnHash(shorthash)
+				ctx.AddOwnName(nodename)
+			}
 
 			return ctx, types.SimpleDisplayer(shorthash + " is " + nodename)
 		},
@@ -132,7 +137,7 @@ var (
 	// 2023-01-06T07:05:35.693861Z 0 [Note] WSREP: New COMPONENT: primary = yes, bootstrap = no, my_idx = 0, memb_num = 2
 	RegexMyIDXFromComponent = LogRegex{
 		Regex:         regexp.MustCompile("New COMPONENT:"),
-		internalRegex: regexp.MustCompile("New COMPONENT:.*my_idx = -?" + regexMyIdx),
+		internalRegex: regexp.MustCompile("New COMPONENT:.*my_idx = -?" + regexIdx),
 		handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			logger.Debug().Str("log", log).Msg("new component ident")
 			r, err := internalRegexSubmatch(internalRegex, log)
@@ -140,9 +145,18 @@ var (
 				return ctx, nil
 			}
 
-			idx := r[internalRegex.SubexpIndex(groupMyIdx)]
+			idx := r[internalRegex.SubexpIndex(groupIdx)]
 			ctx.MyIdx = idx
 			return ctx, types.SimpleDisplayer("my_idx=" + idx)
+		},
+		Verbosity: types.DebugMySQL,
+	}
+
+	RegexOwnIndexFromView = LogRegex{
+		Regex:         regexp.MustCompile("own_index:"),
+		internalRegex: regexp.MustCompile("own_index: " + regexIdx),
+		handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+			return RegexMyIDXFromComponent.handler(internalRegex, ctx, log)
 		},
 		Verbosity: types.DebugMySQL,
 	}
@@ -152,7 +166,7 @@ var (
 	// Curently disabled, not present in identsRegexes slice
 	RegexMyIDXFromClusterView = LogRegex{
 		Regex:         regexp.MustCompile("New cluster view:"),
-		internalRegex: regexp.MustCompile("New cluster view:.*my index: -?" + regexMyIdx + ","),
+		internalRegex: regexp.MustCompile("New cluster view:.*my index: -?" + regexIdx + ","),
 		handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			return RegexMyIDXFromComponent.handler(internalRegex, ctx, log)
 		},
@@ -161,14 +175,14 @@ var (
 
 	RegexOwnNameFromStateExchange = LogRegex{
 		Regex:         regexp.MustCompile("STATE EXCHANGE: got state msg"),
-		internalRegex: regexp.MustCompile("STATE EXCHANGE:.* from " + regexMyIdx + " \\(" + regexNodeName + "\\)"),
+		internalRegex: regexp.MustCompile("STATE EXCHANGE:.* from " + regexIdx + " \\(" + regexNodeName + "\\)"),
 		handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			r, err := internalRegexSubmatch(internalRegex, log)
 			if err != nil {
 				return ctx, nil
 			}
 
-			idx := r[internalRegex.SubexpIndex(groupMyIdx)]
+			idx := r[internalRegex.SubexpIndex(groupIdx)]
 			name := r[internalRegex.SubexpIndex(groupNodeName)]
 			if idx != ctx.MyIdx {
 				return ctx, types.SimpleDisplayer("name from unknown idx")

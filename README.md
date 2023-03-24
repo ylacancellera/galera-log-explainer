@@ -9,12 +9,13 @@ Filter, aggregate and summarize multiple galera logs together.
 * List key points of information from logs (sst, view changes, general errors, maintenance operations)
 * Translate advanced Galera information to a easily readable counterpart
 * Filter on dates with --since, --until
-* Filter on type of events 
+* Filter on type of events
+* Aggregates rotated logs together, even when there are logs from multiple nodes
 
 
-Get the latest events on a local server
+Get the latest cluster changes on a local server
 ```sh
-galera-log-explainer list --all --since 2023-03-24T10:24:00.000000Z /var/log/mysql/*.log
+galera-log-explainer list --all --since 2023-01-05T03:24:26.000000Z /var/log/mysql/*.log
 ```
 
 Find out information about nodes, using any type of info
@@ -81,3 +82,9 @@ Usage:
 	
 	Run "galera-log-explainer <command> --help" for more information on a command.
 
+
+## Compatibility
+
+* Percona XtraDB Cluster: 5.5 to 8.0
+* MariaDB Galera Cluster: 10.0 to 10.6
+* Galera logs from K8s pods

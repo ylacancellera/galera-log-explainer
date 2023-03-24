@@ -14,6 +14,7 @@ type summary struct {
 }
 
 func (s *summary) Run() error {
+	return errors.New("Unimplemented")
 
 	toCheck := regex.AllRegexes()
 

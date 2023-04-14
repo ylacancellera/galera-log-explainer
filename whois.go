@@ -23,7 +23,8 @@ It will list known node name(s), IP(s), hostname(s), and other known node's UUID
 
 func (w *whois) Run() error {
 
-	toCheck := append(regex.IdentRegexes, regex.SetVerbosity(types.DebugMySQL, regex.ViewsRegexes...)...)
+	regex.SetVerbosity(types.DebugMySQL, regex.ViewsMap)
+	toCheck := regex.IdentsMap.Merge(regex.ViewsMap)
 	timeline, err := timelineFromPaths(CLI.Whois.Paths, toCheck, CLI.Since, CLI.Until)
 	if err != nil {
 		return errors.Wrap(err, "Found nothing to translate")

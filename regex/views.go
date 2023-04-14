@@ -8,18 +8,16 @@ import (
 	"github.com/ylacancellera/galera-log-explainer/utils"
 )
 
-var ViewsRegexes = []LogRegex{RegexNodeEstablished, RegexNodeJoined, RegexNodeLeft, RegexNodeSuspect, RegexNodeChangedIdentity, RegexWsrepUnsafeBootstrap, RegexWsrepConsistenctyCompromised, RegexWsrepNonPrimary, RegexNewComponent, RegexBootstrap}
-
 func init() {
-	ViewsRegexes = setType(types.ViewsRegexType, ViewsRegexes...)
+	setType(types.ViewsRegexType, ViewsMap)
 }
 
 // "galera views" regexes
-var (
-	RegexNodeEstablished = LogRegex{
+var ViewsMap = types.RegexMap{
+	"RegexNodeEstablished": &types.LogRegex{
 		Regex:         regexp.MustCompile("connection established"),
-		internalRegex: regexp.MustCompile("established to " + regexNodeHash + " " + regexNodeIPMethod),
-		handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+		InternalRegex: regexp.MustCompile("established to " + regexNodeHash + " " + regexNodeIPMethod),
+		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			r, err := internalRegexSubmatch(internalRegex, log)
 			if err != nil {
 				return ctx, nil
@@ -33,12 +31,12 @@ var (
 			return ctx, func(ctx types.LogCtx) string { return types.DisplayNodeSimplestForm(ctx, ip) + " established" }
 		},
 		Verbosity: types.Detailed,
-	}
+	},
 
-	RegexNodeJoined = LogRegex{
+	"RegexNodeJoined": &types.LogRegex{
 		Regex:         regexp.MustCompile("declaring .* stable"),
-		internalRegex: regexp.MustCompile("declaring " + regexNodeHash + " at " + regexNodeIPMethod),
-		handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+		InternalRegex: regexp.MustCompile("declaring " + regexNodeHash + " at " + regexNodeIPMethod),
+		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			r, err := internalRegexSubmatch(internalRegex, log)
 			if err != nil {
 				return ctx, nil
@@ -51,12 +49,12 @@ var (
 				return types.DisplayNodeSimplestForm(ctx, ip) + utils.Paint(utils.GreenText, " has joined")
 			}
 		},
-	}
+	},
 
-	RegexNodeLeft = LogRegex{
+	"RegexNodeLeft": &types.LogRegex{
 		Regex:         regexp.MustCompile("forgetting"),
-		internalRegex: regexp.MustCompile("forgetting" + regexNodeHash + "\\(" + regexNodeIPMethod),
-		handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+		InternalRegex: regexp.MustCompile("forgetting" + regexNodeHash + "\\(" + regexNodeIPMethod),
+		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			r, err := internalRegexSubmatch(internalRegex, log)
 			if err != nil {
 				return ctx, nil
@@ -67,14 +65,13 @@ var (
 				return types.DisplayNodeSimplestForm(ctx, ip) + utils.Paint(utils.RedText, " has left")
 			}
 		},
-	}
+	},
 
 	// New COMPONENT: primary = yes, bootstrap = no, my_idx = 1, memb_num = 5
-	RegexNewComponent = LogRegex{
+	"RegexNewComponent": &types.LogRegex{
 		Regex:         regexp.MustCompile("New COMPONENT:"),
-		internalRegex: regexp.MustCompile("New COMPONENT: primary = (?P<primary>.+), bootstrap = (?P<bootstrap>.*), my_idx = .*, memb_num = (?P<memb_num>[0-9]{1,2})"),
-		handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			logger.Debug().Str("log", log).Msg("new component")
+		InternalRegex: regexp.MustCompile("New COMPONENT: primary = (?P<primary>.+), bootstrap = (?P<bootstrap>.*), my_idx = .*, memb_num = (?P<memb_num>[0-9]{1,2})"),
+		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			r, err := internalRegexSubmatch(internalRegex, log)
 			if err != nil {
 				return ctx, nil
@@ -84,7 +81,6 @@ var (
 			memb_num := r[internalRegex.SubexpIndex("memb_num")]
 			bootstrap := r[internalRegex.SubexpIndex("bootstrap")] == "yes"
 
-			logger.Debug().Str("log", log).Bool("primary", primary).Str("memb_num", memb_num).Bool("bootstrap", bootstrap).Msg("new component")
 			if primary {
 				msg := utils.Paint(utils.GreenText, "PRIMARY") + "(n=" + memb_num + ")"
 				if bootstrap {
@@ -98,12 +94,12 @@ var (
 			ctx.State = "NON-PRIMARY"
 			return ctx, types.SimpleDisplayer(utils.Paint(utils.RedText, "NON-PRIMARY") + "(n=" + memb_num + ")")
 		},
-	}
+	},
 
-	RegexNodeSuspect = LogRegex{
+	"RegexNodeSuspect": &types.LogRegex{
 		Regex:         regexp.MustCompile("suspecting node"),
-		internalRegex: regexp.MustCompile("suspecting node: " + regexNodeHash),
-		handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+		InternalRegex: regexp.MustCompile("suspecting node: " + regexNodeHash),
+		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			r, err := internalRegexSubmatch(internalRegex, log)
 			if err != nil {
 				return ctx, nil
@@ -119,12 +115,12 @@ var (
 			return ctx, types.SimpleDisplayer(hash + utils.Paint(utils.YellowText, " suspected to be down"))
 		},
 		Verbosity: types.Detailed,
-	}
+	},
 
-	RegexNodeChangedIdentity = LogRegex{
+	"RegexNodeChangedIdentity": &types.LogRegex{
 		Regex:         regexp.MustCompile("remote endpoint.*changed identity"),
-		internalRegex: regexp.MustCompile("remote endpoint " + regexNodeIPMethod + " changed identity " + regexNodeHash + " -> " + strings.Replace(regexNodeHash, groupNodeHash, groupNodeHash+"2", -1)),
-		handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+		InternalRegex: regexp.MustCompile("remote endpoint " + regexNodeIPMethod + " changed identity " + regexNodeHash + " -> " + strings.Replace(regexNodeHash, groupNodeHash, groupNodeHash+"2", -1)),
+		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			r, err := internalRegexSubmatch(internalRegex, log)
 			if err != nil {
 				return ctx, nil
@@ -148,38 +144,38 @@ var (
 			}
 		},
 		Verbosity: types.Detailed,
-	}
+	},
 
-	RegexWsrepUnsafeBootstrap = LogRegex{
+	"RegexWsrepUnsafeBootstrap": &types.LogRegex{
 		Regex: regexp.MustCompile("ERROR.*not be safe to bootstrap"),
-		handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			ctx.State = "CLOSED"
 
 			return ctx, types.SimpleDisplayer(utils.Paint(utils.RedText, "not safe to bootstrap"))
 		},
-	}
-	RegexWsrepConsistenctyCompromised = LogRegex{
+	},
+	"RegexWsrepConsistenctyCompromised": &types.LogRegex{
 		Regex: regexp.MustCompile(".ode consistency compromi.ed"),
-		handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			ctx.State = "CLOSED"
 
 			return ctx, types.SimpleDisplayer(utils.Paint(utils.RedText, "consistency compromised"))
 		},
-	}
-	RegexWsrepNonPrimary = LogRegex{
+	},
+	"RegexWsrepNonPrimary": &types.LogRegex{
 		Regex: regexp.MustCompile("failed to reach primary view"),
-		handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			return ctx, types.SimpleDisplayer("received " + utils.Paint(utils.RedText, "non primary"))
 		},
-	}
+	},
 
-	RegexBootstrap = LogRegex{
+	"RegexBootstrap": &types.LogRegex{
 		Regex: regexp.MustCompile("gcomm: bootstrapping new group"),
-		handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			return ctx, types.SimpleDisplayer(utils.Paint(utils.GreenText, "bootstrapping"))
 		},
-	}
-)
+	},
+}
 
 /*
 var (
@@ -273,4 +269,11 @@ d4397932 at tcp://ip:4567
  }
 
  Transport endpoint is not connected
+
+
+ 2023-03-31T08:05:57.964535Z 0 [Note] WSREP: handshake failed, my group: '<group>', peer group: '<bad group>'
+
+ 2023-04-04T22:35:23.487304Z 0 [Warning] [MY-000000] [Galera] Handshake failed: tlsv1 alert decrypt error
+
+
 */

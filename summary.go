@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/pkg/errors"
@@ -24,9 +25,19 @@ func (s *summary) Run() error {
 		return errors.New("unimplemented")
 	}
 
-	timeline, _ := timelineFromPaths(CLI.List.Paths, toCheck, CLI.Since, CLI.Until)
-	_ = timeline
-	//groupedEvents := GroupEventsFromTimeline(timeline, types.ViewsRegexType)
+	timeline, err := timelineFromPaths(s.Paths, toCheck, CLI.Since, CLI.Until)
+	if err != nil {
+		return errors.Wrap(err, "Could not get summary")
+	}
+	groupedEvent := groupEvents(timeline, types.ViewsRegexType)
+	fmt.Println("base")
+	fmt.Println(groupedEvent.Base.Msg(groupedEvent.Base.Ctx))
+	fmt.Println()
+	for node, m := range groupedEvent.Proofs {
+		fmt.Println("proof from", node)
+		fmt.Println(m.Log)
+		fmt.Println()
+	}
 	//_ = groupedEvents
 
 	groups := []types.GroupedEvent{}
@@ -34,9 +45,9 @@ func (s *summary) Run() error {
 	return nil
 }
 
-func groupEvents(timeline types.Timeline, groupWith types.RegexType) {
+func groupEvents(timeline types.Timeline, groupWith types.RegexType) types.GroupedEvent {
 
-	group := types.GroupedEvent{Base: types.LogInfo{Date: types.Date{Time: time.Date(2100, time.January, 1, 1, 1, 1, 1, time.UTC)}}}
+	group := types.GroupedEvent{Base: types.LogInfo{Date: types.Date{Time: time.Date(2100, time.January, 1, 1, 1, 1, 1, time.UTC)}}, Proofs: map[string]types.LogInfo{}}
 
 	for node := range timeline {
 		stack := groupEventsFromLocalTimeline(timeline[node], groupWith)
@@ -45,6 +56,7 @@ func groupEvents(timeline types.Timeline, groupWith types.RegexType) {
 		}
 		group.Proofs[node] = stack[len(stack)-1]
 	}
+	return group
 }
 
 func groupEventsFromLocalTimeline(lt types.LocalTimeline, groupWith types.RegexType) []types.LogInfo {

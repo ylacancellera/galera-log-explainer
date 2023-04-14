@@ -6,36 +6,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 	"github.com/ylacancellera/galera-log-explainer/types"
 )
-
-type LogRegex struct {
-	Regex         *regexp.Regexp // to send to grep, should be as simple as possible but without collisions
-	internalRegex *regexp.Regexp // for internal usage in handler func
-	Type          types.RegexType
-	logger        zerolog.Logger // wip
-
-	// Taking into arguments the current context and log line, returning an updated context and a closure to get the msg to display
-	// Why a closure: to later inject an updated context instead of the current partial context, to ensure hash/ip/nodenames are known
-	handler   func(*regexp.Regexp, types.LogCtx, string) (types.LogCtx, types.LogDisplayer)
-	Verbosity types.Verbosity // To be able to hide details from summaries
-}
-
-var logger zerolog.Logger
-
-func init() {
-	logger = log.With().Str("component", "regex").Logger()
-}
-
-func (l *LogRegex) Handle(ctx types.LogCtx, line string) (types.LogCtx, types.LogDisplayer) {
-	return l.handler(l.internalRegex, ctx, line)
-}
-
-func AllRegexes() []LogRegex {
-	return append(append(append(append(IdentRegexes, StatesRegexes...), ViewsRegexes...), SSTRegexes...), EventsRegexes...)
-}
 
 func internalRegexSubmatch(regex *regexp.Regexp, log string) ([]string, error) {
 	slice := regex.FindStringSubmatch(log)
@@ -45,24 +17,25 @@ func internalRegexSubmatch(regex *regexp.Regexp, log string) ([]string, error) {
 	return slice, nil
 }
 
-func setType(t types.RegexType, regexes ...LogRegex) []LogRegex {
-	rs := regexes[:0]
+func setType(t types.RegexType, regexes types.RegexMap) {
 	for _, regex := range regexes {
 		regex.Type = t
-		rs = append(rs, regex)
 	}
-	return rs
+	return
 }
 
 // SetVerbosity accepts any LogRegex
 // Some can be useful to construct context, but we can choose not to display them
-func SetVerbosity(verbosity types.Verbosity, regexes ...LogRegex) []LogRegex {
-	rs := regexes[:0]
+func SetVerbosity(verbosity types.Verbosity, regexes types.RegexMap) {
 	for _, regex := range regexes {
 		regex.Verbosity = verbosity
-		rs = append(rs, regex)
 	}
-	return rs
+	return
+}
+
+func AllRegexes() types.RegexMap {
+	IdentsMap.Merge(ViewsMap).Merge(SSTMap).Merge(EventsMap).Merge(StatesMap)
+	return IdentsMap
 }
 
 // general buidling block wsrep regexes

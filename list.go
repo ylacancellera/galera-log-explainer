@@ -59,25 +59,27 @@ func (l *list) Run() error {
 	return nil
 }
 
-func (l *list) regexesToUse() []regex.LogRegex {
+func (l *list) regexesToUse() types.RegexMap {
 
 	// IdentRegexes is always needed: we would not be able to identify the node where the file come from
-	toCheck := regex.IdentRegexes
+	toCheck := regex.IdentsMap
 	if CLI.List.States || CLI.List.All {
-		toCheck = append(toCheck, regex.StatesRegexes...)
+		toCheck.Merge(regex.StatesMap)
 	} else if !CLI.List.SkipStateColoredColumn {
-		toCheck = append(toCheck, regex.SetVerbosity(types.DebugMySQL, regex.StatesRegexes...)...)
+		regex.SetVerbosity(types.DebugMySQL, regex.StatesMap)
+		toCheck.Merge(regex.StatesMap)
 	}
 	if CLI.List.Views || CLI.List.All {
-		toCheck = append(toCheck, regex.ViewsRegexes...)
+		toCheck.Merge(regex.ViewsMap)
 	}
 	if CLI.List.SST || CLI.List.All {
-		toCheck = append(toCheck, regex.SSTRegexes...)
+		toCheck.Merge(regex.SSTMap)
 	}
 	if CLI.List.Events || CLI.List.All {
-		toCheck = append(toCheck, regex.EventsRegexes...)
+		toCheck.Merge(regex.EventsMap)
 	} else if !CLI.List.SkipStateColoredColumn {
-		toCheck = append(toCheck, regex.SetVerbosity(types.DebugMySQL, regex.EventsRegexes...)...)
+		regex.SetVerbosity(types.DebugMySQL, regex.EventsMap)
+		toCheck.Merge(regex.EventsMap)
 	}
 	return toCheck
 }

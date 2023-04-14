@@ -28,7 +28,8 @@ You can also simply call the command to get a generated sed command to review an
 }
 
 func (s *sed) Run() error {
-	toCheck := append(regex.IdentRegexes, regex.SetVerbosity(types.DebugMySQL, regex.ViewsRegexes...)...)
+	regex.SetVerbosity(types.DebugMySQL, regex.ViewsMap)
+	toCheck := regex.IdentsMap.Merge(regex.ViewsMap)
 	timeline, err := timelineFromPaths(CLI.Sed.Paths, toCheck, CLI.Since, CLI.Until)
 	if err != nil {
 		return errors.Wrap(err, "Found nothing worth replacing")

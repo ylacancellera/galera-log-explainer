@@ -21,6 +21,7 @@ type LogInfo struct {
 	Msg       LogDisplayer // what to show
 	Log       string       // the raw log
 	RegexType RegexType
+	RegexUsed string
 	Ctx       LogCtx // the context is copied for each logInfo, so that it is easier to handle some info (current state), and this is also interesting to check how it evolved
 	Verbosity Verbosity
 }

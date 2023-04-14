@@ -50,7 +50,7 @@ func main() {
 
 // timelineFromPaths takes every path, search them using a list of regexes
 // and organize them in a timeline that will be ready to aggregate or read
-func timelineFromPaths(paths []string, toCheck []regex.LogRegex, since, until *time.Time) (types.Timeline, error) {
+func timelineFromPaths(paths []string, toCheck types.RegexMap, since, until *time.Time) (types.Timeline, error) {
 	timeline := make(types.Timeline)
 	found := false
 
@@ -77,13 +77,13 @@ func timelineFromPaths(paths []string, toCheck []regex.LogRegex, since, until *t
 }
 
 type extractor struct {
-	regexes      []regex.LogRegex
+	regexes      types.RegexMap
 	path         string
 	since, until *time.Time
 	logger       zerolog.Logger
 }
 
-func newExtractor(path string, toCheck []regex.LogRegex, since, until *time.Time) extractor {
+func newExtractor(path string, toCheck types.RegexMap, since, until *time.Time) extractor {
 	e := extractor{regexes: toCheck, path: path, since: since, until: until}
 	e.logger = log.With().Str("component", "extractor").Str("path", e.path).Logger()
 	if since != nil {
@@ -188,7 +188,7 @@ func (e *extractor) iterateOnResults(s *bufio.Scanner) ([]types.LogInfo, error) 
 		recentEnough = true
 
 		// We have to find again what regex worked to get this log line
-		for _, regex := range e.regexes {
+		for key, regex := range e.regexes {
 			if !regex.Regex.MatchString(line) {
 				continue
 			}
@@ -199,6 +199,7 @@ func (e *extractor) iterateOnResults(s *bufio.Scanner) ([]types.LogInfo, error) 
 				Msg:       displayer,
 				Ctx:       ctx,
 				RegexType: regex.Type,
+				RegexUsed: key,
 				Verbosity: regex.Verbosity,
 			})
 		}

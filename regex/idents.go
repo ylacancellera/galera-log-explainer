@@ -122,7 +122,7 @@ var IdentsMap = types.RegexMap{
 	// 2023-01-06T07:05:35.693861Z 0 [Note] WSREP: New COMPONENT: primary = yes, bootstrap = no, my_idx = 0, memb_num = 2
 	"RegexMyIDXFromComponent": &types.LogRegex{
 		Regex:         regexp.MustCompile("New COMPONENT:"),
-		InternalRegex: regexp.MustCompile("New COMPONENT:.*my_idx = -?" + regexIdx),
+		InternalRegex: regexp.MustCompile("New COMPONENT:.*my_idx = " + regexIdx),
 		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			r, err := internalRegexSubmatch(internalRegex, log)
 			if err != nil {

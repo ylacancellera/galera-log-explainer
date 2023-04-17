@@ -56,7 +56,7 @@ var (
 	regexSeqno         = "(?P<" + groupSeqno + ">[0-9]+)"
 	regexNodeIP        = "(?P<" + groupNodeIP + ">[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})"
 	regexNodeIPMethod  = "(?P<" + groupMethod + ">.+)://" + regexNodeIP + ":[0-9]{1,6}"
-	regexIdx           = "(?P<" + groupIdx + ">[0-9]{1,2})"
+	regexIdx           = "(?P<" + groupIdx + ">-?[0-9]{1,2})"
 )
 
 func IsNodeUUID(s string) bool {

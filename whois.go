@@ -90,7 +90,10 @@ func whoIs(ctxs map[string]types.LogCtx, search string) types.NodeInfo {
 			}
 		}
 		for _, hash := range hashes {
-			nodenames = utils.SliceMergeDeduplicate(nodenames, []string{ctx.HashToNodeName[hash]})
+			nodename, ok := ctx.HashToNodeName[hash]
+			if ok {
+				nodenames = utils.SliceMergeDeduplicate(nodenames, []string{nodename})
+			}
 		}
 	}
 	ni.NodeNames = nodenames

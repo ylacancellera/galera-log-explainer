@@ -1,6 +1,10 @@
 package types
 
-import "github.com/ylacancellera/galera-log-explainer/utils"
+import (
+	"fmt"
+
+	"github.com/ylacancellera/galera-log-explainer/utils"
+)
 
 // LogCtx is a context for a given file.
 // It used to keep track of what is going on at each new event.
@@ -90,6 +94,11 @@ func (ctx *LogCtx) AddOwnName(name string) {
 	}
 	ctx.OwnNames = append(ctx.OwnNames, name)
 	for _, hash := range ctx.OwnHashes {
+
+		if hash == "e96f2070-a987" {
+			fmt.Println("addownname", hash, name)
+			fmt.Println(ctx.HashToNodeName[hash])
+		}
 		ctx.HashToNodeName[hash] = name
 	}
 	for _, ip := range ctx.OwnIPs {
@@ -132,6 +141,7 @@ func (base *LogCtx) MergeMapsWith(ctxs []LogCtx) {
 			base.HashToIP[hash] = ip
 		}
 		for hash, nodename := range ctx.HashToNodeName {
+
 			base.HashToNodeName[hash] = nodename
 		}
 		for ip, hostname := range ctx.IPToHostname {

@@ -28,6 +28,7 @@ var CLI struct {
 	Whois   whois   `cmd:""`
 	Sed     sed     `cmd:""`
 	Summary summary `cmd:""`
+	Ctx     ctx     `cmd:""`
 }
 
 func main() {
@@ -150,12 +151,15 @@ func (e *extractor) search() (string, types.LocalTimeline, error) {
 	}
 
 	// If we found anything
-	if len(lt) > 0 {
+	if len(lt) == 0 {
 		// identify the node with the easiest to read information
-		return types.DisplayLocalNodeSimplestForm(lt[len(lt)-1].Ctx), lt, nil
+		return "", nil, errors.New("Found nothing")
 	}
 
-	return filepath.Base(e.path), lt, errors.New("Found nothing")
+	// Why not just return the file path:
+	// so that we are able to merge files that belong to the same nodes
+	// we wouldn't want them to be shown as from different nodes
+	return types.DisplayLocalNodeSimplestForm(lt[len(lt)-1].Ctx), lt, nil
 }
 
 func (e *extractor) sanitizeLine(s string) string {

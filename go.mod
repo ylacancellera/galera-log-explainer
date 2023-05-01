@@ -8,7 +8,6 @@ require (
 	github.com/alecthomas/kong v0.6.1
 	github.com/pkg/errors v0.9.1
 	github.com/rs/zerolog v1.29.0
-	golang.org/x/exp v0.0.0-20230321023759-10a507213a29
 )
 
 require (

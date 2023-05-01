@@ -22,6 +22,7 @@ var CLI struct {
 	Since     *time.Time      `help:"Only list events after this date, you can copy-paste a date from mysql error log"`
 	Until     *time.Time      `help:"Only list events before this date, you can copy-paste a date from mysql error log"`
 	Verbosity types.Verbosity `default:"1" help:"0: Info, 1: Detailed, 2: DebugMySQL (every mysql info the tool used), 3: Debug (internal tool debug)"`
+	K8s       bool            `default:"false" help:"Analyze logs from Percona PXC operator. Off by default because it negatively impacts performance for non-k8s setups" name:"k8s"`
 
 	List    list    `cmd:""`
 	Whois   whois   `cmd:""`
@@ -102,7 +103,10 @@ func (e *extractor) grepArgument() string {
 	for _, regex := range e.regexes {
 		regexToSendSlice = append(regexToSendSlice, regex.Regex.String())
 	}
-	grepRegex := "({\"log\":\")?" // to ignore k8s log prefixes. Works without it, but it helps to correctly filter date
+	grepRegex := ""
+	if CLI.K8s {
+		grepRegex = "({\"log\":\")?" // to ignore k8s log prefixes. Works without it, but it helps to correctly filter date
+	}
 	if e.since != nil || e.until != nil {
 		grepRegex += "(" + regex.BetweenDateRegex(e.since, e.until) + "|" + regex.NoDatesRegex() + ").*"
 	}

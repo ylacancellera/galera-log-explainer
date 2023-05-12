@@ -25,11 +25,12 @@ func (l *LogRegex) Handle(ctx LogCtx, line string) (LogCtx, LogDisplayer) {
 type RegexType string
 
 var (
-	EventsRegexType RegexType = "events"
-	SSTRegexType    RegexType = "sst"
-	ViewsRegexType  RegexType = "views"
-	IdentRegexType  RegexType = "identity"
-	StatesRegexType RegexType = "states"
+	EventsRegexType      RegexType = "events"
+	SSTRegexType         RegexType = "sst"
+	ViewsRegexType       RegexType = "views"
+	IdentRegexType       RegexType = "identity"
+	StatesRegexType      RegexType = "states"
+	PXCOperatorRegexType RegexType = "pxc-operator"
 )
 
 type RegexMap map[string]*LogRegex
@@ -39,4 +40,13 @@ func (r RegexMap) Merge(r2 RegexMap) RegexMap {
 		r[key] = value
 	}
 	return r
+}
+
+func (r RegexMap) Compile() []string {
+
+	arr := []string{}
+	for _, regex := range r {
+		arr = append(arr, regex.Regex.String())
+	}
+	return arr
 }

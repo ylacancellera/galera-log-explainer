@@ -87,7 +87,9 @@ func (ctx *LogCtx) AllNodeNames() []string {
 
 // AddOwnName propagates a name into the translation maps using the trusted node's known own hashes and ips
 func (ctx *LogCtx) AddOwnName(name string) {
-	if utils.SliceContains(ctx.OwnNames, name) {
+	// used to be a simple "if utils.SliceContains", changed to "is it the last known name?"
+	// because somes names/ips come back and forth, we should keep track of that
+	if len(ctx.OwnNames) > 0 && ctx.OwnNames[len(ctx.OwnNames)-1] == name {
 		return
 	}
 	ctx.OwnNames = append(ctx.OwnNames, name)
@@ -117,7 +119,8 @@ func (ctx *LogCtx) AddOwnHash(hash string) {
 
 // AddOwnIP propagates a ip into the translation maps
 func (ctx *LogCtx) AddOwnIP(ip string) {
-	if utils.SliceContains(ctx.OwnIPs, ip) {
+	// see AddOwnName comment
+	if len(ctx.OwnIPs) > 0 && ctx.OwnIPs[len(ctx.OwnIPs)-1] == ip {
 		return
 	}
 	ctx.OwnIPs = append(ctx.OwnIPs, ip)

@@ -114,13 +114,17 @@ func newExtractor(path string, toCheck types.RegexMap, since, until *time.Time) 
 
 func (e *extractor) grepArgument() string {
 
-	regexToSendSlice := []string{}
-	for _, regex := range e.regexes {
-		regexToSendSlice = append(regexToSendSlice, regex.Regex.String())
-	}
+	regexToSendSlice := e.regexes.Compile()
+
 	grepRegex := "^"
 	if CLI.PxcOperator {
-		grepRegex += "{\"log\":\"" //
+		// special case
+		// I'm not adding pxcoperator map the same way others are used, because they do not have the same formats and same place
+		// it needs to be put on the front so that it's not 'merged' with the '{"log":"' json prefix
+		// this is to keep things as close as '^' as possible to keep doing prefix searches
+		grepRegex += "(" + strings.Join(regex.PXCOperatorMap.Compile(), "|") + "|" + "{\"log\":\"" + ")"
+		e.regexes.Merge(regex.PXCOperatorMap)
+		//grepRegex += "{\"log\":\"" //
 	}
 	if e.since != nil || e.until != nil {
 		grepRegex += "(" + regex.BetweenDateRegex(e.since, e.until) + "|" + regex.NoDatesRegex() + ")"

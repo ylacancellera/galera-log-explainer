@@ -18,6 +18,8 @@ import (
 func TimelineCLI(timeline types.Timeline, verbosity types.Verbosity) {
 
 	// to hold the current context for each node
+	// "keys" is needed, because iterating over a map must give a different order each time
+	// a slice keeps its order
 	keys, currentContext := initKeysContext(timeline)
 	latestContext := timeline.GetLatestUpdatedContextsByNodes()
 	lastContext := map[string]types.LogCtx{}
@@ -29,11 +31,12 @@ func TimelineCLI(timeline types.Timeline, verbosity types.Verbosity) {
 	fmt.Fprintln(w, headerNodes(keys))
 	fmt.Fprintln(w, headerFilePath(keys, currentContext))
 	fmt.Fprintln(w, headerIP(keys, currentContext))
+	fmt.Fprintln(w, headerName(keys, currentContext))
 	fmt.Fprintln(w, separator(keys))
 
 	var (
-		args         []string // stuff to print
-		printedLines int
+		args      []string // stuff to print
+		linecount int
 	)
 
 	// as long as there is a next event to print
@@ -69,7 +72,7 @@ func TimelineCLI(timeline types.Timeline, verbosity types.Verbosity) {
 			}
 		}
 
-		if sep := fileTransitionSeparator(keys, lastContext, currentContext); sep != "" {
+		if sep := transitionSeparator(keys, lastContext, currentContext); sep != "" {
 			fmt.Fprintln(w, sep)
 		}
 
@@ -84,16 +87,17 @@ func TimelineCLI(timeline types.Timeline, verbosity types.Verbosity) {
 		if err != nil {
 			log.Println("Failed to write a line", err)
 		}
-		printedLines++
+		linecount++
 	}
 
 	// footer
 	// only having a header is not fast enough to read when there are too many lines
-	if printedLines >= 50 {
+	if linecount >= 50 {
 		fmt.Fprintln(w, separator(keys))
 		fmt.Fprintln(w, headerNodes(keys))
 		fmt.Fprintln(w, headerFilePath(keys, currentContext))
 		fmt.Fprintln(w, headerIP(keys, currentContext))
+		fmt.Fprintln(w, headerName(keys, currentContext))
 	}
 }
 
@@ -137,7 +141,7 @@ func headerFilePath(keys []string, ctxs map[string]types.LogCtx) string {
 }
 
 func headerIP(keys []string, ctxs map[string]types.LogCtx) string {
-	header := "ip\t"
+	header := "last known ip\t"
 	for _, node := range keys {
 		if ctx, ok := ctxs[node]; ok && len(ctx.OwnIPs) > 0 {
 			header += ctx.OwnIPs[len(ctx.OwnIPs)-1] + "\t"
@@ -148,28 +152,135 @@ func headerIP(keys []string, ctxs map[string]types.LogCtx) string {
 	return header
 }
 
-func fileTransitionSeparator(keys []string, oldctxs, ctxs map[string]types.LogCtx) string {
-	sep1 := " \t"
-	sep2 := " \t"
-	sep3 := " \t"
-	found := false
+func headerName(keys []string, ctxs map[string]types.LogCtx) string {
+	header := "last known name\t"
+	for _, node := range keys {
+		if ctx, ok := ctxs[node]; ok && len(ctx.OwnNames) > 0 {
+			header += ctx.OwnNames[len(ctx.OwnNames)-1] + "\t"
+		} else {
+			header += " \t"
+		}
+	}
+	return header
+}
+
+type transition struct {
+	s1, s2, changeType string
+	ok                 bool
+	summary            transitionSummary
+}
+
+type transitions struct {
+	tests             []*transition
+	transitionToPrint []*transition
+	numberFound       int
+}
+
+type transitionSummary [4]string
+
+const NumberOfPossibleTransition = 3
+
+// transactionSeparator is useful to highligh a change of context
+// example, changing file
+//   mysqld.log.2
+//    (file path)
+//           V
+//   mysqld.log.1
+// or a change of ip, node name, ...
+func transitionSeparator(keys []string, oldctxs, ctxs map[string]types.LogCtx) string {
+
+	ts := map[string]*transitions{}
+
 	for _, node := range keys {
 		ctx, ok1 := ctxs[node]
 		oldctx, ok2 := oldctxs[node]
-		if ok1 && ok2 && ctx.FilePath != oldctx.FilePath {
-			sep1 += utils.Paint(utils.BrightBlueText, oldctx.FilePath) + "\t"
-			sep2 += utils.Paint(utils.BrightBlueText, " V ") + "\t"
-			sep3 += utils.Paint(utils.BrightBlueText, ctx.FilePath) + "\t"
-			found = true
-		} else {
-			sep1 += " \t"
-			sep2 += " \t"
-			sep3 += " \t"
+
+		ts[node] = &transitions{tests: []*transition{}}
+		if ok1 && ok2 {
+			ts[node].tests = append(ts[node].tests, &transition{s1: oldctx.FilePath, s2: ctx.FilePath, changeType: "file path"})
+
+			if len(oldctx.OwnNames) > 0 && len(ctx.OwnNames) > 0 {
+				ts[node].tests = append(ts[node].tests, &transition{s1: oldctx.OwnNames[len(oldctx.OwnNames)-1], s2: ctx.OwnNames[len(ctx.OwnNames)-1], changeType: "node name"})
+			}
+			if len(oldctx.OwnIPs) > 0 && len(ctx.OwnIPs) > 0 {
+				ts[node].tests = append(ts[node].tests, &transition{s1: oldctx.OwnIPs[len(oldctx.OwnIPs)-1], s2: ctx.OwnIPs[len(ctx.OwnIPs)-1], changeType: "node ip"})
+			}
+
+		}
+
+		ts[node].fillEmptyTransition()
+		ts[node].iterate()
+	}
+
+	highestStackOfTransitions := 0
+
+	for _, node := range keys {
+		if ts[node].numberFound > highestStackOfTransitions {
+			highestStackOfTransitions = ts[node].numberFound
 		}
 	}
-	if !found {
+	for _, node := range keys {
+		ts[node].stackPrioritizeFound(highestStackOfTransitions)
+	}
+
+	out := "\t"
+	for i := 0; i < highestStackOfTransitions; i++ {
+		for row := 0; row < 4; row++ {
+			for _, node := range keys {
+				out += ts[node].transitionToPrint[i].summary[row]
+			}
+			if row < 4-1 {
+				out += "\n\t"
+			}
+		}
+	}
+
+	if out == "\t" {
 		return ""
 	}
-	return sep1 + "\n" + sep2 + "\n" + sep3
+	return out
+}
 
+func (ts *transitions) iterate() {
+
+	for _, test := range ts.tests {
+
+		test.summarizeIfDifferent()
+		if test.ok {
+			ts.numberFound++
+		}
+	}
+
+}
+func (ts *transitions) stackPrioritizeFound(height int) {
+	for i, test := range ts.tests {
+		// if at the right height
+		if len(ts.tests)-i+len(ts.transitionToPrint) == height {
+			ts.transitionToPrint = append(ts.transitionToPrint, ts.tests[i:]...)
+		}
+		if test.ok {
+			ts.transitionToPrint = append(ts.transitionToPrint, test)
+		}
+	}
+}
+
+func (ts *transitions) fillEmptyTransition() {
+	if len(ts.tests) == NumberOfPossibleTransition {
+		return
+	}
+	for i := len(ts.tests); i < NumberOfPossibleTransition; i++ {
+		ts.tests = append(ts.tests, &transition{s1: "", s2: "", changeType: ""})
+	}
+
+}
+
+func (t *transition) summarizeIfDifferent() {
+	if t.s1 != t.s2 {
+		t.summary = [4]string{utils.Paint(utils.BrightBlueText, t.s1), utils.Paint(utils.BlueText, "("+t.changeType+")"), utils.Paint(utils.BrightBlueText, " V "), utils.Paint(utils.BrightBlueText, t.s2)}
+		t.ok = true
+	}
+	for i := range t.summary {
+		t.summary[i] = t.summary[i] + "\t"
+	}
+	return
 }

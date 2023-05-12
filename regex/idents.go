@@ -1,7 +1,6 @@
 package regex
 
 import (
-	"fmt"
 	"regexp"
 	"strings"
 
@@ -72,11 +71,8 @@ var IdentsMap = types.RegexMap{
 			shorthash := splitted[0] + "-" + splitted[3]
 			ctx.HashToNodeName[shorthash] = nodename
 
-			//fmt.Println(shorthash, nodename)
-			//	}
 			if ctx.MyIdx == idx && ctx.State == "PRIMARY" {
 				ctx.AddOwnHash(shorthash)
-				fmt.Println("regexmember")
 				ctx.AddOwnName(nodename)
 			}
 
@@ -136,8 +132,6 @@ var IdentsMap = types.RegexMap{
 
 			idx := r[internalRegex.SubexpIndex(groupIdx)]
 			ctx.MyIdx = idx
-			fmt.Println("myidx: " + idx)
-			fmt.Println(log)
 			return ctx, types.SimpleDisplayer("my_idx=" + idx)
 		},
 		Verbosity: types.DebugMySQL,
@@ -162,10 +156,6 @@ var IdentsMap = types.RegexMap{
 				return ctx, types.SimpleDisplayer("name(" + name + ") can't be trusted as it's non-primary")
 			}
 
-			if name != "cluster1-pxc-0" {
-				fmt.Println("regexownnamefromstate")
-				fmt.Println(log)
-			}
 			ctx.AddOwnName(name)
 			return ctx, types.SimpleDisplayer("local name:" + name)
 		},

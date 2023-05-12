@@ -1,8 +1,6 @@
 package types
 
 import (
-	"fmt"
-
 	"github.com/ylacancellera/galera-log-explainer/utils"
 )
 
@@ -95,10 +93,6 @@ func (ctx *LogCtx) AddOwnName(name string) {
 	ctx.OwnNames = append(ctx.OwnNames, name)
 	for _, hash := range ctx.OwnHashes {
 
-		if hash == "e96f2070-a987" {
-			fmt.Println("addownname", hash, name)
-			fmt.Println(ctx.HashToNodeName[hash])
-		}
 		ctx.HashToNodeName[hash] = name
 	}
 	for _, ip := range ctx.OwnIPs {

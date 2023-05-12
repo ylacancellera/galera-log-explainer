@@ -18,11 +18,11 @@ import (
 )
 
 var CLI struct {
-	NoColor   bool
-	Since     *time.Time      `help:"Only list events after this date, you can copy-paste a date from mysql error log"`
-	Until     *time.Time      `help:"Only list events before this date, you can copy-paste a date from mysql error log"`
-	Verbosity types.Verbosity `default:"1" help:"0: Info, 1: Detailed, 2: DebugMySQL (every mysql info the tool used), 3: Debug (internal tool debug)"`
-	K8s       bool            `default:"false" help:"Analyze logs from Percona PXC operator. Off by default because it negatively impacts performance for non-k8s setups" name:"k8s"`
+	NoColor     bool
+	Since       *time.Time      `help:"Only list events after this date, you can copy-paste a date from mysql error log"`
+	Until       *time.Time      `help:"Only list events before this date, you can copy-paste a date from mysql error log"`
+	Verbosity   types.Verbosity `default:"1" help:"0: Info, 1: Detailed, 2: DebugMySQL (every mysql info the tool used), 3: Debug (internal tool debug)"`
+	PxcOperator bool            `default:"false" help:"Analyze logs from Percona PXC operator. Off by default because it negatively impacts performance for non-k8s setups"`
 
 	List    list    `cmd:""`
 	Whois   whois   `cmd:""`
@@ -60,17 +60,31 @@ func timelineFromPaths(paths []string, toCheck types.RegexMap, since, until *tim
 
 		extr := newExtractor(path, toCheck, since, until)
 
-		node, localTimeline, err := extr.search()
+		localTimeline, err := extr.search()
 		if err != nil {
 			extr.logger.Warn().Err(err).Msg("Search failed")
 			continue
 		}
 		found = true
 
-		if t, ok := timeline[node]; ok {
-			localTimeline = types.MergeTimeline(t, localTimeline)
+		// identify the node with the easiest to read information
+		//		return , lt, nil
+		var node string
+		if CLI.PxcOperator {
+			node = path
+
+		} else {
+
+			// Why it should not just identify using the file path:
+			// so that we are able to merge files that belong to the same nodes
+			// we wouldn't want them to be shown as from different nodes
+			node = types.DisplayLocalNodeSimplestForm(localTimeline[len(localTimeline)-1].Ctx)
+			if t, ok := timeline[node]; ok {
+				localTimeline = types.MergeTimeline(t, localTimeline)
+			}
 		}
 		timeline[node] = localTimeline
+
 	}
 	if !found {
 		return nil, errors.New("Could not find data")
@@ -104,18 +118,19 @@ func (e *extractor) grepArgument() string {
 	for _, regex := range e.regexes {
 		regexToSendSlice = append(regexToSendSlice, regex.Regex.String())
 	}
-	grepRegex := ""
-	if CLI.K8s {
-		grepRegex = "({\"log\":\")?" // to ignore k8s log prefixes. Works without it, but it helps to correctly filter date
+	grepRegex := "^"
+	if CLI.PxcOperator {
+		grepRegex += "{\"log\":\"" //
 	}
 	if e.since != nil || e.until != nil {
-		grepRegex += "(" + regex.BetweenDateRegex(e.since, e.until) + "|" + regex.NoDatesRegex() + ").*"
+		grepRegex += "(" + regex.BetweenDateRegex(e.since, e.until) + "|" + regex.NoDatesRegex() + ")"
 	}
+	grepRegex += ".*"
 	return grepRegex + "(" + strings.Join(regexToSendSlice, "|") + ")"
 }
 
 // search is the main function to search what we want in a file
-func (e *extractor) search() (string, types.LocalTimeline, error) {
+func (e *extractor) search() (types.LocalTimeline, error) {
 
 	// A first pass is done, with every regexes we want compiled in a single one.
 	grepRegex := e.grepArgument()
@@ -139,7 +154,7 @@ func (e *extractor) search() (string, types.LocalTimeline, error) {
 	defer out.Close()
 	err := cmd.Start()
 	if err != nil {
-		return "", nil, errors.Wrapf(err, "failed to search in %s", e.path)
+		return nil, errors.Wrapf(err, "failed to search in %s", e.path)
 	}
 
 	// grep treatment
@@ -152,14 +167,10 @@ func (e *extractor) search() (string, types.LocalTimeline, error) {
 
 	// If we found anything
 	if len(lt) == 0 {
-		// identify the node with the easiest to read information
-		return "", nil, errors.New("Found nothing")
+		return nil, errors.New("Found nothing")
 	}
+	return lt, nil
 
-	// Why not just return the file path:
-	// so that we are able to merge files that belong to the same nodes
-	// we wouldn't want them to be shown as from different nodes
-	return types.DisplayLocalNodeSimplestForm(lt[len(lt)-1].Ctx), lt, nil
 }
 
 func (e *extractor) sanitizeLine(s string) string {
@@ -196,6 +207,7 @@ func (e *extractor) iterateOnResults(s *bufio.Scanner) ([]types.LogInfo, error) 
 		recentEnough = true
 
 		// We have to find again what regex worked to get this log line
+		// it can match multiple regexes
 		for key, regex := range e.regexes {
 			if !regex.Regex.MatchString(line) {
 				continue

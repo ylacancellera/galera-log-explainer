@@ -24,7 +24,7 @@ func TimelineCLI(timeline types.Timeline, verbosity types.Verbosity) {
 	latestContext := timeline.GetLatestUpdatedContextsByNodes()
 	lastContext := map[string]types.LogCtx{}
 
-	w := tabwriter.NewWriter(os.Stdout, 8, 8, 3, ' ', tabwriter.AlignRight)
+	w := tabwriter.NewWriter(os.Stdout, 8, 8, 3, ' ', tabwriter.DiscardEmptyColumns)
 	defer w.Flush()
 
 	// header

@@ -46,7 +46,7 @@ var ViewsMap = types.RegexMap{
 			ctx.HashToIP[r[internalRegex.SubexpIndex(groupNodeHash)]] = ip
 			ctx.IPToMethod[ip] = r[internalRegex.SubexpIndex(groupMethod)]
 			return ctx, func(ctx types.LogCtx) string {
-				return types.DisplayNodeSimplestForm(ctx, ip) + utils.Paint(utils.GreenText, " has joined")
+				return types.DisplayNodeSimplestForm(ctx, ip) + utils.Paint(utils.GreenText, " joined")
 			}
 		},
 	},
@@ -62,7 +62,7 @@ var ViewsMap = types.RegexMap{
 
 			ip := r[internalRegex.SubexpIndex(groupNodeIP)]
 			return ctx, func(ctx types.LogCtx) string {
-				return types.DisplayNodeSimplestForm(ctx, ip) + utils.Paint(utils.RedText, " has left")
+				return types.DisplayNodeSimplestForm(ctx, ip) + utils.Paint(utils.RedText, "  left")
 			}
 		},
 	},
@@ -84,7 +84,7 @@ var ViewsMap = types.RegexMap{
 			if primary {
 				msg := utils.Paint(utils.GreenText, "PRIMARY") + "(n=" + memb_num + ")"
 				if bootstrap {
-					msg += " ,bootstrap=yes"
+					msg += ",bootstrap"
 				}
 				return ctx, types.SimpleDisplayer(msg)
 			}

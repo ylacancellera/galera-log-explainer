@@ -2,15 +2,12 @@ package types
 
 import (
 	"regexp"
-
-	"github.com/rs/zerolog"
 )
 
 type LogRegex struct {
 	Regex         *regexp.Regexp // to send to grep, should be as simple as possible but without collisions
 	InternalRegex *regexp.Regexp // for internal usage in handler func
 	Type          RegexType
-	logger        zerolog.Logger // wip
 
 	// Taking into arguments the current context and log line, returning an updated context and a closure to get the msg to display
 	// Why a closure: to later inject an updated context instead of the current partial context, to ensure hash/ip/nodenames are known

@@ -25,11 +25,10 @@ var CLI struct {
 	Verbosity   types.Verbosity `default:"1" help:"0: Info, 1: Detailed, 2: DebugMySQL (every mysql info the tool used), 3: Debug (internal tool debug)"`
 	PxcOperator bool            `default:"false" help:"Analyze logs from Percona PXC operator. Off by default because it negatively impacts performance for non-k8s setups"`
 
-	List    list    `cmd:""`
-	Whois   whois   `cmd:""`
-	Sed     sed     `cmd:""`
-	Summary summary `cmd:""`
-	Ctx     ctx     `cmd:""`
+	List  list  `cmd:""`
+	Whois whois `cmd:""`
+	Sed   sed   `cmd:""`
+	Ctx   ctx   `cmd:""`
 
 	GrepCmd  string `help:"'grep' command path. Could need to be set to 'ggrep' for darwin systems" default:"grep"`
 	GrepArgs string `help:"'grep' arguments. perl regexp (-P) is necessary. -o will break the tool" default:"-P"`

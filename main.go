@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -29,6 +30,9 @@ var CLI struct {
 	Sed     sed     `cmd:""`
 	Summary summary `cmd:""`
 	Ctx     ctx     `cmd:""`
+
+	GrepCmd  string `help:"'grep' command path. Could need to be set to 'ggrep' for darwin systems" default:"grep"`
+	GrepArgs string `help:"'grep' arguments. perl regexp (-P) is necessary. -o will break the tool" default:"-P"`
 }
 
 func main() {
@@ -157,7 +161,10 @@ func (e *extractor) search() (types.LocalTimeline, error) {
 		Also, being sequential also ensure this program is light enough to run without too much impacts
 		It also helps to be transparent and not provide an obscure tool that work as a blackbox
 	*/
-	cmd := exec.Command("grep", "-P", grepRegex, e.path)
+	if runtime.GOOS == "darwin" && CLI.GrepCmd == "grep" {
+		e.logger.Warn().Msg("On Darwin systems, use '--grep-cmd=ggrep' as it requires grep v3")
+	}
+	cmd := exec.Command(CLI.GrepCmd, CLI.GrepArgs, grepRegex, e.path)
 	out, _ := cmd.StdoutPipe()
 	defer out.Close()
 	err := cmd.Start()

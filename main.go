@@ -122,7 +122,7 @@ func (e *extractor) grepArgument() string {
 		// I'm not adding pxcoperator map the same way others are used, because they do not have the same formats and same place
 		// it needs to be put on the front so that it's not 'merged' with the '{"log":"' json prefix
 		// this is to keep things as close as '^' as possible to keep doing prefix searches
-		grepRegex += "(" + strings.Join(regex.PXCOperatorMap.Compile(), "|") + "|" + "{\"log\":\"" + ")"
+		grepRegex += "((" + strings.Join(regex.PXCOperatorMap.Compile(), "|") + ")|^{\"log\":\""
 		e.regexes.Merge(regex.PXCOperatorMap)
 		//grepRegex += "{\"log\":\"" //
 	}
@@ -130,7 +130,11 @@ func (e *extractor) grepArgument() string {
 		grepRegex += "(" + regex.BetweenDateRegex(e.since, e.until) + "|" + regex.NoDatesRegex() + ")"
 	}
 	grepRegex += ".*"
-	return grepRegex + "(" + strings.Join(regexToSendSlice, "|") + ")"
+	grepRegex += "(" + strings.Join(regexToSendSlice, "|") + ")"
+	if CLI.PxcOperator {
+		grepRegex += ")"
+	}
+	return grepRegex
 }
 
 // search is the main function to search what we want in a file

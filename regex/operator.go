@@ -17,7 +17,7 @@ func init() {
 // only those should be handled here, they are specific to pxc operator but still very insightful
 var PXCOperatorMap = types.RegexMap{
 	"RegexNodeNameFromEnv": &types.LogRegex{
-		Regex:         regexp.MustCompile("\\+ NODE_NAME="),
+		Regex:         regexp.MustCompile(". NODE_NAME="),
 		InternalRegex: regexp.MustCompile("NODE_NAME=" + regexNodeName),
 		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			r, err := internalRegexSubmatch(internalRegex, log)
@@ -28,8 +28,24 @@ var PXCOperatorMap = types.RegexMap{
 			nodename := r[internalRegex.SubexpIndex(groupNodeName)]
 			nodename, _, _ = strings.Cut(nodename, ".")
 			ctx.AddOwnName(nodename)
-			panic(nodename)
-			return ctx, types.SimpleDisplayer("local name:" + nodename)
+			return ctx, types.SimpleDisplayer("local name(operator):" + nodename)
 		},
+		Verbosity: types.DebugMySQL,
+	},
+
+	"RegexNodeIPFromEnv": &types.LogRegex{
+		Regex:         regexp.MustCompile(". NODE_IP="),
+		InternalRegex: regexp.MustCompile("NODE_IP=" + regexNodeIP),
+		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+			r, err := internalRegexSubmatch(internalRegex, log)
+			if err != nil {
+				return ctx, nil
+			}
+
+			ip := r[internalRegex.SubexpIndex(groupNodeIP)]
+			ctx.AddOwnIP(ip)
+			return ctx, types.SimpleDisplayer("local ip(operator):" + ip)
+		},
+		Verbosity: types.DebugMySQL,
 	},
 }

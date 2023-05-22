@@ -70,7 +70,8 @@ var IdentsMap = types.RegexMap{
 			splitted := strings.Split(hash, "-")
 			shorthash := splitted[0] + "-" + splitted[3]
 			ctx.HashToNodeName[shorthash] = nodename
-			if ctx.MyIdx == idx {
+
+			if ctx.MyIdx == idx && ctx.State == "PRIMARY" {
 				ctx.AddOwnHash(shorthash)
 				ctx.AddOwnName(nodename)
 			}
@@ -148,8 +149,13 @@ var IdentsMap = types.RegexMap{
 			idx := r[internalRegex.SubexpIndex(groupIdx)]
 			name := r[internalRegex.SubexpIndex(groupNodeName)]
 			if idx != ctx.MyIdx {
-				return ctx, types.SimpleDisplayer("name from unknown idx")
+				return ctx, types.SimpleDisplayer("name(" + name + ") from unknown idx")
 			}
+
+			if ctx.State == "NON-PRIMARY" {
+				return ctx, types.SimpleDisplayer("name(" + name + ") can't be trusted as it's non-primary")
+			}
+
 			ctx.AddOwnName(name)
 			return ctx, types.SimpleDisplayer("local name:" + name)
 		},

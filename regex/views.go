@@ -275,5 +275,7 @@ d4397932 at tcp://ip:4567
 
  2023-04-04T22:35:23.487304Z 0 [Warning] [MY-000000] [Galera] Handshake failed: tlsv1 alert decrypt error
 
+ 2023-04-16T19:35:06.875877Z 0 [Warning] [MY-000000] [Galera] Action message in non-primary configuration from member 0
+
 
 */

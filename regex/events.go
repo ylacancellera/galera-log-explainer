@@ -98,3 +98,9 @@ var EventsMap = types.RegexMap{
 var regexWsrepLoadNone = regexp.MustCompile("none")
 
 // mysqld got signal 6/11
+/*
+
+2023-05-09T17:39:19.955040Z 51 [Warning] [MY-000000] [Galera] failed to replay trx: source: fb9d6310-ee8b-11ed-8aee-f7542ad73e53 version: 5 local: 1 flags: 1 conn_id: 48 trx_id: 2696 tstamp: 1683653959142522853; state: EXECUTING:0->REPLICATING:782->CERTIFYING:3509->APPLYING:3748->COMMITTING:1343->COMMITTED:-1
+2023-05-09T17:39:19.955085Z 51 [Warning] [MY-000000] [Galera] Invalid state in replay for trx source: fb9d6310-ee8b-11ed-8aee-f7542ad73e53 version: 5 local: 1 flags: 1 conn_id: 48 trx_id: 2696 tstamp: 1683653959142522853; state: EXECUTING:0->REPLICATING:782->CERTIFYING:3509->APPLYING:3748->COMMITTING:1343->COMMITTED:-1 (FATAL)
+         at galera/src/replicator_smm.cpp:replay_trx():1247
+*/

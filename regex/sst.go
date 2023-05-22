@@ -179,6 +179,7 @@ REGEX_SST_BYPASS="\(Bypassing state dump\|IST sender starting\|IST received\)"
 
 2023-03-20 17:26:27 140666176771840 [ERROR] WSREP: gcs/src/gcs_group.cpp:gcs_group_handle_join_msg():736: Will never receive state. Need to abort.
 
+2023-05-12T02:52:33.767132Z 0 [Note] [MY-000000] [WSREP-SST] Preparing the backup at /var/lib/mysql/sst-xb-tmpdir
 
 )
 */

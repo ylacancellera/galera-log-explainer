@@ -63,21 +63,21 @@ func (l *list) regexesToUse() types.RegexMap {
 
 	// IdentRegexes is always needed: we would not be able to identify the node where the file come from
 	toCheck := regex.IdentsMap
-	if CLI.List.States || CLI.List.All {
+	if l.States || l.All {
 		toCheck.Merge(regex.StatesMap)
-	} else if !CLI.List.SkipStateColoredColumn {
+	} else if !l.SkipStateColoredColumn {
 		regex.SetVerbosity(types.DebugMySQL, regex.StatesMap)
 		toCheck.Merge(regex.StatesMap)
 	}
-	if CLI.List.Views || CLI.List.All {
+	if l.Views || l.All {
 		toCheck.Merge(regex.ViewsMap)
 	}
-	if CLI.List.SST || CLI.List.All {
+	if l.SST || l.All {
 		toCheck.Merge(regex.SSTMap)
 	}
-	if CLI.List.Events || CLI.List.All {
+	if l.Events || l.All {
 		toCheck.Merge(regex.EventsMap)
-	} else if !CLI.List.SkipStateColoredColumn {
+	} else if !l.SkipStateColoredColumn {
 		regex.SetVerbosity(types.DebugMySQL, regex.EventsMap)
 		toCheck.Merge(regex.EventsMap)
 	}

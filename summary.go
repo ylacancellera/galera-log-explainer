@@ -15,7 +15,6 @@ type summary struct {
 }
 
 func (s *summary) Run() error {
-	return errors.New("Unimplemented")
 
 	toCheck := regex.AllRegexes()
 
@@ -29,7 +28,7 @@ func (s *summary) Run() error {
 	if err != nil {
 		return errors.Wrap(err, "Could not get summary")
 	}
-	groupedEvent := groupEvents(timeline, types.ViewsRegexType)
+	groupedEvent := groupEvents(timeline, "RegexNewComponent")
 	fmt.Println("base")
 	fmt.Println(groupedEvent.Base.Msg(groupedEvent.Base.Ctx))
 	fmt.Println()
@@ -45,7 +44,7 @@ func (s *summary) Run() error {
 	return nil
 }
 
-func groupEvents(timeline types.Timeline, groupWith types.RegexType) types.GroupedEvent {
+func groupEvents(timeline types.Timeline, groupWith string) types.GroupedEvent {
 
 	group := types.GroupedEvent{Base: types.LogInfo{Date: types.Date{Time: time.Date(2100, time.January, 1, 1, 1, 1, 1, time.UTC)}}, Proofs: map[string]types.LogInfo{}}
 
@@ -59,11 +58,11 @@ func groupEvents(timeline types.Timeline, groupWith types.RegexType) types.Group
 	return group
 }
 
-func groupEventsFromLocalTimeline(lt types.LocalTimeline, groupWith types.RegexType) []types.LogInfo {
+func groupEventsFromLocalTimeline(lt types.LocalTimeline, groupWith string) []types.LogInfo {
 
 	for i, li := range lt {
-		if li.RegexType == groupWith {
-			return lt[:i]
+		if li.RegexUsed == groupWith {
+			return lt[:i+1]
 		}
 	}
 	return []types.LogInfo{}

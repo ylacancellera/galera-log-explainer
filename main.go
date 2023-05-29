@@ -19,16 +19,18 @@ import (
 )
 
 var CLI struct {
-	NoColor     bool
-	Since       *time.Time      `help:"Only list events after this date, you can copy-paste a date from mysql error log"`
-	Until       *time.Time      `help:"Only list events before this date, you can copy-paste a date from mysql error log"`
-	Verbosity   types.Verbosity `default:"1" help:"0: Info, 1: Detailed, 2: DebugMySQL (every mysql info the tool used), 3: Debug (internal tool debug)"`
-	PxcOperator bool            `default:"false" help:"Analyze logs from Percona PXC operator. Off by default because it negatively impacts performance for non-k8s setups"`
+	NoColor        bool
+	Since          *time.Time      `help:"Only list events after this date, you can copy-paste a date from mysql error log"`
+	Until          *time.Time      `help:"Only list events before this date, you can copy-paste a date from mysql error log"`
+	Verbosity      types.Verbosity `default:"1" help:"0: Info, 1: Detailed, 2: DebugMySQL (every mysql info the tool used), 3: Debug (internal tool debug)"`
+	PxcOperator    bool            `default:"false" help:"Analyze logs from Percona PXC operator. Off by default because it negatively impacts performance for non-k8s setups"`
+	ExcludeRegexes []string        `help:"Remove regexes from analysis. List regexes using 'galera-log-explainer regex-list'"`
 
-	List  list  `cmd:""`
-	Whois whois `cmd:""`
-	Sed   sed   `cmd:""`
-	Ctx   ctx   `cmd:""`
+	List      list      `cmd:""`
+	Whois     whois     `cmd:""`
+	Sed       sed       `cmd:""`
+	Ctx       ctx       `cmd:""`
+	RegexList regexList `cmd:""`
 
 	GrepCmd  string `help:"'grep' command path. Could need to be set to 'ggrep' for darwin systems" default:"grep"`
 	GrepArgs string `help:"'grep' arguments. perl regexp (-P) is necessary. -o will break the tool" default:"-P"`
@@ -223,7 +225,7 @@ func (e *extractor) iterateOnResults(s *bufio.Scanner) ([]types.LogInfo, error) 
 		// We have to find again what regex worked to get this log line
 		// it can match multiple regexes
 		for key, regex := range e.regexes {
-			if !regex.Regex.MatchString(line) {
+			if !regex.Regex.MatchString(line) || utils.SliceContains(CLI.ExcludeRegexes, key) {
 				continue
 			}
 			ctx, displayer = regex.Handle(ctx, line)

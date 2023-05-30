@@ -17,7 +17,7 @@ const (
 
 // LogInfo is to store a single event in log. This is something that should be displayed ultimately, this is what we want when we launch this tool
 type LogInfo struct {
-	Date      Date
+	Date      *Date
 	Msg       LogDisplayer // what to show
 	Log       string       // the raw log
 	RegexType RegexType

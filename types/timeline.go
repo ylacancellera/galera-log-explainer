@@ -21,8 +21,8 @@ func MergeTimeline(t1, t2 LocalTimeline) LocalTimeline {
 		return t1
 	}
 
-	startt1 := t1[0].Date.Time
-	startt2 := t2[0].Date.Time
+	startt1 := getfirsttime(t1)
+	startt2 := getfirsttime(t2)
 
 	// just flip them, easier than adding too many nested conditions
 	// t1: ---O----?--
@@ -31,8 +31,8 @@ func MergeTimeline(t1, t2 LocalTimeline) LocalTimeline {
 		return MergeTimeline(t2, t1)
 	}
 
-	endt1 := t1[len(t1)-1].Date.Time
-	endt2 := t2[len(t2)-1].Date.Time
+	endt1 := getlasttime(t1)
+	endt2 := getlasttime(t2)
 
 	// if t2 is an updated version of t1, or t1 an updated of t2, or t1=t2
 	// t1: --O-----?--
@@ -76,6 +76,23 @@ func MergeTimeline(t1, t2 LocalTimeline) LocalTimeline {
 	// t1: --O--O------
 	// t2: ------O--O--
 	return append(t1, t2...)
+}
+
+func getfirsttime(l LocalTimeline) time.Time {
+	for _, event := range l {
+		if event.Date != nil {
+			return event.Date.Time
+		}
+	}
+	return time.Time{}
+}
+func getlasttime(l LocalTimeline) time.Time {
+	for i := len(l) - 1; i >= 0; i-- {
+		if l[i].Date != nil {
+			return l[i].Date.Time
+		}
+	}
+	return time.Time{}
 }
 
 // CutTimelineAt returns a localtimeline with the 1st event starting
@@ -124,7 +141,7 @@ func (t Timeline) IterateNode() []string {
 		if len(t[node]) == 0 {
 			continue
 		}
-		curDate := t[node][0].Date.Time
+		curDate := getfirsttime(t[node])
 		if curDate.Before(nextDate) {
 			nextDate = curDate
 			nextNodes = []string{node}

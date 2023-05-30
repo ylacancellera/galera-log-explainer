@@ -71,6 +71,7 @@ func timelineFromPaths(paths []string, toCheck types.RegexMap, since, until *tim
 			continue
 		}
 		found = true
+		extr.logger.Debug().Str("path", path).Msg("Finished searching")
 
 		// identify the node with the easiest to read information
 		//		return , lt, nil
@@ -85,9 +86,12 @@ func timelineFromPaths(paths []string, toCheck types.RegexMap, since, until *tim
 			// we wouldn't want them to be shown as from different nodes
 			node = types.DisplayLocalNodeSimplestForm(localTimeline[len(localTimeline)-1].Ctx)
 			if t, ok := timeline[node]; ok {
+
+				extr.logger.Debug().Str("path", path).Str("node", node).Msg("Merging with existing timeline")
 				localTimeline = types.MergeTimeline(t, localTimeline)
 			}
 		}
+		extr.logger.Debug().Str("path", path).Str("node", node).Msg("Storing timeline")
 		timeline[node] = localTimeline
 
 	}
@@ -163,7 +167,7 @@ func (e *extractor) search() (types.LocalTimeline, error) {
 		It also helps to be transparent and not provide an obscure tool that work as a blackbox
 	*/
 	if runtime.GOOS == "darwin" && CLI.GrepCmd == "grep" {
-		e.logger.Warn().Msg("On Darwin systems, use '--grep-cmd=ggrep' as it requires grep v3")
+		e.logger.Warn().Msg("On Darwin systems, use 'galera-log-explainer --grep-cmd=ggrep' as it requires grep v3")
 	}
 	cmd := exec.Command(CLI.GrepCmd, CLI.GrepArgs, grepRegex, e.path)
 	out, _ := cmd.StdoutPipe()
@@ -210,7 +214,12 @@ func (e *extractor) iterateOnResults(s *bufio.Scanner) ([]types.LogInfo, error) 
 	for s.Scan() {
 		line = e.sanitizeLine(s.Text())
 
-		date := types.NewDate(regex.SearchDateFromLog(line))
+		var date *types.Date
+		t, layout, ok := regex.SearchDateFromLog(line)
+		if ok {
+			d := types.NewDate(t, layout)
+			date = &d
+		}
 
 		// If it's recentEnough, it means we already validated a log: every next logs necessarily happened later
 		// this is useful because not every logs have a date attached, and some without date are very useful

@@ -20,9 +20,9 @@ func TimelineCLI(timeline types.Timeline, verbosity types.Verbosity) {
 	// to hold the current context for each node
 	// "keys" is needed, because iterating over a map must give a different order each time
 	// a slice keeps its order
-	keys, currentContext := initKeysContext(timeline)
-	latestContext := timeline.GetLatestUpdatedContextsByNodes()
-	lastContext := map[string]types.LogCtx{}
+	keys, currentContext := initKeysContext(timeline)           // currentcontext to follow when important thing changed
+	latestContext := timeline.GetLatestUpdatedContextsByNodes() // so that we have fully updated context when we print
+	lastContext := map[string]types.LogCtx{}                    // just to follow when important thing changed
 
 	w := tabwriter.NewWriter(os.Stdout, 8, 8, 3, ' ', tabwriter.DiscardEmptyColumns)
 	defer w.Flush()
@@ -45,8 +45,12 @@ func TimelineCLI(timeline types.Timeline, verbosity types.Verbosity) {
 		// Date column
 		//formattedDate, tmpLastLayout := dateBlock(nextDate, lastDate, timeline[nextNodes[0]][0].DateLayout, lastLayout)
 		date := timeline[nextNodes[0]][0].Date
+		if date != nil {
+			args = []string{date.DisplayTime}
+		} else {
+			args = []string{""}
+		}
 
-		args = []string{date.DisplayTime}
 		displayedValue := 0
 
 		// node values
@@ -73,6 +77,13 @@ func TimelineCLI(timeline types.Timeline, verbosity types.Verbosity) {
 		}
 
 		if sep := transitionSeparator(keys, lastContext, currentContext); sep != "" {
+			// reset current context, so that we avoid duplicating transitions
+			// lastContext/currentContext is only useful for that anyway
+			lastContext = map[string]types.LogCtx{}
+			for k, v := range currentContext {
+				lastContext[k] = v
+			}
+			// print transition
 			fmt.Fprintln(w, sep)
 		}
 
@@ -180,6 +191,8 @@ type transitionSummary [4]string
 
 const NumberOfPossibleTransition = 3
 
+const RowPerTransitions = 4
+
 // transactionSeparator is useful to highligh a change of context
 // example, changing file
 //   mysqld.log.2
@@ -225,11 +238,11 @@ func transitionSeparator(keys []string, oldctxs, ctxs map[string]types.LogCtx) s
 
 	out := "\t"
 	for i := 0; i < highestStackOfTransitions; i++ {
-		for row := 0; row < 4; row++ {
+		for row := 0; row < RowPerTransitions; row++ {
 			for _, node := range keys {
 				out += ts[node].transitionToPrint[i].summary[row]
 			}
-			if row < 4-1 {
+			if !(i == highestStackOfTransitions-1 && row == RowPerTransitions-1) { // unless last row
 				out += "\n\t"
 			}
 		}

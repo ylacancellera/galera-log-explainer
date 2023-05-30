@@ -87,7 +87,7 @@ REGEX_LOG_PREFIX="$REGEX_DATE \?[0-9]* "
 
 const k8sprefix = `{"log":"`
 
-func SearchDateFromLog(logline string) (time.Time, string) {
+func SearchDateFromLog(logline string) (time.Time, string, bool) {
 	if logline[:len(k8sprefix)] == k8sprefix {
 		logline = logline[len(k8sprefix):]
 	}
@@ -97,9 +97,9 @@ func SearchDateFromLog(logline string) (time.Time, string) {
 		}
 		t, err := time.Parse(layout, logline[:len(layout)])
 		if err == nil {
-			return t, layout
+			return t, layout, true
 		}
 	}
 	log.Debug().Str("log", logline).Msg("could not find date from log")
-	return time.Time{}, ""
+	return time.Time{}, "", false
 }

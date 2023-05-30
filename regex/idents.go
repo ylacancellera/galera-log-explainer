@@ -2,6 +2,7 @@ package regex
 
 import (
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/ylacancellera/galera-log-explainer/types"
@@ -49,8 +50,8 @@ var IdentsMap = types.RegexMap{
 
 	//        0: 015702fc-32f5-11ed-a4ca-267f97316394, node-1
 	//	      1: 08dd5580-32f7-11ed-a9eb-af5e3d01519e, garb
-	// TODO: store indexes to later search for them using SST infos and STATES EXCHANGES logs. Could be unsafe if galera do not log indexes in time though
-	"RegexMember": &types.LogRegex{
+	// TO *never* DO: store indexes to later search for them using SST infos and STATES EXCHANGES logs. EDIT: is definitely NOT reliable
+	"RegexMemberAssociations": &types.LogRegex{
 		Regex:         regexp.MustCompile("[0-9]: [a-z0-9]+-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]+, [a-zA-Z0-9-_]+"),
 		InternalRegex: regexp.MustCompile(regexIdx + ": " + regexNodeHash4Dash + ", " + regexNodeName),
 		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
@@ -71,12 +72,34 @@ var IdentsMap = types.RegexMap{
 			shorthash := splitted[0] + "-" + splitted[3]
 			ctx.HashToNodeName[shorthash] = nodename
 
-			if ctx.MyIdx == idx && ctx.State == "PRIMARY" {
+			if ctx.MyIdx == idx && (ctx.State == "PRIMARY" || ctx.MemberCount == 1) {
 				ctx.AddOwnHash(shorthash)
 				ctx.AddOwnName(nodename)
 			}
 
 			return ctx, types.SimpleDisplayer(shorthash + " is " + nodename)
+		},
+		Verbosity: types.DebugMySQL,
+	},
+
+	"RegexMemberCount": &types.LogRegex{
+		Regex:         regexp.MustCompile("members.[0-9]+.:"),
+		InternalRegex: regexp.MustCompile(regexMembers),
+		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+			r, err := internalRegexSubmatch(internalRegex, log)
+			if err != nil {
+				return ctx, nil
+			}
+
+			members := r[internalRegex.SubexpIndex(groupMembers)]
+
+			membercount, err := strconv.Atoi(members)
+			if err != nil {
+				return ctx, nil
+			}
+			ctx.MemberCount = membercount
+
+			return ctx, types.SimpleDisplayer("view member count: " + members)
 		},
 		Verbosity: types.DebugMySQL,
 	},
@@ -207,13 +230,14 @@ func init() {
 
 	// 2023-01-06T07:05:35.698869Z 7 [Note] WSREP: New cluster view: global state: 00000000-0000-0000-0000-000000000000:0, view# 10: Primary, number of nodes: 2, my index: 0, protocol version 3
 	// WARN: my index seems to always be 0 on this log on certain version. It had broken some nodenames
-	// Curently disabled, not present in identsRegexes slice
-	IdentsMap["RegexMyIDXFromClusterView"] = &types.LogRegex{
-		Regex:         regexp.MustCompile("New cluster view:"),
-		InternalRegex: regexp.MustCompile("New cluster view:.*my index: -?" + regexIdx + ","),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			return IdentsMap["RegexMyIDXFromComponent"].Handler(internalRegex, ctx, log)
-		},
-		Verbosity: types.DebugMySQL,
-	}
+	/*
+		IdentsMap["RegexMyIDXFromClusterView"] = &types.LogRegex{
+			Regex:         regexp.MustCompile("New cluster view:"),
+			InternalRegex: regexp.MustCompile("New cluster view:.*my index: " + regexIdx + ","),
+			Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+				return IdentsMap["RegexMyIDXFromComponent"].Handler(internalRegex, ctx, log)
+			},
+			Verbosity: types.DebugMySQL,
+		}
+	*/
 }

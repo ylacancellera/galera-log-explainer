@@ -15,6 +15,7 @@ type LogCtx struct {
 	ResyncingNode    string
 	ResyncedFromNode string
 	MyIdx            string
+	MemberCount      int
 	HashToIP         map[string]string
 	HashToNodeName   map[string]string
 	IPToHostname     map[string]string

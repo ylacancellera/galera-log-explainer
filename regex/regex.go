@@ -48,6 +48,8 @@ var (
 	groupNodeName2     = "nodename2"
 	groupIdx           = "idx"
 	groupSeqno         = "seqno"
+	groupMembers       = "members"
+	regexMembers       = "(?P<" + groupMembers + ">[0-9]{1,2})"
 	regexNodeHash      = "(?P<" + groupNodeHash + ">[a-zA-Z0-9-_]+)"
 	regexNodeName      = "(?P<" + groupNodeName + ">[a-zA-Z0-9-_]+)"
 	regexNodeName2     = strings.Replace(regexNodeName, groupNodeName, groupNodeName2, 1)

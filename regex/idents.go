@@ -137,30 +137,52 @@ var IdentsMap = types.RegexMap{
 		Verbosity: types.DebugMySQL,
 	},
 
-	"RegexOwnNameFromStateExchange": &types.LogRegex{
-		Regex:         regexp.MustCompile("STATE EXCHANGE: got state msg"),
-		InternalRegex: regexp.MustCompile("STATE EXCHANGE:.* from " + regexIdx + " \\(" + regexNodeName + "\\)"),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			r, err := internalRegexSubmatch(internalRegex, log)
-			if err != nil {
-				return ctx, nil
-			}
+	/*
 
-			idx := r[internalRegex.SubexpIndex(groupIdx)]
-			name := r[internalRegex.SubexpIndex(groupNodeName)]
-			if idx != ctx.MyIdx {
-				return ctx, types.SimpleDisplayer("name(" + name + ") from unknown idx")
-			}
+			can't be trusted, from actual log:
+			View:
+		  id: 937dcf28-d38e-11ed-82ac-63ef4aef5b2a:22777301
+		  status: primary
+		  protocol_version: 4
+		  capabilities: MULTI-MASTER, CERTIFICATION, PARALLEL_APPLYING, REPLAY, ISOLATION, PAUSE, CAUSAL_READ, INCREMENTAL_WS, UNORDERED, PREORDERED, STREAMING, NBO
+		  final: no
+		  own_index: 1
+		  members(3):
+		        0: <some uuid>, node0
+		        1: <some uuid>, node1
+		        2: <some uuid>, node2
+		=================================================
+		2023-05-28T21:18:23.184707-05:00 2 [Note] [MY-000000] [WSREP] wsrep_notify_cmd is not defined, skipping notification.
+		2023-05-28T21:18:23.193459-05:00 0 [Note] [MY-000000] [Galera] STATE EXCHANGE: sent state msg: <cluster uuid>
+		2023-05-28T21:18:23.195777-05:00 0 [Note] [MY-000000] [Galera] STATE EXCHANGE: got state msg: <cluster uuid> from 0 (node1)
+		2023-05-28T21:18:23.195805-05:00 0 [Note] [MY-000000] [Galera] STATE EXCHANGE: got state msg: <cluster uuid> from 1 (node2)
 
-			if ctx.State == "NON-PRIMARY" {
-				return ctx, types.SimpleDisplayer("name(" + name + ") can't be trusted as it's non-primary")
-			}
 
-			ctx.AddOwnName(name)
-			return ctx, types.SimpleDisplayer("local name:" + name)
-		},
-		Verbosity: types.DebugMySQL,
-	},
+				"RegexOwnNameFromStateExchange": &types.LogRegex{
+					Regex:         regexp.MustCompile("STATE EXCHANGE: got state msg"),
+					InternalRegex: regexp.MustCompile("STATE EXCHANGE:.* from " + regexIdx + " \\(" + regexNodeName + "\\)"),
+					Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+						r, err := internalRegexSubmatch(internalRegex, log)
+						if err != nil {
+							return ctx, nil
+						}
+
+						idx := r[internalRegex.SubexpIndex(groupIdx)]
+						name := r[internalRegex.SubexpIndex(groupNodeName)]
+						if idx != ctx.MyIdx {
+							return ctx, types.SimpleDisplayer("name(" + name + ") from unknown idx")
+						}
+
+						if ctx.State == "NON-PRIMARY" {
+							return ctx, types.SimpleDisplayer("name(" + name + ") can't be trusted as it's non-primary")
+						}
+
+						ctx.AddOwnName(name)
+						return ctx, types.SimpleDisplayer("local name:" + name)
+					},
+					Verbosity: types.DebugMySQL,
+				},
+	*/
 }
 
 func init() {

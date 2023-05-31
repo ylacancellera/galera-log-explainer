@@ -30,8 +30,8 @@ func TimelineCLI(timeline types.Timeline, verbosity types.Verbosity) {
 	// header
 	fmt.Fprintln(w, headerNodes(keys))
 	fmt.Fprintln(w, headerFilePath(keys, currentContext))
-	fmt.Fprintln(w, headerIP(keys, currentContext))
-	fmt.Fprintln(w, headerName(keys, currentContext))
+	fmt.Fprintln(w, headerIP(keys, latestContext))
+	fmt.Fprintln(w, headerName(keys, latestContext))
 	fmt.Fprintln(w, separator(keys))
 
 	var (
@@ -140,7 +140,7 @@ func headerNodes(keys []string) string {
 }
 
 func headerFilePath(keys []string, ctxs map[string]types.LogCtx) string {
-	header := "path\t"
+	header := "current path\t"
 	for _, node := range keys {
 		if ctx, ok := ctxs[node]; ok {
 			header += ctx.FilePath + "\t"

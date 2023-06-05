@@ -164,7 +164,7 @@ var IdentsMap = types.RegexMap{
 
 			can't be trusted, from actual log:
 			View:
-		  id: 937dcf28-d38e-11ed-82ac-63ef4aef5b2a:22777301
+		  id: <some cluster uuid>:<seqno>
 		  status: primary
 		  protocol_version: 4
 		  capabilities: MULTI-MASTER, CERTIFICATION, PARALLEL_APPLYING, REPLAY, ISOLATION, PAUSE, CAUSAL_READ, INCREMENTAL_WS, UNORDERED, PREORDERED, STREAMING, NBO

@@ -12,6 +12,7 @@ func init() {
 }
 
 var SSTMap = types.RegexMap{
+	// TODO: requested state from unknown node
 	"RegexSSTRequestSuccess": &types.LogRegex{
 		Regex:         regexp.MustCompile("requested state transfer.*Selected"),
 		InternalRegex: regexp.MustCompile("Member .* \\(" + regexNodeName + "\\) requested state transfer.*Selected .* \\(" + regexNodeName2 + "\\)\\("),
@@ -27,14 +28,14 @@ var SSTMap = types.RegexMap{
 			displayDonor := types.ShortNodeName(donor)
 			if utils.SliceContains(ctx.OwnNames, joiner) {
 				ctx.ResyncedFromNode = donor
-				return ctx, types.SimpleDisplayer(displayDonor + utils.Paint(utils.GreenText, " accepted to resync local node"))
+				return ctx, types.SimpleDisplayer(displayDonor + utils.Paint(utils.GreenText, " will resync local node"))
 			}
 			if utils.SliceContains(ctx.OwnNames, donor) {
 				ctx.ResyncingNode = joiner
-				return ctx, types.SimpleDisplayer(utils.Paint(utils.GreenText, "local node accepted to resync ") + displayJoiner)
+				return ctx, types.SimpleDisplayer(utils.Paint(utils.GreenText, "local node will resync ") + displayJoiner)
 			}
 
-			return ctx, types.SimpleDisplayer(displayDonor + utils.Paint(utils.GreenText, " accepted to resync ") + displayJoiner)
+			return ctx, types.SimpleDisplayer(displayDonor + utils.Paint(utils.GreenText, " will resync ") + displayJoiner)
 		},
 		Verbosity: types.Detailed,
 	},
@@ -82,12 +83,24 @@ var SSTMap = types.RegexMap{
 				return ctx, types.SimpleDisplayer(utils.Paint(utils.GreenText, "finished sending SST to ") + displayJoiner)
 			}
 
-			// some weird ones:
-			// 2022-12-24T03:27:41.966118Z 0 [Note] WSREP: 0.0 (name): State transfer to -1.-1 (left the group) complete.
-			if displayJoiner == "left the group" {
-				return ctx, types.SimpleDisplayer(displayDonor + utils.Paint(utils.RedText, " synced ??(node left)"))
-			}
 			return ctx, types.SimpleDisplayer(displayDonor + utils.Paint(utils.GreenText, " synced ") + displayJoiner)
+		},
+	},
+
+	// some weird ones:
+	// 2022-12-24T03:27:41.966118Z 0 [Note] WSREP: 0.0 (name): State transfer to -1.-1 (left the group) complete.
+	"RegexSSTCompleteUnknown": &types.LogRegex{
+		Regex:         regexp.MustCompile("State transfer to.*complete"),
+		InternalRegex: regexp.MustCompile("\\(" + regexNodeName + "\\): State transfer.*\\(left the group\\) complete"),
+		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+			r, err := internalRegexSubmatch(internalRegex, log)
+			if err != nil {
+				return ctx, nil
+			}
+
+			donor := r[internalRegex.SubexpIndex(groupNodeName)]
+			displayDonor := types.ShortNodeName(donor)
+			return ctx, types.SimpleDisplayer(displayDonor + utils.Paint(utils.RedText, " synced ??(node left)"))
 		},
 	},
 
@@ -127,6 +140,9 @@ var SSTMap = types.RegexMap{
 
 			ctx.State = "DONOR"
 			node := r[internalRegex.SubexpIndex(groupNodeIP)]
+			if ctx.ResyncingNode == "" { // we should already have something at this point
+				ctx.ResyncingNode = node
+			}
 
 			return ctx, func(ctx types.LogCtx) string {
 				return utils.Paint(utils.YellowText, "SST to ") + types.DisplayNodeSimplestForm(ctx, node)

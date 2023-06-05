@@ -2,6 +2,7 @@ package regex
 
 import (
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/ylacancellera/galera-log-explainer/types"
@@ -53,7 +54,7 @@ var ViewsMap = types.RegexMap{
 
 	"RegexNodeLeft": &types.LogRegex{
 		Regex:         regexp.MustCompile("forgetting"),
-		InternalRegex: regexp.MustCompile("forgetting" + regexNodeHash + "\\(" + regexNodeIPMethod),
+		InternalRegex: regexp.MustCompile("forgetting " + regexNodeHash + " \\(" + regexNodeIPMethod),
 		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			r, err := internalRegexSubmatch(internalRegex, log)
 			if err != nil {
@@ -62,7 +63,7 @@ var ViewsMap = types.RegexMap{
 
 			ip := r[internalRegex.SubexpIndex(groupNodeIP)]
 			return ctx, func(ctx types.LogCtx) string {
-				return types.DisplayNodeSimplestForm(ctx, ip) + utils.Paint(utils.RedText, "  left")
+				return types.DisplayNodeSimplestForm(ctx, ip) + utils.Paint(utils.RedText, " left")
 			}
 		},
 	},
@@ -78,21 +79,29 @@ var ViewsMap = types.RegexMap{
 			}
 
 			primary := r[internalRegex.SubexpIndex("primary")] == "yes"
-			memb_num := r[internalRegex.SubexpIndex("memb_num")]
+			membNum := r[internalRegex.SubexpIndex("memb_num")]
 			bootstrap := r[internalRegex.SubexpIndex("bootstrap")] == "yes"
+			memberCount, err := strconv.Atoi(membNum)
+			if err != nil {
+				return ctx, nil
+			}
 
+			ctx.MemberCount = memberCount
 			if primary {
-				msg := utils.Paint(utils.GreenText, "PRIMARY") + "(n=" + memb_num + ")"
+				// we don't always store PRIMARY because we could have found DONOR/JOINER/SYNCED/DESYNCED just earlier
+				// and we do not want to override these as they have more value
+				if ctx.State == "CLOSED" || ctx.State == "NON-PRIMARY" || ctx.State == "OPEN" || ctx.State == "RECOVERY" || ctx.State == "" {
+					ctx.State = "PRIMARY"
+				}
+				msg := utils.Paint(utils.GreenText, "PRIMARY") + "(n=" + membNum + ")"
 				if bootstrap {
 					msg += ",bootstrap"
 				}
 				return ctx, types.SimpleDisplayer(msg)
 			}
 
-			// We stores nonprim as state, but not PRIMARY because we should find DONOR/JOINER/SYNCED/DESYNCED when it is primary
-			// and we do not want to override these as they have more value
 			ctx.State = "NON-PRIMARY"
-			return ctx, types.SimpleDisplayer(utils.Paint(utils.RedText, "NON-PRIMARY") + "(n=" + memb_num + ")")
+			return ctx, types.SimpleDisplayer(utils.Paint(utils.RedText, "NON-PRIMARY") + "(n=" + membNum + ")")
 		},
 	},
 
@@ -127,20 +136,20 @@ var ViewsMap = types.RegexMap{
 			}
 
 			hash := r[internalRegex.SubexpIndex(groupNodeHash)]
+			hash2 := r[internalRegex.SubexpIndex(groupNodeHash+"2")]
 			ip, ok := ctx.HashToIP[hash]
 			if !ok && regexp.MustCompile(regexNodeHash4Dash).MatchString(hash) {
-				splitted := strings.Split(hash, "-")
-				ip, ok = ctx.HashToIP[splitted[0]+"-"+splitted[3]]
+				ip, ok = ctx.HashToIP[utils.UUIDToShortUUID(hash)]
 
 				// there could have additional corner case to discover yet
 				if !ok {
-					return ctx, types.SimpleDisplayer(hash + utils.Paint(utils.YellowText, " changed identity "))
+					return ctx, types.SimpleDisplayer(hash + utils.Paint(utils.YellowText, " changed identity"))
 				}
+				hash2 = utils.UUIDToShortUUID(hash2)
 			}
-			hash2 := r[internalRegex.SubexpIndex(groupNodeHash+"2")]
 			ctx.HashToIP[hash2] = ip
 			return ctx, func(ctx types.LogCtx) string {
-				return types.DisplayNodeSimplestForm(ctx, ip) + utils.Paint(utils.YellowText, " changed identity ")
+				return types.DisplayNodeSimplestForm(ctx, ip) + utils.Paint(utils.YellowText, " changed identity")
 			}
 		},
 		Verbosity: types.Detailed,

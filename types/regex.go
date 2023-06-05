@@ -1,6 +1,7 @@
 package types
 
 import (
+	"encoding/json"
 	"regexp"
 )
 
@@ -17,6 +18,26 @@ type LogRegex struct {
 
 func (l *LogRegex) Handle(ctx LogCtx, line string) (LogCtx, LogDisplayer) {
 	return l.Handler(l.InternalRegex, ctx, line)
+}
+
+func (l *LogRegex) MarshalJSON() ([]byte, error) {
+	out := &struct {
+		Regex         string    `json:"regex"`
+		InternalRegex string    `json:"internalRegex"`
+		Type          RegexType `json:"type"`
+		Verbosity     Verbosity `json:"verbosity"`
+	}{
+		Type:      l.Type,
+		Verbosity: l.Verbosity,
+	}
+	if l.Regex != nil {
+		out.Regex = l.Regex.String()
+	}
+	if l.InternalRegex != nil {
+		out.InternalRegex = l.InternalRegex.String()
+	}
+
+	return json.Marshal(out)
 }
 
 type RegexType string

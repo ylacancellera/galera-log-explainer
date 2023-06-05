@@ -1,20 +1,33 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 
+	"github.com/pkg/errors"
 	"github.com/ylacancellera/galera-log-explainer/regex"
 )
 
-type regexList struct{}
+type regexList struct {
+	Json bool
+}
 
 func (l *regexList) Help() string {
-	return "List available regexes"
+	return "List available regexes. Can be used to exclude them later"
 }
 
 func (l *regexList) Run() error {
 
 	allregexes := regex.AllRegexes()
+
+	if l.Json {
+		out, err := json.Marshal(&allregexes)
+		if err != nil {
+			return errors.Wrap(err, "could not marshal regexes")
+		}
+		fmt.Println(string(out))
+		return nil
+	}
 	keys := []string{}
 	for k := range allregexes {
 		keys = append(keys, k)

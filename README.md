@@ -60,16 +60,25 @@ Usage:
 
 	$ galera-log-explainer --help
 	Usage: galera-log-explainer <command>
-	
+
 	An utility to transform Galera logs in a readable version
 	
 	Flags:
-	  -h, --help           Show context-sensitive help.
+	  -h, --help               Show context-sensitive help.
 	      --no-color
-	      --since=SINCE    Only list events after this date, you can copy-paste a date from mysql error log
-	      --until=UNTIL    Only list events before this date, you can copy-paste a date from mysql error log
-	      --verbosity=1    0: Info, 1: Detailed, 2: DebugMySQL (every mysql info the tool used), 3: Debug
-	                       (internal tool debug)
+	      --since=SINCE        Only list events after this date, you can copy-paste a date from mysql
+	                           error log
+	      --until=UNTIL        Only list events before this date, you can copy-paste a date from mysql
+	                           error log
+	      --verbosity=1        0: Info, 1: Detailed, 2: DebugMySQL (every mysql info the tool used), 3:
+	                           Debug (internal tool debug)
+	      --pxc-operator       Analyze logs from Percona PXC operator. Off by default because it
+	                           negatively impacts performance for non-k8s setups
+	      --exclude-regexes=EXCLUDE-REGEXES,...
+	                           Remove regexes from analysis. List regexes using 'galera-log-explainer
+	                           regex-list'
+	      --grep-cmd="grep"    'grep' command path. Could need to be set to 'ggrep' for darwin systems
+	      --grep-args="-P"     'grep' arguments. perl regexp (-P) is necessary. -o will break the tool
 	
 	Commands:
 	  list <paths> ...
@@ -78,7 +87,9 @@ Usage:
 	
 	  sed <paths> ...
 	
-	  summary <paths> ...
+	  ctx <paths> ...
+	
+	  regex-list
 	
 	Run "galera-log-explainer <command> --help" for more information on a command.
 

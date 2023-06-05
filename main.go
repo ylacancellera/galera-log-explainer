@@ -223,10 +223,10 @@ func (e *extractor) iterateOnResults(s *bufio.Scanner) ([]types.LogInfo, error) 
 
 		// If it's recentEnough, it means we already validated a log: every next logs necessarily happened later
 		// this is useful because not every logs have a date attached, and some without date are very useful
-		if !recentEnough && e.since != nil && e.since.After(date.Time) {
+		if !recentEnough && e.since != nil && (date == nil || (date != nil && e.since.After(date.Time))) {
 			continue
 		}
-		if e.until != nil && e.until.Before(date.Time) {
+		if e.until != nil && date != nil && e.until.Before(date.Time) {
 			return lt, nil
 		}
 		recentEnough = true

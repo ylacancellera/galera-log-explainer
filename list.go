@@ -19,7 +19,10 @@ type list struct {
 }
 
 func (l *list) Help() string {
-	return `List events for each nodes
+	return `List events for each nodes in a columnar output
+	It will merge logs between themselves
+
+	"identifier" is an internal metadata, this is used to merge logs.
 
 Usage:
 	galera-log-explainer list --all <list of files>

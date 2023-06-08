@@ -9,6 +9,7 @@ import (
 )
 
 func init() {
+	init_add_regexes()
 	setType(types.IdentRegexType, IdentsMap)
 }
 
@@ -208,7 +209,7 @@ var IdentsMap = types.RegexMap{
 	*/
 }
 
-func init() {
+func init_add_regexes() {
 	// 2023-01-06T07:05:34.035959Z 0 [Note] WSREP: (9509c194, 'tcp://0.0.0.0:4567') connection established to 838ebd6d tcp://ip:4567
 	IdentsMap["RegexOwnUUIDFromEstablished"] = &types.LogRegex{
 		Regex:         regexp.MustCompile("connection established to"),

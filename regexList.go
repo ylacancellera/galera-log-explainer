@@ -19,6 +19,7 @@ func (l *regexList) Help() string {
 func (l *regexList) Run() error {
 
 	allregexes := regex.AllRegexes()
+	allregexes.Merge(regex.PXCOperatorMap)
 
 	if l.Json {
 		out, err := json.Marshal(&allregexes)

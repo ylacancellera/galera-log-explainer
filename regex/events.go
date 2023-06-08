@@ -111,4 +111,7 @@ var regexWsrepLoadNone = regexp.MustCompile("none")
 
 2001-01-01T01:01:01.000000Z 0 [ERROR] [MY-000000] [Galera] gcs/src/gcs_group.cpp:group_post_state_exchange():431: Reversing history: 312312 -> 20121, this member has applied 12345 more events than the primary component.Data loss is possible. Must abort.
 
+2023-06-07T02:50:17.288285-06:00 0 [ERROR] WSREP: Requested size 114209078 for '/var/lib/mysql//galera.cache' exceeds available storage space 1: 28 (No space left on device)
+
+
 */

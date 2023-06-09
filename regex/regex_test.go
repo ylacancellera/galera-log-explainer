@@ -60,6 +60,13 @@ func TestRegexes(t *testing.T) {
 			mapToTest:   EventsMap,
 			key:         "RegexShutdownSignal",
 		},
+		{
+			log:         "2001-01-01  1:01:01 0 [Note] /usr/sbin/mariadbd (initiated by: unknown): Normal shutdown",
+			expectedCtx: types.LogCtx{State: "CLOSED"},
+			expectedOut: "received shutdown",
+			mapToTest:   EventsMap,
+			key:         "RegexShutdownSignal",
+		},
 
 		{
 			log:         "2001-01-01T01:01:01.000000Z 0 [ERROR] [MY-010119] [Server] Aborting",
@@ -393,6 +400,21 @@ func TestRegexes(t *testing.T) {
 			expectedCtx: types.LogCtx{
 				HashToIP:   map[string]string{"5873acd0-baa8": "172.17.0.2"},
 				IPToMethod: map[string]string{"172.17.0.2": "ssl"},
+			},
+			expectedOut: "172.17.0.2 joined",
+			mapToTest:   ViewsMap,
+			key:         "RegexNodeJoined",
+		},
+		{
+			name: "mariadb variation",
+			log:  "2001-01-01  1:01:30 0 [Note] WSREP: declaring 5873acd0-baa8 at tcp://172.17.0.2:4567 stable",
+			inputCtx: types.LogCtx{
+				HashToIP:   map[string]string{},
+				IPToMethod: map[string]string{},
+			},
+			expectedCtx: types.LogCtx{
+				HashToIP:   map[string]string{"5873acd0-baa8": "172.17.0.2"},
+				IPToMethod: map[string]string{"172.17.0.2": "tcp"},
 			},
 			expectedOut: "172.17.0.2 joined",
 			mapToTest:   ViewsMap,

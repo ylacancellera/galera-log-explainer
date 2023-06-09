@@ -1,3 +1,5 @@
+[![Go Report Card](https://goreportcard.com/badge/github.com/ylacancellera/galera-log-explainer)](https://goreportcard.com/report/github.com/ylancellera/galera-log-explainer) 
+
 # galera-log-explainer
 
 Filter, aggregate and summarize multiple galera logs together.

@@ -12,6 +12,7 @@ type LogCtx struct {
 	OwnHashes        []string
 	OwnNames         []string
 	State            string
+	Version          string
 	ResyncingNode    string
 	ResyncedFromNode string
 	MyIdx            string

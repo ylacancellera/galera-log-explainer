@@ -13,6 +13,21 @@ func init() {
 }
 
 var EventsMap = types.RegexMap{
+	"RegexStarting": &types.LogRegex{
+		Regex:         regexp.MustCompile("starting as process"),
+		InternalRegex: regexp.MustCompile("\\(mysqld " + regexVersion + ".*\\)"),
+		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+			r, err := internalRegexSubmatch(internalRegex, log)
+			if err != nil {
+				return ctx, nil
+			}
+			ctx.Version = r[internalRegex.SubexpIndex(groupVersion)]
+
+			ctx.State = "OPEN"
+
+			return ctx, types.SimpleDisplayer("starting(" + ctx.Version + ")")
+		},
+	},
 	"RegexShutdownComplete": &types.LogRegex{
 		Regex: regexp.MustCompile("mysqld: Shutdown complete"),
 		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {

@@ -175,23 +175,33 @@ func headerName(keys []string, ctxs map[string]types.LogCtx) string {
 	return header
 }
 
+// transition is to builds the check+display of an important context transition
+// like files, IP, name, anything
+// summary will hold the whole multi-line report
 type transition struct {
 	s1, s2, changeType string
 	ok                 bool
 	summary            transitionSummary
 }
 
+// transitions will hold any number of transition to test
+// transitionToPrint will hold whatever transition happened, but will also store empty transitions
+// to ensure that every columns will have the same amount of rows to write: this is needed to maintain
+// the columnar output
 type transitions struct {
 	tests             []*transition
 	transitionToPrint []*transition
 	numberFound       int
 }
 
-type transitionSummary [4]string
-
-const NumberOfPossibleTransition = 3
-
+// 4 here means there are 4 rows to store
+// 0: base info, 1: type of info that changed, 2: just an arrow placeholder, 3: new info
 const RowPerTransitions = 4
+
+type transitionSummary [RowPerTransitions]string
+
+// because only 3 transitions are implement: file path, ip, node name
+const NumberOfPossibleTransition = 3
 
 // transactionSeparator is useful to highligh a change of context
 // example, changing file
@@ -204,6 +214,7 @@ func transitionSeparator(keys []string, oldctxs, ctxs map[string]types.LogCtx) s
 
 	ts := map[string]*transitions{}
 
+	// For each columns to print, we build tests
 	for _, node := range keys {
 		ctx, ok1 := ctxs[node]
 		oldctx, ok2 := oldctxs[node]
@@ -221,17 +232,20 @@ func transitionSeparator(keys []string, oldctxs, ctxs map[string]types.LogCtx) s
 
 		}
 
+		// we resolve tests
 		ts[node].fillEmptyTransition()
 		ts[node].iterate()
 	}
 
 	highestStackOfTransitions := 0
 
+	// we need to know the maximum height to print
 	for _, node := range keys {
 		if ts[node].numberFound > highestStackOfTransitions {
 			highestStackOfTransitions = ts[node].numberFound
 		}
 	}
+	// now we have the height, we compile the stack to print (possibly empty placeholders for some columns)
 	for _, node := range keys {
 		ts[node].stackPrioritizeFound(highestStackOfTransitions)
 	}

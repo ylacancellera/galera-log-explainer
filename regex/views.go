@@ -181,15 +181,22 @@ var ViewsMap = types.RegexMap{
 	"RegexBootstrap": &types.LogRegex{
 		Regex: regexp.MustCompile("gcomm: bootstrapping new group"),
 		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			return ctx, types.SimpleDisplayer(utils.Paint(utils.GreenText, "bootstrapping"))
+			return ctx, types.SimpleDisplayer(utils.Paint(utils.YellowText, "bootstrapping"))
 		},
 	},
+
+	"RegexSafeToBoostrapSet": &types.LogRegex{
+		Regex: regexp.MustCompile("safe_to_bootstrap: 1"),
+		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+			return ctx, types.SimpleDisplayer(utils.Paint(utils.YellowText, "safe_to_bootstrap: 1"))
+		},
+	},
+	// "2022-10-29T12:00:34.449023Z 0 [Note] WSREP: Found saved state: 8e862473-455e-11e8-a0ca-3fcd8faf3209:-1, safe_to_bootstrap: 0"
 }
 
 /*
 var (
 	"SELF-LEAVE."
-	"2022-10-29T12:00:34.449023Z 0 [Note] WSREP: Found saved state: 8e862473-455e-11e8-a0ca-3fcd8faf3209:-1, safe_to_bootstrap: 0"
 	REGEX_NODE_INACTIVE     = "declaring inactive"
 	REGEX_NODE_TIMEOUT      = "timed out, no messages seen in"
 	REGEX_INCONSISTENT_VIEW = "node uuid:.*is inconsistent to restored view"

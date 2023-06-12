@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/ylacancellera/galera-log-explainer/types"
 	"github.com/ylacancellera/galera-log-explainer/utils"
 )
@@ -18,6 +19,7 @@ func TestRegexes(t *testing.T) {
 		inputCtx             types.LogCtx
 		expectedCtx          types.LogCtx
 		displayerExpectedNil bool
+		expectedErr          bool
 		mapToTest            types.RegexMap
 		key                  string
 	}{
@@ -644,6 +646,20 @@ func TestRegexes(t *testing.T) {
 		},
 
 		{
+			log:         "2001-01-01T01:01:01.000000Z 0 [Note] WSREP: Found saved state: 8e862473-455e-11e8-a0ca-3fcd8faf3209:-1, safe_to_bootstrap: 1",
+			expectedOut: "safe_to_bootstrap: 1",
+			mapToTest:   ViewsMap,
+			key:         "RegexSafeToBoostrapSet",
+		},
+		{
+			name:        "should not match",
+			log:         "2001-01-01T01:01:01.000000Z 0 [Note] WSREP: Found saved state: 8e862473-455e-11e8-a0ca-3fcd8faf3209:-1, safe_to_bootstrap: 0",
+			expectedErr: true,
+			mapToTest:   ViewsMap,
+			key:         "RegexSafeToBoostrapSet",
+		},
+
+		{
 			log:      "2001-01-01T01:01:01.000000Z 0 [Note] WSREP: Shifting OPEN -> CLOSED (TO: 1922878)",
 			inputCtx: types.LogCtx{},
 			expectedCtx: types.LogCtx{
@@ -846,7 +862,13 @@ func TestRegexes(t *testing.T) {
 		if test.name == "" {
 			test.name = "default"
 		}
-		testActualGrepOnLog(t, test.key, test.log, test.mapToTest[test.key])
+		err := testActualGrepOnLog(t, test.key, test.log, test.mapToTest[test.key])
+		if err != nil {
+			if test.expectedErr {
+				continue
+			}
+			t.Fatalf("key: %s\ntestname: %s\nregex string: \"%s\"\nlog: %s\n", test.key, test.name, test.mapToTest[test.key].Regex.String(), err)
+		}
 
 		ctx, displayer := test.mapToTest[test.key].Handle(test.inputCtx, test.log)
 		msg := ""
@@ -862,25 +884,26 @@ func TestRegexes(t *testing.T) {
 	}
 }
 
-func testActualGrepOnLog(t *testing.T, key, log string, regex *types.LogRegex) {
+func testActualGrepOnLog(t *testing.T, key, log string, regex *types.LogRegex) error {
 
 	f, err := ioutil.TempFile(t.TempDir(), "test_log")
 	if err != nil {
-		t.Fatalf("failed to create tmp file: %v", err)
+		return errors.Wrap(err, "failed to create tmp file")
 	}
 	defer f.Sync()
 
 	_, err = f.WriteString(log)
 	if err != nil {
-		t.Fatalf("failed to write in tmp file: %v", err)
+		return errors.Wrap(err, "failed to write in tmp file")
 	}
 	m := types.RegexMap{"test": regex}
 
 	out, err := exec.Command("grep", "-P", m.Compile()[0], f.Name()).Output()
 	if err != nil {
-		t.Fatalf("failed to grep in tmp file: %v\nregex key: %s\nregex string: \"%s\"\nlog: %s", err, key, regex.Regex.String(), log)
+		return errors.Wrap(err, "failed to grep in tmp file")
 	}
 	if string(out) == "" {
-		t.Errorf("empty results when grepping in tmp file: %v, using: %s", err, regex.Regex.String())
+		return errors.Wrap(err, "empty results when grepping in tmp file")
 	}
+	return nil
 }

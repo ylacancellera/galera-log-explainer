@@ -38,7 +38,7 @@ func AllRegexes() types.RegexMap {
 	return IdentsMap
 }
 
-// general buidling block wsrep regexes
+// general building block wsrep regexes
 // It's later used to identify subgroups easier
 var (
 	groupMethod        = "ssltcp"

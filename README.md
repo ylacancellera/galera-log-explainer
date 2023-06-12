@@ -1,4 +1,4 @@
-[![Go Report Card](https://goreportcard.com/badge/github.com/ylacancellera/galera-log-explainer)](https://goreportcard.com/report/github.com/ylancellera/galera-log-explainer) 
+[![Go Report Card](https://goreportcard.com/badge/github.com/ylacancellera/galera-log-explainer)](https://goreportcard.com/report/github.com/ylacancellera/galera-log-explainer) 
 
 # galera-log-explainer
 

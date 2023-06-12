@@ -18,13 +18,13 @@ func TestTransitionSeparator(t *testing.T) {
 			name: "no changes",
 			keys: []string{"node0", "node1"},
 			oldctxs: map[string]types.LogCtx{
-				"node0": types.LogCtx{},
-				"node1": types.LogCtx{},
+				"node0": {},
+				"node1": {},
 			},
 			ctxs: map[string]types.LogCtx{
 
-				"node0": types.LogCtx{},
-				"node1": types.LogCtx{},
+				"node0": {},
+				"node1": {},
 			},
 			expectedOut: "",
 		},
@@ -32,13 +32,13 @@ func TestTransitionSeparator(t *testing.T) {
 			name: "filepath changed on node0",
 			keys: []string{"node0", "node1"},
 			oldctxs: map[string]types.LogCtx{
-				"node0": types.LogCtx{FilePath: "path1"},
-				"node1": types.LogCtx{},
+				"node0": {FilePath: "path1"},
+				"node1": {},
 			},
 			ctxs: map[string]types.LogCtx{
 
-				"node0": types.LogCtx{FilePath: "path2"},
-				"node1": types.LogCtx{},
+				"node0": {FilePath: "path2"},
+				"node1": {},
 			},
 			/*
 				path1
@@ -52,13 +52,13 @@ func TestTransitionSeparator(t *testing.T) {
 			name: "filepath changed on node1",
 			keys: []string{"node0", "node1"},
 			oldctxs: map[string]types.LogCtx{
-				"node0": types.LogCtx{},
-				"node1": types.LogCtx{FilePath: "path1"},
+				"node0": {},
+				"node1": {FilePath: "path1"},
 			},
 			ctxs: map[string]types.LogCtx{
 
-				"node0": types.LogCtx{},
-				"node1": types.LogCtx{FilePath: "path2"},
+				"node0": {},
+				"node1": {FilePath: "path2"},
 			},
 			expectedOut: "\t\tpath1\t\n\t\t(file path)\t\n\t\t V \t\n\t\tpath2\t",
 		},
@@ -66,12 +66,12 @@ func TestTransitionSeparator(t *testing.T) {
 			name: "filepath changed on both",
 			keys: []string{"node0", "node1"},
 			oldctxs: map[string]types.LogCtx{
-				"node0": types.LogCtx{FilePath: "path1_0"},
-				"node1": types.LogCtx{FilePath: "path1_1"},
+				"node0": {FilePath: "path1_0"},
+				"node1": {FilePath: "path1_1"},
 			},
 			ctxs: map[string]types.LogCtx{
-				"node0": types.LogCtx{FilePath: "path2_0"},
-				"node1": types.LogCtx{FilePath: "path2_1"},
+				"node0": {FilePath: "path2_0"},
+				"node1": {FilePath: "path2_1"},
 			},
 			expectedOut: "\tpath1_0\tpath1_1\t\n\t(file path)\t(file path)\t\n\t V \t V \t\n\tpath2_0\tpath2_1\t",
 		},
@@ -79,12 +79,12 @@ func TestTransitionSeparator(t *testing.T) {
 			name: "node name changed on node1",
 			keys: []string{"node0", "node1"},
 			oldctxs: map[string]types.LogCtx{
-				"node0": types.LogCtx{},
-				"node1": types.LogCtx{OwnNames: []string{"name1"}},
+				"node0": {},
+				"node1": {OwnNames: []string{"name1"}},
 			},
 			ctxs: map[string]types.LogCtx{
-				"node0": types.LogCtx{},
-				"node1": types.LogCtx{OwnNames: []string{"name1", "name2"}},
+				"node0": {},
+				"node1": {OwnNames: []string{"name1", "name2"}},
 			},
 			expectedOut: "\t\tname1\t\n\t\t(node name)\t\n\t\t V \t\n\t\tname2\t",
 		},
@@ -92,12 +92,12 @@ func TestTransitionSeparator(t *testing.T) {
 			name: "node ip changed on node1",
 			keys: []string{"node0", "node1"},
 			oldctxs: map[string]types.LogCtx{
-				"node0": types.LogCtx{},
-				"node1": types.LogCtx{OwnIPs: []string{"ip1"}},
+				"node0": {},
+				"node1": {OwnIPs: []string{"ip1"}},
 			},
 			ctxs: map[string]types.LogCtx{
-				"node0": types.LogCtx{},
-				"node1": types.LogCtx{OwnIPs: []string{"ip1", "ip2"}},
+				"node0": {},
+				"node1": {OwnIPs: []string{"ip1", "ip2"}},
 			},
 			expectedOut: "\t\tip1\t\n\t\t(node ip)\t\n\t\t V \t\n\t\tip2\t",
 		},
@@ -105,12 +105,12 @@ func TestTransitionSeparator(t *testing.T) {
 			name: "node ip, node name and filepath changed on node1", // very possible with operators
 			keys: []string{"node0", "node1"},
 			oldctxs: map[string]types.LogCtx{
-				"node0": types.LogCtx{},
-				"node1": types.LogCtx{OwnIPs: []string{"ip1"}, OwnNames: []string{"name1"}, FilePath: "path1"},
+				"node0": {},
+				"node1": {OwnIPs: []string{"ip1"}, OwnNames: []string{"name1"}, FilePath: "path1"},
 			},
 			ctxs: map[string]types.LogCtx{
-				"node0": types.LogCtx{},
-				"node1": types.LogCtx{OwnIPs: []string{"ip1", "ip2"}, OwnNames: []string{"name1", "name2"}, FilePath: "path2"},
+				"node0": {},
+				"node1": {OwnIPs: []string{"ip1", "ip2"}, OwnNames: []string{"name1", "name2"}, FilePath: "path2"},
 			},
 			/*
 				(timestamp)	(node0)	(node1)
@@ -135,12 +135,12 @@ func TestTransitionSeparator(t *testing.T) {
 			name: "node ip, node name and filepath changed on node1, nodename changed on node2", // very possible with operators
 			keys: []string{"node0", "node1"},
 			oldctxs: map[string]types.LogCtx{
-				"node0": types.LogCtx{OwnNames: []string{"name1_0"}},
-				"node1": types.LogCtx{OwnIPs: []string{"ip1"}, OwnNames: []string{"name1_1"}, FilePath: "path1"},
+				"node0": {OwnNames: []string{"name1_0"}},
+				"node1": {OwnIPs: []string{"ip1"}, OwnNames: []string{"name1_1"}, FilePath: "path1"},
 			},
 			ctxs: map[string]types.LogCtx{
-				"node0": types.LogCtx{OwnNames: []string{"name1_0", "name2_0"}},
-				"node1": types.LogCtx{OwnIPs: []string{"ip1", "ip2"}, OwnNames: []string{"name1_1", "name2_1"}, FilePath: "path2"},
+				"node0": {OwnNames: []string{"name1_0", "name2_0"}},
+				"node1": {OwnIPs: []string{"ip1", "ip2"}, OwnNames: []string{"name1_1", "name2_1"}, FilePath: "path2"},
 			},
 			/*
 				(timestamp)	(node0)			(node1)

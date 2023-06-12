@@ -72,6 +72,14 @@ func TestRegexes(t *testing.T) {
 			key:         "RegexStarting",
 		},
 		{
+			name:        "8.0.30 operator",
+			log:         "{\"log\":\"2001-01-01T01:01:01.000000Z 0 [System] [MY-010116] [Server] /usr/sbin/mysqld (mysqld 8.0.30-22.1) starting as process 1\n\",\"file\":\"/var/lib/mysql/mysqld-error.log\"}",
+			expectedCtx: types.LogCtx{State: "OPEN", Version: "8.0.30"},
+			expectedOut: "starting(8.0.30)",
+			mapToTest:   EventsMap,
+			key:         "RegexStarting",
+		},
+		{
 			name:                 "wrong version 7.0.0",
 			log:                  "2001-01-01T01:01:01.000000Z 0 [System] [MY-010116] [Server] /usr/sbin/mysqld (mysqld 7.0.0-22) starting as process 1",
 			displayerExpectedNil: true,
@@ -657,6 +665,20 @@ func TestRegexes(t *testing.T) {
 			expectedErr: true,
 			mapToTest:   ViewsMap,
 			key:         "RegexSafeToBoostrapSet",
+		},
+
+		{
+			log:         "2001-01-01T01:01:01.000000Z 0 [Warning] [MY-000000] [Galera] Could not open state file for reading: '/var/lib/mysql//grastate.dat'",
+			expectedOut: "no grastate.dat file",
+			mapToTest:   ViewsMap,
+			key:         "RegexNoGrastate",
+		},
+
+		{
+			log:         "2001-01-01T01:01:01.000000Z 0 [Warning] [MY-000000] [Galera] No persistent state found. Bootstraping with default state",
+			expectedOut: "bootstrapping(empty grastate)",
+			mapToTest:   ViewsMap,
+			key:         "RegexBootstrapingDefaultState",
 		},
 
 		{

@@ -191,7 +191,19 @@ var ViewsMap = types.RegexMap{
 			return ctx, types.SimpleDisplayer(utils.Paint(utils.YellowText, "safe_to_bootstrap: 1"))
 		},
 	},
-	// "2022-10-29T12:00:34.449023Z 0 [Note] WSREP: Found saved state: 8e862473-455e-11e8-a0ca-3fcd8faf3209:-1, safe_to_bootstrap: 0"
+	"RegexNoGrastate": &types.LogRegex{
+		Regex: regexp.MustCompile("Could not open state file for reading.*grastate.dat"),
+		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+			return ctx, types.SimpleDisplayer(utils.Paint(utils.YellowText, "no grastate.dat file"))
+		},
+		Verbosity: types.Detailed,
+	},
+	"RegexBootstrapingDefaultState": &types.LogRegex{
+		Regex: regexp.MustCompile("Bootstraping with default state"),
+		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+			return ctx, types.SimpleDisplayer(utils.Paint(utils.YellowText, "bootstrapping(empty grastate)"))
+		},
+	},
 }
 
 /*
@@ -221,8 +233,6 @@ Winner: ad544d173db06c24
 2022-11-21T20:59:04.898114-05:00 10 [ERROR] [MY-010584] [Repl] Slave SQL: Error '<query>', Error_code: MY-001304
 2022-11-21T20:59:04.898180-05:00 10 [Warning] [MY-000000] [WSREP] Event 1 Query apply failed: 1, seqno 5405
 
-04:31:38 UTC - mysqld got signal 6 ;
-
 2022-11-29T23:34:51.820009-05:00 0 [Warning] [MY-000000] [Galera] Could not find peer: c0ff4085-5ad7-11ed-8b74-cfeec74147fe
 
 2022-12-07  1:00:03 0 [Note] WSREP: Member 0.0 (node) desyncs itself from group
@@ -230,11 +240,9 @@ Winner: ad544d173db06c24
 2022-12-07  1:00:06 0 [Note] WSREP: Member 0.0 (node) synced with group.
 
 
-2021-03-25T21:58:08.570748Z 0 [Warning] WSREP: no nodes coming from prim view, prim not possible
 2021-03-25T21:58:13.570928Z 0 [Warning] WSREP: no nodes coming from prim view, prim not possible
 2021-03-25T21:58:13.855983Z 0 [Warning] WSREP: Quorum: No node with complete state:
 
-2021-03-25T21:58:02.322381Z 0 [Warning] WSREP: No persistent state found. Bootstraping with default state
 
 
 2021-04-22T08:01:05.000581Z 0 [Warning] WSREP: Failed to report last committed 66328091, -110 (Connection timed out)

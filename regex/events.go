@@ -29,6 +29,20 @@ var EventsMap = types.RegexMap{
 			return ctx, types.SimpleDisplayer(utils.Paint(utils.RedText, "terminated"))
 		},
 	},
+	"RegexGotSignal6": &types.LogRegex{
+		Regex: regexp.MustCompile("mysqld got signal 6"),
+		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+			ctx.State = "CLOSED"
+			return ctx, types.SimpleDisplayer(utils.Paint(utils.RedText, "crash: got signal 6"))
+		},
+	},
+	"RegexGotSignal11": &types.LogRegex{
+		Regex: regexp.MustCompile("mysqld got signal 11"),
+		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+			ctx.State = "CLOSED"
+			return ctx, types.SimpleDisplayer(utils.Paint(utils.RedText, "crash: got signal 11"))
+		},
+	},
 	"RegexShutdownSignal": &types.LogRegex{
 		Regex: regexp.MustCompile("Normal|Received shutdown"),
 		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
@@ -97,9 +111,7 @@ var EventsMap = types.RegexMap{
 }
 var regexWsrepLoadNone = regexp.MustCompile("none")
 
-// mysqld got signal 6/11
 /*
-2001-01-01T01:01:01.000000Z 0 [System] [MY-010116] [Server] /usr/sbin/mysqld (mysqld 8.0.30-22) starting as process 1
 
 
 2023-05-09T17:39:19.955040Z 51 [Warning] [MY-000000] [Galera] failed to replay trx: source: fb9d6310-ee8b-11ed-8aee-f7542ad73e53 version: 5 local: 1 flags: 1 conn_id: 48 trx_id: 2696 tstamp: 1683653959142522853; state: EXECUTING:0->REPLICATING:782->CERTIFYING:3509->APPLYING:3748->COMMITTING:1343->COMMITTED:-1
@@ -113,5 +125,5 @@ var regexWsrepLoadNone = regexp.MustCompile("none")
 
 2023-06-07T02:50:17.288285-06:00 0 [ERROR] WSREP: Requested size 114209078 for '/var/lib/mysql//galera.cache' exceeds available storage space 1: 28 (No space left on device)
 
-
+2023-01-01 11:33:15 2101097 [ERROR] mariadbd: Disk full (/tmp/#sql-temptable-.....MAI); waiting for someone to free some space... (errno: 28 "No space left on device")
 */

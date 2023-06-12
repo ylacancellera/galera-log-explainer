@@ -47,6 +47,21 @@ func TestRegexes(t *testing.T) {
 		},
 
 		{
+			log:         "01:01:01 UTC - mysqld got signal 6 ;",
+			expectedCtx: types.LogCtx{State: "CLOSED"},
+			expectedOut: "crash: got signal 6",
+			mapToTest:   EventsMap,
+			key:         "RegexGotSignal6",
+		},
+		{
+			log:         "01:01:01 UTC - mysqld got signal 11 ;",
+			expectedCtx: types.LogCtx{State: "CLOSED"},
+			expectedOut: "crash: got signal 11",
+			mapToTest:   EventsMap,
+			key:         "RegexGotSignal11",
+		},
+
+		{
 			log:         "2001-01-01T01:01:01.000000Z 0 [Note] [MY-000000] [WSREP] Received shutdown signal. Will sleep for 10 secs before initiating shutdown. pxc_maint_mode switched to SHUTDOWN",
 			expectedCtx: types.LogCtx{State: "CLOSED"},
 			expectedOut: "received shutdown",

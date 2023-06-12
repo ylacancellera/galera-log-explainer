@@ -32,6 +32,7 @@ func TimelineCLI(timeline types.Timeline, verbosity types.Verbosity) {
 	fmt.Fprintln(w, headerFilePath(keys, currentContext))
 	fmt.Fprintln(w, headerIP(keys, latestContext))
 	fmt.Fprintln(w, headerName(keys, latestContext))
+	fmt.Fprintln(w, headerVersion(keys, currentContext))
 	fmt.Fprintln(w, separator(keys))
 
 	var (
@@ -109,6 +110,7 @@ func TimelineCLI(timeline types.Timeline, verbosity types.Verbosity) {
 		fmt.Fprintln(w, headerFilePath(keys, currentContext))
 		fmt.Fprintln(w, headerIP(keys, currentContext))
 		fmt.Fprintln(w, headerName(keys, currentContext))
+		fmt.Fprintln(w, headerVersion(keys, currentContext))
 	}
 }
 
@@ -143,7 +145,11 @@ func headerFilePath(keys []string, ctxs map[string]types.LogCtx) string {
 	header := "current path\t"
 	for _, node := range keys {
 		if ctx, ok := ctxs[node]; ok {
-			header += ctx.FilePath + "\t"
+			if len(ctx.FilePath) < 50 {
+				header += ctx.FilePath + "\t"
+			} else {
+				header += "..." + ctx.FilePath[len(ctx.FilePath)-50:] + "\t"
+			}
 		} else {
 			header += " \t"
 		}
@@ -158,6 +164,16 @@ func headerIP(keys []string, ctxs map[string]types.LogCtx) string {
 			header += ctx.OwnIPs[len(ctx.OwnIPs)-1] + "\t"
 		} else {
 			header += " \t"
+		}
+	}
+	return header
+}
+
+func headerVersion(keys []string, ctxs map[string]types.LogCtx) string {
+	header := "mysql version\t"
+	for _, node := range keys {
+		if ctx, ok := ctxs[node]; ok {
+			header += ctx.Version + "\t"
 		}
 	}
 	return header

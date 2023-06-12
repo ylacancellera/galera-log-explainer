@@ -102,6 +102,19 @@ func TestTransitionSeparator(t *testing.T) {
 			expectedOut: "\t\tip1\t\n\t\t(node ip)\t\n\t\t V \t\n\t\tip2\t",
 		},
 		{
+			name: "version changed on node1",
+			keys: []string{"node0", "node1"},
+			oldctxs: map[string]types.LogCtx{
+				"node0": {},
+				"node1": {Version: "8.0.28"},
+			},
+			ctxs: map[string]types.LogCtx{
+				"node0": {},
+				"node1": {Version: "8.0.30"},
+			},
+			expectedOut: "\t\t8.0.28\t\n\t\t(version)\t\n\t\t V \t\n\t\t8.0.30\t",
+		},
+		{
 			name: "node ip, node name and filepath changed on node1", // very possible with operators
 			keys: []string{"node0", "node1"},
 			oldctxs: map[string]types.LogCtx{
@@ -144,21 +157,21 @@ func TestTransitionSeparator(t *testing.T) {
 			},
 			/*
 				(timestamp)	(node0)			(node1)
-					\t		\t				path1	\t\n
-					\t		\t				(file path)	\t\n
-					\t		\t				 V	\t\n
-					\t		\t				path2	\t\n
-					\t		name1_0\t		name1_1	\t\n
-					\t		(node name)\t	(node name)	\t\n
+					\t		name1_0\t		path1	\t\n
+					\t		(node name)\t	(file path)	\t\n
 					\t		 V \t			 V	\t\n
-					\t		name2_0\t		name2_1	\t\n
+					\t		name2_0\t		path2	\t\n
+					\t		\t				name1_1	\t\n
+					\t		\t				(node name)	\t\n
+					\t		\t				 V	\t\n
+					\t		\t				name2_1	\t\n
 					\t		\t				ip2	\t\n
 					\t		\t				(node ip)		\t\n
 					\t		\t				 V	\t\n
 					\t		\t				ip2	\t --only one without \n
 
 			*/
-			expectedOut: "\t\tpath1\t\n\t\t(file path)\t\n\t\t V \t\n\t\tpath2\t\n\tname1_0\tname1_1\t\n\t(node name)\t(node name)\t\n\t V \t V \t\n\tname2_0\tname2_1\t\n\t\tip1\t\n\t\t(node ip)\t\n\t\t V \t\n\t\tip2\t",
+			expectedOut: "\tname1_0\tpath1\t\n\t(node name)\t(file path)\t\n\t V \t V \t\n\tname2_0\tpath2\t\n\t\tname1_1\t\n\t\t(node name)\t\n\t\t V \t\n\t\tname2_1\t\n\t\tip1\t\n\t\t(node ip)\t\n\t\t V \t\n\t\tip2\t",
 		},
 	}
 

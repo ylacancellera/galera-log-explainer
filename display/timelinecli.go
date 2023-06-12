@@ -200,8 +200,8 @@ const RowPerTransitions = 4
 
 type transitionSummary [RowPerTransitions]string
 
-// because only 3 transitions are implement: file path, ip, node name
-const NumberOfPossibleTransition = 3
+// because only those transitions are implemented: file path, ip, node name, version
+const NumberOfPossibleTransition = 4
 
 // transactionSeparator is useful to highligh a change of context
 // example, changing file
@@ -229,6 +229,7 @@ func transitionSeparator(keys []string, oldctxs, ctxs map[string]types.LogCtx) s
 			if len(oldctx.OwnIPs) > 0 && len(ctx.OwnIPs) > 0 {
 				ts[node].tests = append(ts[node].tests, &transition{s1: oldctx.OwnIPs[len(oldctx.OwnIPs)-1], s2: ctx.OwnIPs[len(ctx.OwnIPs)-1], changeType: "node ip"})
 			}
+			ts[node].tests = append(ts[node].tests, &transition{s1: oldctx.Version, s2: ctx.Version, changeType: "version"})
 
 		}
 
@@ -303,7 +304,7 @@ func (ts *transitions) fillEmptyTransition() {
 
 func (t *transition) summarizeIfDifferent() {
 	if t.s1 != t.s2 {
-		t.summary = [4]string{utils.Paint(utils.BrightBlueText, t.s1), utils.Paint(utils.BlueText, "("+t.changeType+")"), utils.Paint(utils.BrightBlueText, " V "), utils.Paint(utils.BrightBlueText, t.s2)}
+		t.summary = [RowPerTransitions]string{utils.Paint(utils.BrightBlueText, t.s1), utils.Paint(utils.BlueText, "("+t.changeType+")"), utils.Paint(utils.BrightBlueText, " V "), utils.Paint(utils.BrightBlueText, t.s2)}
 		t.ok = true
 	}
 	for i := range t.summary {

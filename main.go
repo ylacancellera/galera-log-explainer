@@ -153,8 +153,8 @@ func (e *extractor) grepArgument() string {
 		e.regexes.Merge(regex.PXCOperatorMap)
 		//grepRegex += "{\"log\":\"" //
 	}
-	if e.since != nil || e.until != nil {
-		grepRegex += "(" + regex.BetweenDateRegex(e.since, e.until) + "|" + regex.NoDatesRegex() + ")"
+	if e.since != nil {
+		grepRegex += "(" + regex.BetweenDateRegex(e.since) + "|" + regex.NoDatesRegex() + ")"
 	}
 	grepRegex += ".*"
 	grepRegex += "(" + strings.Join(regexToSendSlice, "|") + ")"

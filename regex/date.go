@@ -27,7 +27,7 @@ var DateLayouts = []string{
 // Currently limited to filter by day to produce "short" regexes. Finer events will be filtered later in code
 // Trying to filter hours, minutes using regexes would produce regexes even harder to read
 // while not really adding huge benefit as we do not expect so many events of interets
-func BetweenDateRegex(since, until *time.Time) string {
+func BetweenDateRegex(since *time.Time) string {
 	/*
 		"2006-01-02
 		"2006-01-0[3-9]

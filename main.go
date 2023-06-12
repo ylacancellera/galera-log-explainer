@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -228,7 +227,7 @@ func (e *extractor) iterateOnResults(s *bufio.Scanner) ([]types.LogInfo, error) 
 		displayer    types.LogDisplayer
 	)
 	ctx := types.NewLogCtx()
-	ctx.FilePath = filepath.Base(e.path)
+	ctx.FilePath = e.path
 
 	for s.Scan() {
 		line = e.sanitizeLine(s.Text())

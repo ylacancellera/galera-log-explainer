@@ -210,7 +210,7 @@ func TestRegexes(t *testing.T) {
 
 		{
 			log:         "2001-01-01T01:01:01.045425-05:00 0 [ERROR] unknown variable 'validate_password_length=8'",
-			expectedOut: "unknown variable: validate_password_length=8",
+			expectedOut: "unknown variable: validate_password_le...",
 			mapToTest:   EventsMap,
 			key:         "RegexUnknownConf",
 		},

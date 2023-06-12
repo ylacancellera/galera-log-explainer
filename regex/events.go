@@ -103,6 +103,9 @@ var EventsMap = types.RegexMap{
 			if len(split) > 0 {
 				v = split[1]
 			}
+			if len(v) > 20 {
+				v = v[:20] + "..."
+			}
 			return ctx, types.SimpleDisplayer(utils.Paint(utils.YellowText, "unknown variable") + ": " + v)
 		},
 	},

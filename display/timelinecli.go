@@ -245,7 +245,9 @@ func transitionSeparator(keys []string, oldctxs, ctxs map[string]types.LogCtx) s
 			if len(oldctx.OwnIPs) > 0 && len(ctx.OwnIPs) > 0 {
 				ts[node].tests = append(ts[node].tests, &transition{s1: oldctx.OwnIPs[len(oldctx.OwnIPs)-1], s2: ctx.OwnIPs[len(ctx.OwnIPs)-1], changeType: "node ip"})
 			}
-			ts[node].tests = append(ts[node].tests, &transition{s1: oldctx.Version, s2: ctx.Version, changeType: "version"})
+			if oldctx.Version != "" {
+				ts[node].tests = append(ts[node].tests, &transition{s1: oldctx.Version, s2: ctx.Version, changeType: "version"})
+			}
 
 		}
 

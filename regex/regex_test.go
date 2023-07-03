@@ -93,6 +93,15 @@ func TestRegexes(t *testing.T) {
 			mapToTest:            EventsMap,
 			key:                  "RegexStarting",
 		},
+		{
+			name:        "could not catch how it stopped",
+			log:         "{\"log\":\"2001-01-01T01:01:01.000000Z 0 [System] [MY-010116] [Server] /usr/sbin/mysqld (mysqld 8.0.30-22.1) starting as process 1\n\",\"file\":\"/var/lib/mysql/mysqld-error.log\"}",
+			expectedCtx: types.LogCtx{State: "OPEN", Version: "8.0.30"},
+			inputCtx:    types.LogCtx{State: "OPEN"},
+			expectedOut: "starting(8.0.30, could not catch how/when it stopped)",
+			mapToTest:   EventsMap,
+			key:         "RegexStarting",
+		},
 
 		{
 
@@ -204,6 +213,15 @@ func TestRegexes(t *testing.T) {
 			log:         " INFO: WSREP: Recovered position 00000000-0000-0000-0000-000000000000:-1",
 			expectedCtx: types.LogCtx{State: "RECOVERY"},
 			expectedOut: "wsrep recovery",
+			mapToTest:   EventsMap,
+			key:         "RegexWsrepRecovery",
+		},
+		{
+			name:        "could not catch how it stopped",
+			log:         " INFO: WSREP: Recovered position 00000000-0000-0000-0000-000000000000:-1",
+			expectedCtx: types.LogCtx{State: "RECOVERY"},
+			inputCtx:    types.LogCtx{State: "OPEN"},
+			expectedOut: "wsrep recovery(could not catch how/when it stopped)",
 			mapToTest:   EventsMap,
 			key:         "RegexWsrepRecovery",
 		},

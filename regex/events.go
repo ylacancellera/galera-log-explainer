@@ -23,9 +23,14 @@ var EventsMap = types.RegexMap{
 			}
 			ctx.Version = r[internalRegex.SubexpIndex(groupVersion)]
 
+			msg := "starting(" + ctx.Version
+			if isShutdownReasonMissing(ctx) {
+				msg += ", " + utils.Paint(utils.YellowText, "could not catch how/when it stopped")
+			}
+			msg += ")"
 			ctx.State = "OPEN"
 
-			return ctx, types.SimpleDisplayer("starting(" + ctx.Version + ")")
+			return ctx, types.SimpleDisplayer(msg)
 		},
 	},
 	"RegexShutdownComplete": &types.LogRegex{
@@ -66,6 +71,9 @@ var EventsMap = types.RegexMap{
 			return ctx, types.SimpleDisplayer(utils.Paint(utils.RedText, "received shutdown"))
 		},
 	},
+
+	// 2023-06-12T07:51:38.135646Z 0 [Warning] [MY-000000] [Galera] Exception while mapping writeset addr: 0x7fb668d4e568, seqno: 2770385572449823232, size: 73316, ctx: 0x56128412e0c0, flags: 1. store: 1, type: 32 into [555, 998): 'deque::_M_new_elements_at_back'. Aborting GCache recovery.
+
 	"RegexAborting": &types.LogRegex{
 		Regex: regexp.MustCompile("Aborting"),
 		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
@@ -89,9 +97,14 @@ var EventsMap = types.RegexMap{
 		//  INFO: WSREP: Recovered position 00000000-0000-0000-0000-000000000000:-1
 		Regex: regexp.MustCompile("Recovered position"),
 		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+
+			msg := "wsrep recovery"
+			if isShutdownReasonMissing(ctx) {
+				msg += "(" + utils.Paint(utils.YellowText, "could not catch how/when it stopped") + ")"
+			}
 			ctx.State = "RECOVERY"
 
-			return ctx, types.SimpleDisplayer("wsrep recovery")
+			return ctx, types.SimpleDisplayer(msg)
 		},
 	},
 
@@ -129,6 +142,11 @@ var EventsMap = types.RegexMap{
 }
 var regexWsrepLoadNone = regexp.MustCompile("none")
 
+// isShutdownReasonMissing is returning true if the latest wsrep state indicated a "working" node
+func isShutdownReasonMissing(ctx types.LogCtx) bool {
+	return ctx.State != "CLOSED" && ctx.State != "RECOVERY" && ctx.State != ""
+}
+
 /*
 
 
@@ -142,4 +160,7 @@ var regexWsrepLoadNone = regexp.MustCompile("none")
 2023-06-07T02:50:17.288285-06:00 0 [ERROR] WSREP: Requested size 114209078 for '/var/lib/mysql//galera.cache' exceeds available storage space 1: 28 (No space left on device)
 
 2023-01-01 11:33:15 2101097 [ERROR] mariadbd: Disk full (/tmp/#sql-temptable-.....MAI); waiting for someone to free some space... (errno: 28 "No space left on device")
+
+2023-06-13  1:15:27 35 [Note] WSREP: MDL BF-BF conflict
+
 */

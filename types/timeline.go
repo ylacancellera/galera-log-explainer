@@ -8,6 +8,21 @@ import (
 // It should be kept already sorted by timestamp
 type LocalTimeline []LogInfo
 
+func (lt LocalTimeline) Add(li LogInfo) LocalTimeline {
+
+	// to deduplicate, it will keep 2 loginfo occurences
+	// 1st one for the 1st timestamp found, it will also show the number of repetition
+	// 2nd loginfo the keep the last timestamp found, so that we don't loose track
+	// so there will be a corner case if the first ever event is repeated, but that is acceptable
+	if len(lt) > 1 && li.IsDuplicatedEvent(lt[len(lt)-2], lt[len(lt)-1]) {
+		lt[len(lt)-2].RepetitionCount++
+		lt[len(lt)-1] = li
+	} else {
+		lt = append(lt, li)
+	}
+	return lt
+}
+
 // "string" key is a node IP
 type Timeline map[string]LocalTimeline
 

@@ -57,7 +57,6 @@ var SSTMap = types.RegexMap{
 
 			return ctx, types.SimpleDisplayer(joiner + utils.Paint(utils.YellowText, " cannot find donor"))
 		},
-		Verbosity: types.Detailed,
 	},
 
 	// 2022-12-24T03:28:22.444125Z 0 [Note] WSREP: 0.0 (name): State transfer to 2.0 (name2) complete.
@@ -194,6 +193,7 @@ REGEX_SST_BYPASS="\(Bypassing state dump\|IST sender starting\|IST received\)"
 2023/06/09 06:43:06 socat[23579] E connect(62, AF=2 172.17.0.20:4444, 16): Connection refused
 2022-11-29T23:34:51.820069-05:00 0 [Warning] [MY-000000] [Galera] 0.1 (node): State transfer to -1.-1 (left the group) failed: -111 (Connection refused)
 
+2022-11-09T08:49:28.321372+01:00 0 [Warning] WSREP: 0.1 (node2): State transfer to 2.1 (node3) failed: -22 (Invalid argument)
 
 2023-03-20 17:26:27 140666176771840 [Warning] WSREP: 1.0 (node1): State transfer to 0.0 (node2) failed: -255 (Unknown error 255)
 

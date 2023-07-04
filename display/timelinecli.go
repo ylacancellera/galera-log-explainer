@@ -69,8 +69,9 @@ func TimelineCLI(timeline types.Timeline, verbosity types.Verbosity) {
 
 			timeline.Dequeue(node)
 
-			if verbosity > nl.Verbosity && nl.Msg != nil {
-				args = append(args, nl.Msg(latestContext[node]))
+			msg := nl.Msg(latestContext[node])
+			if verbosity > nl.Verbosity && msg != "" {
+				args = append(args, msg)
 				displayedValue++
 			} else {
 				args = append(args, utils.PaintForState("| ", nl.Ctx.State))

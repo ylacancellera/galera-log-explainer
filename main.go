@@ -222,7 +222,7 @@ func (e *extractor) iterateOnResults(s *bufio.Scanner) ([]types.LogInfo, error) 
 
 	var (
 		line         string
-		lt           []types.LogInfo
+		lt           types.LocalTimeline
 		recentEnough bool
 		displayer    types.LogDisplayer
 	)
@@ -256,15 +256,9 @@ func (e *extractor) iterateOnResults(s *bufio.Scanner) ([]types.LogInfo, error) 
 				continue
 			}
 			ctx, displayer = regex.Handle(ctx, line)
-			lt = append(lt, types.LogInfo{
-				Date:      date,
-				Log:       line,
-				Msg:       displayer,
-				Ctx:       ctx,
-				RegexType: regex.Type,
-				RegexUsed: key,
-				Verbosity: regex.Verbosity,
-			})
+			li := types.NewLogInfo(date, displayer, key, regex, key, ctx)
+
+			lt = lt.Add(li)
 		}
 
 	}

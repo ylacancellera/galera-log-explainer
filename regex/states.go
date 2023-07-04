@@ -45,3 +45,5 @@ var StatesMap = types.RegexMap{
 	},
 	// 2022-09-22T20:01:32.505660Z 0 [Note] [MY-000000] [Galera] Restored state OPEN -> SYNCED (13361114)
 }
+
+// 2023-06-15T12:20:51.880330+03:00 2 [Note] [MY-000000] [WSREP] Server status change connected -> joiner

@@ -19,7 +19,8 @@ var DateLayouts = []string{
 	"2006-01-02T15:04:05.000000-07:00", // 5.7
 	"060102 15:04:05",                  // 5.5
 	"2006-01-02 15:04:05",              // 5.6
-	"2006-01-02  15:04:05",             // 10.3
+	"2006-01-02  15:04:05",             // 10.3, yes the extra space is needed
+	"2006/01/02 15:04:05",              // sometimes found in socat errors
 }
 
 // BetweenDateRegex generate a regex to filter mysql error log dates to just get

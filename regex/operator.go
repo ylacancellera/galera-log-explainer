@@ -48,4 +48,16 @@ var PXCOperatorMap = types.RegexMap{
 		},
 		Verbosity: types.DebugMySQL,
 	},
+
+	// Why is it not in regular "views" regexes:
+	// it could have been useful as an "verbosity=types.Detailed" regexes, very rarely
+	// but in context of operators, it is actually a very important information
+	"RegexGcacheScan": &types.LogRegex{
+		// those "operators" regexes do not have the log prefix added implicitely. It's not strictly needed, but
+		// it will help to avoid catching random piece of log out of order
+		Regex: regexp.MustCompile("^{\"log\":\".*GCache::RingBuffer initial scan"),
+		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+			return ctx, types.SimpleDisplayer("recovering gcache")
+		},
+	},
 }

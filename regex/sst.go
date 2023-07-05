@@ -263,17 +263,30 @@ var SSTMap = types.RegexMap{
 			return ctx, types.SimpleDisplayer(utils.Paint(utils.RedText, "will never receive SST, aborting"))
 		},
 	},
+
+	"RegexISTFailed": &types.LogRegex{
+		Regex:         regexp.MustCompile("async IST sender failed to serve"),
+		InternalRegex: regexp.MustCompile("IST sender failed to serve " + regexNodeIPMethod + ".*\\((?P<error>.*)\\)"),
+		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+			r, err := internalRegexSubmatch(internalRegex, log)
+			if err != nil {
+				return ctx, nil
+			}
+
+			node := r[internalRegex.SubexpIndex(groupNodeIP)]
+			istError := r[internalRegex.SubexpIndex("error")]
+
+			return ctx, func(ctx types.LogCtx) string {
+				return "IST to " + types.DisplayNodeSimplestForm(ctx, node) + utils.Paint(utils.RedText, " failed: ") + istError
+			}
+		},
+	},
 }
 
 /*
 
-
 2023-06-07T02:42:29.734960-06:00 0 [ERROR] WSREP: sst sent called when not SST donor, state SYNCED
 2023-06-07T02:42:00.234711-06:00 0 [Warning] WSREP: Protocol violation. JOIN message sender 0.0 (node1) is not in state transfer (SYNCED). Message ignored.
-
-
-		2023-06-09T06:41:43.807462Z 0 [ERROR] WSREP: async IST sender failed to serve tcp://172.17.0.2:4568: ist send failed: asio.system:104', asio error 'write: Connection reset by peer': 104 (Connection reset by peer)
-
 
 )
 */

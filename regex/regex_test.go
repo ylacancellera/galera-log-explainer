@@ -953,17 +953,38 @@ func TestRegexes(t *testing.T) {
 			mapToTest:   SSTMap,
 			key:         "RegexPreparingBackup",
 		},
+
 		{
 			log:         "2001-01-01T01:01:01.000000Z WSREP_SST: [ERROR] Possible timeout in receving first data from donor in gtid/keyring stage",
 			expectedOut: "timeout from donor in gtid/keyring stage",
 			mapToTest:   SSTMap,
 			key:         "RegexTimeoutReceivingFirstData",
 		},
+
 		{
 			log:         "2001-01-01 01:01:01 140666176771840 [ERROR] WSREP: gcs/src/gcs_group.cpp:gcs_group_handle_join_msg():736: Will never receive state. Need to abort.",
 			expectedOut: "will never receive SST, aborting",
 			mapToTest:   SSTMap,
 			key:         "RegexWillNeverReceive",
+		},
+
+		{
+			log:         "2001-01-01T01:01:01.000000Z 0 [ERROR] WSREP: async IST sender failed to serve tcp://172.17.0.2:4568: ist send failed: asio.system:32', asio error 'write: Broken pipe': 32 (Broken pipe)",
+			expectedOut: "IST to 172.17.0.2 failed: Broken pipe",
+			mapToTest:   SSTMap,
+			key:         "RegexISTFailed",
+		},
+		{
+			log:         "2001-01-01 01:10:01 28949 [ERROR] WSREP: async IST sender failed to serve tcp://172.17.0.2:4568: ist send failed: asio.system:104', asio error 'write: Connection reset by peer': 104 (Connection reset by peer)",
+			expectedOut: "IST to 172.17.0.2 failed: Connection reset by peer",
+			mapToTest:   SSTMap,
+			key:         "RegexISTFailed",
+		},
+		{
+			log:         "2001-01-01T01:01:01.000000Z 0 [ERROR] [MY-000000] [Galera] async IST sender failed to serve ssl://172.17.0.2:4568: ist send failed: ', asio error 'Got unexpected return from write: eof: 71 (Protocol error)",
+			expectedOut: "IST to 172.17.0.2 failed: Protocol error",
+			mapToTest:   SSTMap,
+			key:         "RegexISTFailed",
 		},
 
 		{

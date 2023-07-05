@@ -16,6 +16,7 @@ type LogCtx struct {
 	SST            SST
 	MyIdx          string
 	MemberCount    int
+	Desynced       bool
 	HashToIP       map[string]string
 	HashToNodeName map[string]string
 	IPToHostname   map[string]string

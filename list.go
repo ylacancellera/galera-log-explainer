@@ -11,11 +11,12 @@ type list struct {
 	// Paths is duplicated because it could not work as variadic with kong cli if I set it as CLI object
 	Paths                  []string `arg:"" name:"paths" help:"paths of the log to use"`
 	SkipStateColoredColumn bool     `help:"avoid having the placeholder colored with mysql state, which is guessed using several regexes that will not be displayed"`
-	All                    bool     `help:"List everything" xor:"states,views,events,sst"`
+	All                    bool     `help:"List everything" xor:"states,views,events,sst,applicative"`
 	States                 bool     `help:"List WSREP state changes(SYNCED, DONOR, ...)" xor:"states"`
 	Views                  bool     `help:"List how Galera views evolved (who joined, who left)" xor:"views"`
 	Events                 bool     `help:"List generic mysql events (start, shutdown, assertion failures)" xor:"events"`
 	SST                    bool     `help:"List Galera synchronization event" xor:"sst"`
+	Applicative            bool     `help:"List applicative events (resyncs, desyncs, conflicts). Events tied to one's usage of Galera" xor:"applicative"`
 }
 
 func (l *list) Help() string {
@@ -34,7 +35,7 @@ Usage:
 
 func (l *list) Run() error {
 
-	if !(l.All || l.Events || l.States || l.SST || l.Views) {
+	if !(l.All || l.Events || l.States || l.SST || l.Views || l.Applicative) {
 		return errors.New("Please select a type of logs to search: --all, or any parameters from: --sst --views --events --states")
 	}
 
@@ -65,6 +66,9 @@ func (l *list) regexesToUse() types.RegexMap {
 	}
 	if l.SST || l.All {
 		toCheck.Merge(regex.SSTMap)
+	}
+	if l.Applicative || l.All {
+		toCheck.Merge(regex.ApplicativeMap)
 	}
 	if l.Events || l.All {
 		toCheck.Merge(regex.EventsMap)

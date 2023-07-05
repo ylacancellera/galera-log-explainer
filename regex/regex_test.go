@@ -1009,6 +1009,23 @@ func TestRegexes(t *testing.T) {
 			mapToTest:   PXCOperatorMap,
 			key:         "RegexGcacheScan",
 		},
+
+		{
+			log:         "2001-01-01  1:01:01 0 [Note] WSREP: Member 0.0 (node) desyncs itself from group",
+			expectedCtx: types.LogCtx{Desynced: true},
+			expectedOut: "desyncs itself from group",
+			mapToTest:   ApplicativeMap,
+			key:         "RegexDesync",
+		},
+
+		{
+			log:         "2001-01-01  1:01:01 0 [Note] WSREP: Member 0.0 (node) resyncs itself to group",
+			expectedCtx: types.LogCtx{Desynced: false},
+			inputCtx:    types.LogCtx{Desynced: true},
+			expectedOut: "resyncs itself to group",
+			mapToTest:   ApplicativeMap,
+			key:         "RegexResync",
+		},
 	}
 
 	for _, test := range tests {

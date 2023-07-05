@@ -235,8 +235,6 @@ Winner: ad544d173db06c24
 
 2022-11-29T23:34:51.820009-05:00 0 [Warning] [MY-000000] [Galera] Could not find peer: c0ff4085-5ad7-11ed-8b74-cfeec74147fe
 
-2022-12-07  1:00:03 0 [Note] WSREP: Member 0.0 (node) desyncs itself from group
-2022-12-07  1:00:06 0 [Note] WSREP: Member 0.0 (node) resyncs itself to group.
 2022-12-07  1:00:06 0 [Note] WSREP: Member 0.0 (node) synced with group.
 
 

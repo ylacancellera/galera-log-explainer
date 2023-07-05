@@ -34,7 +34,7 @@ func SetVerbosity(verbosity types.Verbosity, regexes types.RegexMap) {
 }
 
 func AllRegexes() types.RegexMap {
-	IdentsMap.Merge(ViewsMap).Merge(SSTMap).Merge(EventsMap).Merge(StatesMap)
+	IdentsMap.Merge(ViewsMap).Merge(SSTMap).Merge(EventsMap).Merge(StatesMap).Merge(ApplicativeMap)
 	return IdentsMap
 }
 

@@ -7,21 +7,20 @@ import (
 // LogCtx is a context for a given file.
 // It used to keep track of what is going on at each new event.
 type LogCtx struct {
-	FilePath         string
-	OwnIPs           []string
-	OwnHashes        []string
-	OwnNames         []string
-	State            string
-	Version          string
-	ResyncingNode    string
-	ResyncedFromNode string
-	MyIdx            string
-	MemberCount      int
-	HashToIP         map[string]string
-	HashToNodeName   map[string]string
-	IPToHostname     map[string]string
-	IPToMethod       map[string]string
-	IPToNodeName     map[string]string
+	FilePath       string
+	OwnIPs         []string
+	OwnHashes      []string
+	OwnNames       []string
+	State          string
+	Version        string
+	SST            SST
+	MyIdx          string
+	MemberCount    int
+	HashToIP       map[string]string
+	HashToNodeName map[string]string
+	IPToHostname   map[string]string
+	IPToMethod     map[string]string
+	IPToNodeName   map[string]string
 }
 
 func NewLogCtx() LogCtx {

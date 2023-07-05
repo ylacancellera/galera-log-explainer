@@ -300,5 +300,7 @@ d4397932 at tcp://ip:4567
 
  2023-04-16T19:35:06.875877Z 0 [Warning] [MY-000000] [Galera] Action message in non-primary configuration from member 0
 
+{"log":"2023-06-10T04:50:46.835491Z 0 [Note] [MY-000000] [Galera] going to give up, state dump for diagnosis:\nevs::proto(evs::proto(6d0345f5-bcc0, GATHER, view_id(REG,02e369be-8363,1046)), GATHER) {\ncurrent_view=Current view of cluster as seen by this node\nview (view_id(REG,02e369be-8363,1046)\nmemb {\n\t02e369be-8363,0\n\t49761f3d-bd34,0\n\t6d0345f5-bcc0,0\n\tb05443d1-96bf,0\n\tb05443d1-96c0,0\n\t}\njoined {\n\t}\nleft {\n\t}\npartitioned {\n\t}\n),\ninput_map=evs::input_map: {aru_seq=461,safe_seq=461,node_index=node: {idx=0,range=[462,461],safe_seq=461} node: {idx=1,range=[462,461],safe_seq=461} node: {idx=2,range=[462,461],safe_seq=461} node: {idx=3,range=[462,461],safe_seq=461} node: {idx=4,range=[462,461],safe_seq=461} },\nfifo_seq=221418422,\nlast_sent=461,\nknown:\n","file":"/var/lib/mysql/mysqld-error.log"}
+
 
 */

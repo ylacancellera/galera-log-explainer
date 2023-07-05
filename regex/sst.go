@@ -27,11 +27,11 @@ var SSTMap = types.RegexMap{
 			displayJoiner := types.ShortNodeName(joiner)
 			displayDonor := types.ShortNodeName(donor)
 			if utils.SliceContains(ctx.OwnNames, joiner) {
-				ctx.ResyncedFromNode = donor
+				ctx.SST.ResyncedFromNode = donor
 				return ctx, types.SimpleDisplayer(displayDonor + utils.Paint(utils.GreenText, " will resync local node"))
 			}
 			if utils.SliceContains(ctx.OwnNames, donor) {
-				ctx.ResyncingNode = joiner
+				ctx.SST.ResyncingNode = joiner
 				return ctx, types.SimpleDisplayer(utils.Paint(utils.GreenText, "local node will resync ") + displayJoiner)
 			}
 
@@ -74,11 +74,11 @@ var SSTMap = types.RegexMap{
 			displayJoiner := types.ShortNodeName(joiner)
 			displayDonor := types.ShortNodeName(donor)
 			if utils.SliceContains(ctx.OwnNames, joiner) {
-				ctx.ResyncedFromNode = ""
+				ctx.SST.ResyncedFromNode = ""
 				return ctx, types.SimpleDisplayer(utils.Paint(utils.GreenText, "finished resyncing from ") + displayDonor)
 			}
 			if utils.SliceContains(ctx.OwnNames, donor) {
-				ctx.ResyncingNode = ""
+				ctx.SST.ResyncingNode = ""
 				return ctx, types.SimpleDisplayer(utils.Paint(utils.GreenText, "finished sending SST to ") + displayJoiner)
 			}
 
@@ -89,7 +89,7 @@ var SSTMap = types.RegexMap{
 	// some weird ones:
 	// 2022-12-24T03:27:41.966118Z 0 [Note] WSREP: 0.0 (name): State transfer to -1.-1 (left the group) complete.
 	"RegexSSTCompleteUnknown": &types.LogRegex{
-		Regex:         regexp.MustCompile("State transfer to.*complete"),
+		Regex:         regexp.MustCompile("State transfer to.*left the group.*complete"),
 		InternalRegex: regexp.MustCompile("\\(" + regexNodeName + "\\): State transfer.*\\(left the group\\) complete"),
 		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			r, err := internalRegexSubmatch(internalRegex, log)
@@ -100,6 +100,38 @@ var SSTMap = types.RegexMap{
 			donor := r[internalRegex.SubexpIndex(groupNodeName)]
 			displayDonor := types.ShortNodeName(donor)
 			return ctx, types.SimpleDisplayer(displayDonor + utils.Paint(utils.RedText, " synced ??(node left)"))
+		},
+	},
+
+	"RegexSSTFailedUnknown": &types.LogRegex{
+		Regex:         regexp.MustCompile("State transfer to.*left the group.*failed"),
+		InternalRegex: regexp.MustCompile("\\(" + regexNodeName + "\\): State transfer.*\\(left the group\\) failed"),
+		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+			r, err := internalRegexSubmatch(internalRegex, log)
+			if err != nil {
+				return ctx, nil
+			}
+
+			donor := r[internalRegex.SubexpIndex(groupNodeName)]
+			displayDonor := types.ShortNodeName(donor)
+			return ctx, types.SimpleDisplayer(displayDonor + utils.Paint(utils.RedText, " failed to sync ??(node left)"))
+		},
+	},
+
+	"RegexSSTStateTransferFailed": &types.LogRegex{
+		Regex:         regexp.MustCompile("State transfer to.*failed:"),
+		InternalRegex: regexp.MustCompile("\\(" + regexNodeName + "\\): State transfer.*\\(" + regexNodeName2 + "\\) failed"),
+		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+			r, err := internalRegexSubmatch(internalRegex, log)
+			if err != nil {
+				return ctx, nil
+			}
+
+			donor := r[internalRegex.SubexpIndex(groupNodeName)]
+			joiner := r[internalRegex.SubexpIndex(groupNodeName2)]
+			displayDonor := types.ShortNodeName(donor)
+			displayJoiner := types.ShortNodeName(joiner)
+			return ctx, types.SimpleDisplayer(displayDonor + utils.Paint(utils.RedText, " failed to sync ") + displayJoiner)
 		},
 	},
 
@@ -123,6 +155,7 @@ var SSTMap = types.RegexMap{
 		Regex: regexp.MustCompile("Proceeding with SST"),
 		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			ctx.State = "JOINER"
+			ctx.SST.Type = "SST"
 
 			return ctx, types.SimpleDisplayer(utils.Paint(utils.YellowText, "Receiving SST"))
 		},
@@ -139,8 +172,8 @@ var SSTMap = types.RegexMap{
 
 			ctx.State = "DONOR"
 			node := r[internalRegex.SubexpIndex(groupNodeIP)]
-			if ctx.ResyncingNode == "" { // we should already have something at this point
-				ctx.ResyncingNode = node
+			if ctx.SST.ResyncingNode == "" { // we should already have something at this point
+				ctx.SST.ResyncingNode = node
 			}
 
 			return ctx, func(ctx types.LogCtx) string {
@@ -183,28 +216,61 @@ var SSTMap = types.RegexMap{
 			}
 		},
 	},
+
+	"RegexFailedToPrepareIST": &types.LogRegex{
+		Regex: regexp.MustCompile("Failed to prepare for incremental state transfer"),
+		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+			ctx.SST.Type = "SST"
+			return ctx, types.SimpleDisplayer("IST is not applicable")
+		},
+	},
+
+	// could not find production examples yet, but it did exist in older version there also was "Bypassing state dump"
+	"RegexBypassSST": &types.LogRegex{
+		Regex: regexp.MustCompile("Bypassing SST"),
+		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+			ctx.SST.Type = "IST"
+			return ctx, types.SimpleDisplayer("IST will be used")
+		},
+	},
+
+	"RegexSocatConnRefused": &types.LogRegex{
+		Regex: regexp.MustCompile("E connect.*Connection refused"),
+		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+			return ctx, types.SimpleDisplayer(utils.Paint(utils.RedText, "socat: connection refused"))
+		},
+	},
+
+	// 2023-05-12T02:52:33.767132Z 0 [Note] [MY-000000] [WSREP-SST] Preparing the backup at /var/lib/mysql/sst-xb-tmpdir
+	"RegexPreparingBackup": &types.LogRegex{
+		Regex: regexp.MustCompile("Preparing the backup at"),
+		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+			return ctx, types.SimpleDisplayer("preparing SST backup")
+		},
+		Verbosity: types.Detailed,
+	},
+
+	"RegexTimeoutReceivingFirstData": &types.LogRegex{
+		Regex: regexp.MustCompile("Possible timeout in receving first data from donor in gtid/keyring stage"),
+		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+			return ctx, types.SimpleDisplayer(utils.Paint(utils.RedText, "timeout from donor in gtid/keyring stage"))
+		},
+	},
+
+	"RegexWillNeverReceive": &types.LogRegex{
+		Regex: regexp.MustCompile("Will never receive state. Need to abort"),
+		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+			return ctx, types.SimpleDisplayer(utils.Paint(utils.RedText, "will never receive SST, aborting"))
+		},
+	},
 }
 
 /*
-var (
-REGEX_IST_UNAVAILABLE="Failed to prepare for incremental state transfer"
-REGEX_SST_BYPASS="\(Bypassing state dump\|IST sender starting\|IST received\)"
-        2023-06-09T06:42:36.266382Z WSREP_SST: [INFO] Bypassing SST. Can work it through IST
-2023/06/09 06:43:06 socat[23579] E connect(62, AF=2 172.17.0.20:4444, 16): Connection refused
-2022-11-29T23:34:51.820069-05:00 0 [Warning] [MY-000000] [Galera] 0.1 (node): State transfer to -1.-1 (left the group) failed: -111 (Connection refused)
 
-2022-11-09T08:49:28.321372+01:00 0 [Warning] WSREP: 0.1 (node2): State transfer to 2.1 (node3) failed: -22 (Invalid argument)
-
-2023-03-20 17:26:27 140666176771840 [Warning] WSREP: 1.0 (node1): State transfer to 0.0 (node2) failed: -255 (Unknown error 255)
-
-2023-03-20 17:26:27 140666176771840 [ERROR] WSREP: gcs/src/gcs_group.cpp:gcs_group_handle_join_msg():736: Will never receive state. Need to abort.
-
-2023-05-12T02:52:33.767132Z 0 [Note] [MY-000000] [WSREP-SST] Preparing the backup at /var/lib/mysql/sst-xb-tmpdir
 
 2023-06-07T02:42:29.734960-06:00 0 [ERROR] WSREP: sst sent called when not SST donor, state SYNCED
 2023-06-07T02:42:00.234711-06:00 0 [Warning] WSREP: Protocol violation. JOIN message sender 0.0 (node1) is not in state transfer (SYNCED). Message ignored.
 
-        2023-06-09T06:41:43.752403Z WSREP_SST: [ERROR] Possible timeout in receving first data from donor in gtid/keyring stage
 
 		2023-06-09T06:41:43.807462Z 0 [ERROR] WSREP: async IST sender failed to serve tcp://172.17.0.2:4568: ist send failed: asio.system:104', asio error 'write: Connection reset by peer': 104 (Connection reset by peer)
 

@@ -756,8 +756,8 @@ func TestRegexes(t *testing.T) {
 				OwnNames: []string{"node2"},
 			},
 			expectedCtx: types.LogCtx{
-				OwnNames:         []string{"node2"},
-				ResyncedFromNode: "node1",
+				OwnNames: []string{"node2"},
+				SST:      types.SST{ResyncedFromNode: "node1"},
 			},
 			expectedOut: "node1 will resync local node",
 			mapToTest:   SSTMap,
@@ -770,8 +770,8 @@ func TestRegexes(t *testing.T) {
 				OwnNames: []string{"node1"},
 			},
 			expectedCtx: types.LogCtx{
-				OwnNames:      []string{"node1"},
-				ResyncingNode: "node2",
+				OwnNames: []string{"node1"},
+				SST:      types.SST{ResyncingNode: "node2"},
 			},
 			expectedOut: "local node will resync node2",
 			mapToTest:   SSTMap,
@@ -812,12 +812,12 @@ func TestRegexes(t *testing.T) {
 			name: "joiner",
 			log:  "2001-01-01T01:01:01.000000Z 0 [Note] WSREP: 0.0 (node1): State transfer to 2.0 (node2) complete.",
 			inputCtx: types.LogCtx{
-				OwnNames:         []string{"node2"},
-				ResyncedFromNode: "node1",
+				OwnNames: []string{"node2"},
+				SST:      types.SST{ResyncedFromNode: "node1"},
 			},
 			expectedCtx: types.LogCtx{
-				ResyncedFromNode: "",
-				OwnNames:         []string{"node2"},
+				SST:      types.SST{ResyncedFromNode: ""},
+				OwnNames: []string{"node2"},
 			},
 			expectedOut: "finished resyncing from node1",
 			mapToTest:   SSTMap,
@@ -827,12 +827,12 @@ func TestRegexes(t *testing.T) {
 			name: "donor",
 			log:  "2001-01-01T01:01:01.000000Z 0 [Note] WSREP: 0.0 (node1): State transfer to 2.0 (node2) complete.",
 			inputCtx: types.LogCtx{
-				OwnNames:      []string{"node1"},
-				ResyncingNode: "node2",
+				OwnNames: []string{"node1"},
+				SST:      types.SST{ResyncingNode: "node2"},
 			},
 			expectedCtx: types.LogCtx{
-				ResyncingNode: "",
-				OwnNames:      []string{"node1"},
+				SST:      types.SST{ResyncingNode: ""},
+				OwnNames: []string{"node1"},
 			},
 			expectedOut: "finished sending SST to node2",
 			mapToTest:   SSTMap,
@@ -864,7 +864,7 @@ func TestRegexes(t *testing.T) {
 
 		{
 			log:         "2001-01-01T01:01:01.000000Z WSREP_SST: [INFO] Proceeding with SST.........",
-			expectedCtx: types.LogCtx{State: "JOINER"},
+			expectedCtx: types.LogCtx{State: "JOINER", SST: types.SST{Type: "SST"}},
 			expectedOut: "Receiving SST",
 			mapToTest:   SSTMap,
 			key:         "RegexSSTProceeding",
@@ -873,8 +873,8 @@ func TestRegexes(t *testing.T) {
 		{
 			log: "2001-01-01T01:01:01.000000Z WSREP_SST: [INFO] Streaming the backup to joiner at 172.17.0.2 4444",
 			expectedCtx: types.LogCtx{
-				State:         "DONOR",
-				ResyncingNode: "172.17.0.2",
+				State: "DONOR",
+				SST:   types.SST{ResyncingNode: "172.17.0.2"},
 			},
 			expectedOut: "SST to 172.17.0.2",
 			mapToTest:   SSTMap,
@@ -895,6 +895,98 @@ func TestRegexes(t *testing.T) {
 			expectedOut: "IST to 172.17.0.2(seqno:71221248)",
 			mapToTest:   SSTMap,
 			key:         "RegexISTSender",
+		},
+
+		{
+			log:         "2001-01-01T01:01:01.000000Z 0 [Warning] [MY-000000] [Galera] 0.1 (node): State transfer to -1.-1 (left the group) failed: -111 (Connection refused)",
+			expectedOut: "node failed to sync ??(node left)",
+			mapToTest:   SSTMap,
+			key:         "RegexSSTFailedUnknown",
+		},
+
+		{
+			log:         "2001-01-01T01:01:01.000000Z 0 [Warning] [MY-000000] [Galera] 0.1 (node): State transfer to 0.2 (node2) failed: -111 (Connection refused)",
+			expectedOut: "node failed to sync node2",
+			mapToTest:   SSTMap,
+			key:         "RegexSSTStateTransferFailed",
+		},
+		{
+			log:                  "2001-01-01T01:01:01.000000Z 0 [Warning] [MY-000000] [Galera] 0.1 (node): State transfer to -1.-1 (left the group) failed: -111 (Connection refused)",
+			displayerExpectedNil: true,
+			mapToTest:            SSTMap,
+			key:                  "RegexSSTStateTransferFailed",
+		},
+
+		{
+			log:         "2001-01-01T01:01:01.000000Z 1 [Note] WSREP: Failed to prepare for incremental state transfer: Local state UUID (00000000-0000-0000-0000-000000000000) does not match group state UUID (ed16c932-84b3-11ed-998c-8e3ae5bc328f): 1 (Operation not permitted)",
+			expectedCtx: types.LogCtx{SST: types.SST{Type: "SST"}},
+			expectedOut: "IST is not applicable",
+			mapToTest:   SSTMap,
+			key:         "RegexFailedToPrepareIST",
+		},
+		{
+			log:         "2001-01-01T01:01:01.000000Z 1 [Warning] WSREP: Failed to prepare for incremental state transfer: Local state seqno is undefined: 1 (Operation not permitted)",
+			expectedCtx: types.LogCtx{SST: types.SST{Type: "SST"}},
+			expectedOut: "IST is not applicable",
+			mapToTest:   SSTMap,
+			key:         "RegexFailedToPrepareIST",
+		},
+
+		{
+			log:         "2001-01-01T01:01:01.000000Z WSREP_SST: [INFO] Bypassing SST. Can work it through IST",
+			expectedCtx: types.LogCtx{SST: types.SST{Type: "IST"}},
+			expectedOut: "IST will be used",
+			mapToTest:   SSTMap,
+			key:         "RegexBypassSST",
+		},
+
+		{
+			log:         "2001/01/01 01:01:01 socat[23579] E connect(62, AF=2 172.17.0.20:4444, 16): Connection refused",
+			expectedOut: "socat: connection refused",
+			mapToTest:   SSTMap,
+			key:         "RegexSocatConnRefused",
+		},
+
+		{
+			log:         "2001-01-01T01:01:01.000000Z 0 [Note] [MY-000000] [WSREP-SST] Preparing the backup at /var/lib/mysql/sst-xb-tmpdir",
+			expectedOut: "preparing SST backup",
+			mapToTest:   SSTMap,
+			key:         "RegexPreparingBackup",
+		},
+		{
+			log:         "2001-01-01T01:01:01.000000Z WSREP_SST: [ERROR] Possible timeout in receving first data from donor in gtid/keyring stage",
+			expectedOut: "timeout from donor in gtid/keyring stage",
+			mapToTest:   SSTMap,
+			key:         "RegexTimeoutReceivingFirstData",
+		},
+		{
+			log:         "2001-01-01 01:01:01 140666176771840 [ERROR] WSREP: gcs/src/gcs_group.cpp:gcs_group_handle_join_msg():736: Will never receive state. Need to abort.",
+			expectedOut: "will never receive SST, aborting",
+			mapToTest:   SSTMap,
+			key:         "RegexWillNeverReceive",
+		},
+
+		{
+			log:         "+ NODE_NAME=cluster1-pxc-0.cluster1-pxc.test-percona.svc.cluster.local",
+			expectedCtx: types.LogCtx{OwnNames: []string{"cluster1-pxc-0"}},
+			expectedOut: "local name(operator):cluster1-pxc-0",
+			mapToTest:   PXCOperatorMap,
+			key:         "RegexNodeNameFromEnv",
+		},
+
+		{
+			log:         "+ NODE_IP=172.17.0.2",
+			expectedCtx: types.LogCtx{OwnIPs: []string{"172.17.0.2"}},
+			expectedOut: "local ip(operator):172.17.0.2",
+			mapToTest:   PXCOperatorMap,
+			key:         "RegexNodeIPFromEnv",
+		},
+
+		{
+			log:         "{\"log\":\"2023-07-05T08:17:23.447015Z 0 [Note] [MY-000000] [Galera] GCache::RingBuffer initial scan...  0.0% (         0/1073741848 bytes) complete.\n\",\"file\":\"/var/lib/mysql/mysqld-error.log\"}",
+			expectedOut: "recovering gcache",
+			mapToTest:   PXCOperatorMap,
+			key:         "RegexGcacheScan",
 		},
 	}
 

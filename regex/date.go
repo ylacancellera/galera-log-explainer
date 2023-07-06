@@ -28,7 +28,7 @@ var DateLayouts = []string{
 // Currently limited to filter by day to produce "short" regexes. Finer events will be filtered later in code
 // Trying to filter hours, minutes using regexes would produce regexes even harder to read
 // while not really adding huge benefit as we do not expect so many events of interets
-func BetweenDateRegex(since *time.Time) string {
+func BetweenDateRegex(since *time.Time, skipLeadingCircumflex bool) string {
 	/*
 		"2006-01-02
 		"2006-01-0[3-9]
@@ -38,6 +38,12 @@ func BetweenDateRegex(since *time.Time) string {
 		"200[7-9]-[0-9]{2}-[0-9]{2}
 		"20[1-9][0-9]-[0-9]{2}-[0-9]{2}
 	*/
+
+	separator := "|^"
+	if skipLeadingCircumflex {
+		separator = "|"
+	}
+
 	regexConstructor := []struct {
 		unit      int
 		unitToStr string
@@ -59,14 +65,14 @@ func BetweenDateRegex(since *time.Time) string {
 	for _, layout := range []string{"2006-01-02", "060102"} {
 		// base complete date
 		lastTransformed := since.Format(layout)
-		s += "|^" + lastTransformed
+		s += separator + lastTransformed
 
 		for _, construct := range regexConstructor {
 			if construct.unit != 9 {
-				s += "|^" + utils.StringsReplaceReversed(lastTransformed, construct.unitToStr, string(construct.unitToStr[0])+"["+strconv.Itoa(construct.unit%10+1)+"-9]", 1)
+				s += separator + utils.StringsReplaceReversed(lastTransformed, construct.unitToStr, string(construct.unitToStr[0])+"["+strconv.Itoa(construct.unit%10+1)+"-9]", 1)
 			}
 			// %1000 here is to cover the transformation of 2022 => 22
-			s += "|^" + utils.StringsReplaceReversed(lastTransformed, construct.unitToStr, "["+strconv.Itoa((construct.unit%1000/10)+1)+"-9][0-9]", 1)
+			s += separator + utils.StringsReplaceReversed(lastTransformed, construct.unitToStr, "["+strconv.Itoa((construct.unit%1000/10)+1)+"-9][0-9]", 1)
 
 			lastTransformed = utils.StringsReplaceReversed(lastTransformed, construct.unitToStr, "[0-9][0-9]", 1)
 
@@ -76,8 +82,13 @@ func BetweenDateRegex(since *time.Time) string {
 	return "(" + s[1:]
 }
 
-func NoDatesRegex() string {
+// basically capturing anything that does not have a date
+// needed, else we would miss some logs, like wsrep recovery
+func NoDatesRegex(skipLeadingCircumflex bool) string {
 	//return "((?![0-9]{4}-[0-9]{2}-[0-9]{2})|(?![0-9]{6}))"
+	if skipLeadingCircumflex {
+		return "(?![0-9]{4})"
+	}
 	return "^(?![0-9]{4})"
 }
 

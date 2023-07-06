@@ -35,7 +35,7 @@ func TestDateAfter(t *testing.T) {
 
 	for _, test := range tests {
 		d, _ := time.Parse(test.format, test.input)
-		s := BetweenDateRegex(&d)
+		s := BetweenDateRegex(&d, false)
 		if s != test.expected {
 			t.Log("wrong date regex:", s)
 			t.Fail()

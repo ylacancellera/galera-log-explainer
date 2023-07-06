@@ -154,7 +154,7 @@ func (e *extractor) grepArgument() string {
 		//grepRegex += "{\"log\":\"" //
 	}
 	if e.since != nil {
-		grepRegex += "(" + regex.BetweenDateRegex(e.since) + "|" + regex.NoDatesRegex() + ")"
+		grepRegex += "(" + regex.BetweenDateRegex(e.since, CLI.PxcOperator) + "|" + regex.NoDatesRegex(CLI.PxcOperator) + ")"
 	}
 	grepRegex += ".*"
 	grepRegex += "(" + strings.Join(regexToSendSlice, "|") + ")"

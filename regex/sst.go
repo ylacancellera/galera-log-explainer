@@ -266,7 +266,7 @@ var SSTMap = types.RegexMap{
 
 	"RegexISTFailed": &types.LogRegex{
 		Regex:         regexp.MustCompile("async IST sender failed to serve"),
-		InternalRegex: regexp.MustCompile("IST sender failed to serve " + regexNodeIPMethod + ".*\\((?P<error>.*)\\)"),
+		InternalRegex: regexp.MustCompile("IST sender failed to serve " + regexNodeIPMethod + ":.*asio error '.*: [0-9]+ \\((?P<error>[\\w\\s]+)\\)"),
 		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			r, err := internalRegexSubmatch(internalRegex, log)
 			if err != nil {

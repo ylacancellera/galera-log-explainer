@@ -986,6 +986,12 @@ func TestRegexes(t *testing.T) {
 			mapToTest:   SSTMap,
 			key:         "RegexISTFailed",
 		},
+		{
+			log:         `{\"log\":\"2001-01-01T01:01:01.000000Z 0 [ERROR] [MY-000000] [Galera] async IST sender failed to serve ssl://172.17.0.2:4568: ist send failed: ', asio error 'Got unexpected return from write: eof: 71 (Protocol error)\n\t at galerautils/src/gu_asio_stream_react.cpp:write():195': 71 (Protocol error)\n\t at galera/src/ist.cpp:send():856\n\",\"file\":\"/var/lib/mysql/mysqld-error.log\"}`,
+			expectedOut: "IST to 172.17.0.2 failed: Protocol error",
+			mapToTest:   SSTMap,
+			key:         "RegexISTFailed",
+		},
 
 		{
 			log:         "+ NODE_NAME=cluster1-pxc-0.cluster1-pxc.test-percona.svc.cluster.local",

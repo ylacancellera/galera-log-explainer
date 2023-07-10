@@ -99,7 +99,7 @@ var EventsMap = types.RegexMap{
 		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 
 			msg := "wsrep recovery"
-			if isShutdownReasonMissing(ctx) {
+			if isShutdownReasonMissing(ctx) && ctx.State != "JOINER" {
 				msg += "(" + utils.Paint(utils.YellowText, "could not catch how/when it stopped") + ")"
 			}
 			ctx.State = "RECOVERY"

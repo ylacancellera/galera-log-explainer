@@ -819,7 +819,22 @@ func TestRegexes(t *testing.T) {
 				SST:      types.SST{ResyncedFromNode: ""},
 				OwnNames: []string{"node2"},
 			},
-			expectedOut: "finished resyncing from node1",
+			expectedOut: "got SST from node1",
+			mapToTest:   SSTMap,
+			key:         "RegexSSTComplete",
+		},
+		{
+			name: "joiner ist",
+			log:  "2001-01-01T01:01:01.000000Z 0 [Note] WSREP: 0.0 (node1): State transfer to 2.0 (node2) complete.",
+			inputCtx: types.LogCtx{
+				OwnNames: []string{"node2"},
+				SST:      types.SST{ResyncedFromNode: "node1", Type: "IST"},
+			},
+			expectedCtx: types.LogCtx{
+				SST:      types.SST{ResyncedFromNode: "", Type: ""},
+				OwnNames: []string{"node2"},
+			},
+			expectedOut: "got IST from node1",
 			mapToTest:   SSTMap,
 			key:         "RegexSSTComplete",
 		},
@@ -835,6 +850,21 @@ func TestRegexes(t *testing.T) {
 				OwnNames: []string{"node1"},
 			},
 			expectedOut: "finished sending SST to node2",
+			mapToTest:   SSTMap,
+			key:         "RegexSSTComplete",
+		},
+		{
+			name: "donor ist",
+			log:  "2001-01-01T01:01:01.000000Z 0 [Note] WSREP: 0.0 (node1): State transfer to 2.0 (node2) complete.",
+			inputCtx: types.LogCtx{
+				OwnNames: []string{"node1"},
+				SST:      types.SST{ResyncingNode: "node2", Type: "IST"},
+			},
+			expectedCtx: types.LogCtx{
+				SST:      types.SST{ResyncingNode: "", Type: ""},
+				OwnNames: []string{"node1"},
+			},
+			expectedOut: "finished sending IST to node2",
 			mapToTest:   SSTMap,
 			key:         "RegexSSTComplete",
 		},
@@ -890,11 +920,27 @@ func TestRegexes(t *testing.T) {
 		},
 
 		{
-			log:         "2001-01-01  7:25:17 140433613571840 [Note] WSREP: async IST sender starting to serve tcp://172.17.0.2:4568 sending 71221242-71221248",
-			expectedCtx: types.LogCtx{},
-			expectedOut: "IST to 172.17.0.2(seqno:71221248)",
+			log:         "2001-01-01  1:01:01 140433613571840 [Note] WSREP: async IST sender starting to serve tcp://172.17.0.2:4568 sending 2-116",
+			expectedCtx: types.LogCtx{State: "DONOR", SST: types.SST{Type: "IST"}},
+			expectedOut: "IST to 172.17.0.2(seqno:116)",
 			mapToTest:   SSTMap,
 			key:         "RegexISTSender",
+		},
+
+		{
+			log:         "2001-01-01T01:01:01.000000Z 0 [Note] [MY-000000] [Galera] Prepared IST receiver for 0-116, listening at: ssl://172.17.0.2:4568",
+			expectedCtx: types.LogCtx{State: "JOINER", SST: types.SST{Type: "IST"}},
+			expectedOut: "will receive IST(seqno:116)",
+			mapToTest:   SSTMap,
+			key:         "RegexISTReceiver",
+		},
+		{
+			name:        "mdb variant",
+			log:         "2001-01-01T01:01:01.000000Z 0 [Note] WSREP: Prepared IST receiver, listening at: ssl://172.17.0.2:4568",
+			expectedCtx: types.LogCtx{State: "JOINER", SST: types.SST{Type: "IST"}},
+			expectedOut: "will receive IST",
+			mapToTest:   SSTMap,
+			key:         "RegexISTReceiver",
 		},
 
 		{

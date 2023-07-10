@@ -73,13 +73,16 @@ var SSTMap = types.RegexMap{
 			joiner := r[internalRegex.SubexpIndex(groupNodeName2)]
 			displayJoiner := types.ShortNodeName(joiner)
 			displayDonor := types.ShortNodeName(donor)
+			displayType := "SST"
+			if ctx.SST.Type != "" {
+				displayType = ctx.SST.Type
+			}
+			ctx.SST.Reset()
 			if utils.SliceContains(ctx.OwnNames, joiner) {
-				ctx.SST.ResyncedFromNode = ""
-				return ctx, types.SimpleDisplayer(utils.Paint(utils.GreenText, "finished resyncing from ") + displayDonor)
+				return ctx, types.SimpleDisplayer(utils.Paint(utils.GreenText, "got "+displayType+" from ") + displayDonor)
 			}
 			if utils.SliceContains(ctx.OwnNames, donor) {
-				ctx.SST.ResyncingNode = ""
-				return ctx, types.SimpleDisplayer(utils.Paint(utils.GreenText, "finished sending SST to ") + displayJoiner)
+				return ctx, types.SimpleDisplayer(utils.Paint(utils.GreenText, "finished sending "+displayType+" to ") + displayJoiner)
 			}
 
 			return ctx, types.SimpleDisplayer(displayDonor + utils.Paint(utils.GreenText, " synced ") + displayJoiner)
@@ -207,6 +210,8 @@ var SSTMap = types.RegexMap{
 			if err != nil {
 				return ctx, nil
 			}
+			ctx.SST.Type = "IST"
+			ctx.State = "DONOR"
 
 			seqno := r[internalRegex.SubexpIndex(groupSeqno)]
 			node := r[internalRegex.SubexpIndex(groupNodeIP)]
@@ -214,6 +219,26 @@ var SSTMap = types.RegexMap{
 			return ctx, func(ctx types.LogCtx) string {
 				return utils.Paint(utils.YellowText, "IST to ") + types.DisplayNodeSimplestForm(ctx, node) + "(seqno:" + seqno + ")"
 			}
+		},
+	},
+
+	"RegexISTReceiver": &types.LogRegex{
+		Regex: regexp.MustCompile("Prepared IST receiver"),
+
+		InternalRegex: regexp.MustCompile("Prepared IST receiver( for [0-9]+-" + regexSeqno + ")?"),
+		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+			r, err := internalRegexSubmatch(internalRegex, log)
+			if err != nil {
+				return ctx, nil
+			}
+			ctx.SST.Type = "IST"
+			ctx.State = "JOINER"
+
+			seqno := r[internalRegex.SubexpIndex(groupSeqno)]
+			if seqno == "" {
+				return ctx, types.SimpleDisplayer(utils.Paint(utils.YellowText, "will receive IST"))
+			}
+			return ctx, types.SimpleDisplayer(utils.Paint(utils.YellowText, "will receive IST") + "(seqno:" + seqno + ")")
 		},
 	},
 

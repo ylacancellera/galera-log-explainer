@@ -134,6 +134,8 @@ func (ctx *LogCtx) AddOwnIP(ip string) {
 	}
 }
 
+// MergeMapsWith will take a slice of contexts and merge every translation maps
+// into the base context. It won't touch "local" infos such as "ownNames"
 func (base *LogCtx) MergeMapsWith(ctxs []LogCtx) {
 	for _, ctx := range ctxs {
 		for hash, ip := range ctx.HashToIP {
@@ -153,4 +155,16 @@ func (base *LogCtx) MergeMapsWith(ctxs []LogCtx) {
 			base.IPToMethod[ip] = method
 		}
 	}
+}
+
+// Inherit will fill the local information from given context
+// into the base
+func (base *LogCtx) Inherit(ctx LogCtx) {
+	base.OwnHashes = append(ctx.OwnHashes, base.OwnHashes...)
+	base.OwnNames = append(ctx.OwnNames, base.OwnNames...)
+	base.OwnIPs = append(ctx.OwnIPs, base.OwnIPs...)
+	if base.Version == "" {
+		base.Version = ctx.Version
+	}
+	base.MergeMapsWith([]LogCtx{ctx})
 }

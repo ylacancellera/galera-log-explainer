@@ -85,11 +85,13 @@ func MergeTimeline(t1, t2 LocalTimeline) LocalTimeline {
 		// t2: ----OO--OO--
 		//>t : --O----OOO-- won't try to get things between t1.end and t2.start
 		// we assume they're identical, they're supposed to be from the same server
-		return append(t1, CutTimelineAt(t2, endt1)...)
+		t2 = CutTimelineAt(t2, endt1)
+		// no return here, to avoid repeating the ctx.inherit
 	}
 
 	// t1: --O--O------
 	// t2: ------O--O--
+	t2[len(t2)-1].Ctx.Inherit(t1[len(t1)-1].Ctx)
 	return append(t1, t2...)
 }
 

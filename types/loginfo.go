@@ -54,6 +54,7 @@ func (li *LogInfo) Msg(ctx LogCtx) string {
 
 func (current *LogInfo) IsDuplicatedEvent(base, previous LogInfo) bool {
 	return base.RegexUsed == previous.RegexUsed &&
+		base.displayer != nil && previous.displayer != nil && current.displayer != nil &&
 		base.displayer(base.Ctx) == previous.displayer(previous.Ctx) &&
 		previous.RegexUsed == current.RegexUsed &&
 		previous.displayer(previous.Ctx) == current.displayer(current.Ctx)

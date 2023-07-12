@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/ylacancellera/galera-log-explainer/types"
+	"github.com/ylacancellera/galera-log-explainer/utils"
 )
 
 func init() {
@@ -63,14 +64,13 @@ var IdentsMap = types.RegexMap{
 
 			idx := r[internalRegex.SubexpIndex(groupIdx)]
 			hash := r[internalRegex.SubexpIndex(groupNodeHash)]
-			nodename := r[internalRegex.SubexpIndex(groupNodeName)]
+			nodename := utils.ShortNodeName(r[internalRegex.SubexpIndex(groupNodeName)])
 
 			// nodenames are truncated after 32 characters ...
 			if len(nodename) == 31 {
 				return ctx, nil
 			}
-			splitted := strings.Split(hash, "-")
-			shorthash := splitted[0] + "-" + splitted[3]
+			shorthash := utils.UUIDToShortUUID(hash)
 			ctx.HashToNodeName[shorthash] = nodename
 
 			if ctx.MyIdx == idx && (ctx.State == "PRIMARY" || ctx.MemberCount == 1) {

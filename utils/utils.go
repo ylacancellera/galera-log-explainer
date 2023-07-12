@@ -109,5 +109,15 @@ func StringsReplaceReversed(s, old, new string, n int) string {
 func UUIDToShortUUID(uuid string) string {
 	splitted := strings.Split(uuid, "-")
 	return splitted[0] + "-" + splitted[3]
+}
 
+// ShortNodeName helps reducing the node name when it is the default value (node hostname)
+// It only keeps the top-level domain
+func ShortNodeName(s string) string {
+	// short enough
+	if len(s) < 10 {
+		return s
+	}
+	before, _, _ := strings.Cut(s, ".")
+	return before
 }

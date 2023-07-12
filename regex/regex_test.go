@@ -749,6 +749,15 @@ func TestRegexes(t *testing.T) {
 			mapToTest:   SSTMap,
 			key:         "RegexSSTRequestSuccess",
 		},
+
+		{
+			log:         "2022-02-22T15:44:48.507924Z 0 [Note] [MY-000000] [Galera] Member 2.0 (node2.host.com) requested state transfer from '*any*'. Selected 0.0 (node1.host.com)(SYNCED) as donor.",
+			inputCtx:    types.LogCtx{},
+			expectedCtx: types.LogCtx{},
+			expectedOut: "node1 will resync node2",
+			mapToTest:   SSTMap,
+			key:         "RegexSSTRequestSuccess",
+		},
 		{
 			name: "joining",
 			log:  "2001-01-01T01:01:01.000000Z 0 [Note] WSREP: Member 2.0 (node2) requested state transfer from '*any*'. Selected 0.0 (node1)(SYNCED) as donor.",

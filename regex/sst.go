@@ -24,8 +24,8 @@ var SSTMap = types.RegexMap{
 
 			joiner := r[internalRegex.SubexpIndex(groupNodeName)]
 			donor := r[internalRegex.SubexpIndex(groupNodeName2)]
-			displayJoiner := types.ShortNodeName(joiner)
-			displayDonor := types.ShortNodeName(donor)
+			displayJoiner := utils.ShortNodeName(joiner)
+			displayDonor := utils.ShortNodeName(donor)
 			if utils.SliceContains(ctx.OwnNames, joiner) {
 				ctx.SST.ResyncedFromNode = donor
 				return ctx, types.SimpleDisplayer(displayDonor + utils.Paint(utils.GreenText, " will resync local node"))
@@ -71,8 +71,8 @@ var SSTMap = types.RegexMap{
 
 			donor := r[internalRegex.SubexpIndex(groupNodeName)]
 			joiner := r[internalRegex.SubexpIndex(groupNodeName2)]
-			displayJoiner := types.ShortNodeName(joiner)
-			displayDonor := types.ShortNodeName(donor)
+			displayJoiner := utils.ShortNodeName(joiner)
+			displayDonor := utils.ShortNodeName(donor)
 			displayType := "SST"
 			if ctx.SST.Type != "" {
 				displayType = ctx.SST.Type
@@ -101,7 +101,7 @@ var SSTMap = types.RegexMap{
 			}
 
 			donor := r[internalRegex.SubexpIndex(groupNodeName)]
-			displayDonor := types.ShortNodeName(donor)
+			displayDonor := utils.ShortNodeName(donor)
 			return ctx, types.SimpleDisplayer(displayDonor + utils.Paint(utils.RedText, " synced ??(node left)"))
 		},
 	},
@@ -116,7 +116,7 @@ var SSTMap = types.RegexMap{
 			}
 
 			donor := r[internalRegex.SubexpIndex(groupNodeName)]
-			displayDonor := types.ShortNodeName(donor)
+			displayDonor := utils.ShortNodeName(donor)
 			return ctx, types.SimpleDisplayer(displayDonor + utils.Paint(utils.RedText, " failed to sync ??(node left)"))
 		},
 	},
@@ -132,8 +132,8 @@ var SSTMap = types.RegexMap{
 
 			donor := r[internalRegex.SubexpIndex(groupNodeName)]
 			joiner := r[internalRegex.SubexpIndex(groupNodeName2)]
-			displayDonor := types.ShortNodeName(donor)
-			displayJoiner := types.ShortNodeName(joiner)
+			displayDonor := utils.ShortNodeName(donor)
+			displayJoiner := utils.ShortNodeName(joiner)
 			return ctx, types.SimpleDisplayer(displayDonor + utils.Paint(utils.RedText, " failed to sync ") + displayJoiner)
 		},
 	},

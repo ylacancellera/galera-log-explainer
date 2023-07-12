@@ -61,3 +61,16 @@ var PXCOperatorMap = types.RegexMap{
 		},
 	},
 }
+
+/*
+{"log":"---- Starting the MySQL server used for post-processing ----\n","file":"/var/lib/mysql/mysqld.post.processing.log"}
+{"log":"2023-01-25T11:00:18.305034Z 0 [Warning] [MY-000000] [WSREP] Node is not a cluster node. Disabling pxc_strict_mode\n","file":"/var/lib/mysql/mysqld.post.processing.log"}
+{"log":"2023-01-25T11:00:18.305457Z 0 [System] [MY-010116] [Server] /usr/sbin/mysqld (mysqld 8.0.25-15.1) starting as process 17811\n","file":"/var/lib/mysql/mysqld.post.processing.log"}
+
+
+
+{"log":"2023-07-10T11:48:30.223629Z 0 [System] [MY-010910] [Server] /usr/sbin/mysqld: Shutdown complete (mysqld 8.0.31-23.2)  Percona XtraDB Cluster (GPL), Release rel23, Revision e6e483f, WSREP version 26.1.4.3
+.\n","file":"/var/lib/mysql/wsrep_recovery_verbose.log"}
+{"log":"2023-01-25T11:00:31.755792Z 0 [System] [MY-010910] [Server] /usr/sbin/mysqld: Shutdown complete (mysqld 8.0.25-15.1)  Percona XtraDB Cluster (GPL), Release rel15, Revision 8638bb0, WSREP version 26.4.3.\n---- Stopped the MySQL server used for post-processing ----\n","file":"/var/lib/mysql/mysqld.post.processing.log"}
+
+*/

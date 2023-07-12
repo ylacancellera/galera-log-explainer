@@ -1,9 +1,8 @@
 package types
 
 import (
-	"strings"
-
 	"github.com/rs/zerolog/log"
+	"github.com/ylacancellera/galera-log-explainer/utils"
 )
 
 // DisplayLocalNodeSimplestForm is used to identify a node timeline.
@@ -34,7 +33,7 @@ func DisplayLocalNodeSimplestForm(ctx LogCtx) string {
 // In order of preference: wsrep_node_name (or galera "node" name), hostname, ip
 func DisplayNodeSimplestForm(ctx LogCtx, ip string) string {
 	if nodename, ok := ctx.IPToNodeName[ip]; ok {
-		s := ShortNodeName(nodename)
+		s := utils.ShortNodeName(nodename)
 		log.Debug().Str("ip", ip).Str("simplestform", s).Str("from", "IPToNodeName").Msg("nodeSimplestForm")
 		return s
 	}
@@ -42,7 +41,7 @@ func DisplayNodeSimplestForm(ctx LogCtx, ip string) string {
 	for hash, storedip := range ctx.HashToIP {
 		if ip == storedip {
 			if nodename, ok := ctx.HashToNodeName[hash]; ok {
-				s := ShortNodeName(nodename)
+				s := utils.ShortNodeName(nodename)
 				log.Debug().Str("ip", ip).Str("simplestform", s).Str("from", "HashToNodeName").Msg("nodeSimplestForm")
 				return s
 			}
@@ -54,15 +53,4 @@ func DisplayNodeSimplestForm(ctx LogCtx, ip string) string {
 	}
 	log.Debug().Str("ip", ip).Str("simplestform", ip).Str("from", "default").Msg("nodeSimplestForm")
 	return ip
-}
-
-// ShortNodeName helps reducing the node name when it is the default value (node hostname)
-// It only keeps the top-level domain
-func ShortNodeName(s string) string {
-	// short enough
-	if len(s) < 10 {
-		return s
-	}
-	before, _, _ := strings.Cut(s, ".")
-	return before
 }

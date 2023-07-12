@@ -887,7 +887,7 @@ func TestRegexes(t *testing.T) {
 
 		{
 			log:         "2001-01-01T01:01:01.000000Z 1328586 [Note] [MY-000000] [WSREP] Initiating SST cancellation",
-			expectedOut: "Former SST cancelled",
+			expectedOut: "former SST cancelled",
 			mapToTest:   SSTMap,
 			key:         "RegexSSTCancellation",
 		},
@@ -895,7 +895,7 @@ func TestRegexes(t *testing.T) {
 		{
 			log:         "2001-01-01T01:01:01.000000Z WSREP_SST: [INFO] Proceeding with SST.........",
 			expectedCtx: types.LogCtx{State: "JOINER", SST: types.SST{Type: "SST"}},
-			expectedOut: "Receiving SST",
+			expectedOut: "receiving SST",
 			mapToTest:   SSTMap,
 			key:         "RegexSSTProceeding",
 		},
@@ -928,9 +928,16 @@ func TestRegexes(t *testing.T) {
 		},
 
 		{
-			log:         "2001-01-01T01:01:01.000000Z 0 [Note] [MY-000000] [Galera] Prepared IST receiver for 0-116, listening at: ssl://172.17.0.2:4568",
+			log:         "2001-01-01T01:01:01.000000Z 0 [Note] [MY-000000] [Galera] Prepared IST receiver for 114-116, listening at: ssl://172.17.0.2:4568",
 			expectedCtx: types.LogCtx{State: "JOINER", SST: types.SST{Type: "IST"}},
 			expectedOut: "will receive IST(seqno:116)",
+			mapToTest:   SSTMap,
+			key:         "RegexISTReceiver",
+		},
+		{
+			log:         "2001-01-01T01:01:01.000000Z 0 [Note] [MY-000000] [Galera] Prepared IST receiver for 0-116, listening at: ssl://172.17.0.2:4568",
+			expectedCtx: types.LogCtx{State: "JOINER", SST: types.SST{Type: "SST"}},
+			expectedOut: "will receive SST",
 			mapToTest:   SSTMap,
 			key:         "RegexISTReceiver",
 		},

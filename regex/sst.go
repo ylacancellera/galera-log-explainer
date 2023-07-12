@@ -150,7 +150,7 @@ var SSTMap = types.RegexMap{
 		Regex: regexp.MustCompile("Initiating SST cancellation"),
 		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 
-			return ctx, types.SimpleDisplayer(utils.Paint(utils.RedText, "Former SST cancelled"))
+			return ctx, types.SimpleDisplayer(utils.Paint(utils.RedText, "former SST cancelled"))
 		},
 	},
 
@@ -160,7 +160,7 @@ var SSTMap = types.RegexMap{
 			ctx.State = "JOINER"
 			ctx.SST.Type = "SST"
 
-			return ctx, types.SimpleDisplayer(utils.Paint(utils.YellowText, "Receiving SST"))
+			return ctx, types.SimpleDisplayer(utils.Paint(utils.YellowText, "receiving SST"))
 		},
 	},
 
@@ -225,20 +225,33 @@ var SSTMap = types.RegexMap{
 	"RegexISTReceiver": &types.LogRegex{
 		Regex: regexp.MustCompile("Prepared IST receiver"),
 
-		InternalRegex: regexp.MustCompile("Prepared IST receiver( for [0-9]+-" + regexSeqno + ")?"),
+		InternalRegex: regexp.MustCompile("Prepared IST receiver( for (?P<startingseqno>[0-9]+)-" + regexSeqno + ")?"),
 		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			r, err := internalRegexSubmatch(internalRegex, log)
 			if err != nil {
 				return ctx, nil
 			}
-			ctx.SST.Type = "IST"
 			ctx.State = "JOINER"
 
 			seqno := r[internalRegex.SubexpIndex(groupSeqno)]
-			if seqno == "" {
-				return ctx, types.SimpleDisplayer(utils.Paint(utils.YellowText, "will receive IST"))
+			msg := utils.Paint(utils.YellowText, "will receive ")
+
+			startingseqno := r[internalRegex.SubexpIndex("startingseqno")]
+			// if it's 0, it will go to SST without a doubt
+			if startingseqno == "0" {
+				ctx.SST.Type = "SST"
+				msg += "SST"
+
+				// not totally correct, but need more logs to get proper pattern
+				// in some cases it does IST before going with SST
+			} else {
+				ctx.SST.Type = "IST"
+				msg += "IST"
+				if seqno != "" {
+					msg += "(seqno:" + seqno + ")"
+				}
 			}
-			return ctx, types.SimpleDisplayer(utils.Paint(utils.YellowText, "will receive IST") + "(seqno:" + seqno + ")")
+			return ctx, types.SimpleDisplayer(msg)
 		},
 	},
 

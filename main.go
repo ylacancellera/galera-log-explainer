@@ -249,6 +249,9 @@ func (e *extractor) iterateOnResults(s *bufio.Scanner) ([]types.LogInfo, error) 
 		}
 		recentEnough = true
 
+		filetype := regex.FileType(line, CLI.PxcOperator)
+		ctx.FileType = filetype
+
 		// We have to find again what regex worked to get this log line
 		// it can match multiple regexes
 		for key, regex := range e.regexes {
@@ -256,7 +259,7 @@ func (e *extractor) iterateOnResults(s *bufio.Scanner) ([]types.LogInfo, error) 
 				continue
 			}
 			ctx, displayer = regex.Handle(ctx, line)
-			li := types.NewLogInfo(date, displayer, key, regex, key, ctx)
+			li := types.NewLogInfo(date, displayer, key, regex, key, ctx, filetype)
 
 			lt = lt.Add(li)
 		}

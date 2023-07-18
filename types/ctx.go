@@ -8,10 +8,11 @@ import (
 // It used to keep track of what is going on at each new event.
 type LogCtx struct {
 	FilePath       string
+	FileType       string
 	OwnIPs         []string
 	OwnHashes      []string
 	OwnNames       []string
-	State          string
+	state          map[string]string
 	Version        string
 	SST            SST
 	MyIdx          string
@@ -25,7 +26,29 @@ type LogCtx struct {
 }
 
 func NewLogCtx() LogCtx {
-	return LogCtx{HashToIP: map[string]string{}, IPToHostname: map[string]string{}, IPToMethod: map[string]string{}, IPToNodeName: map[string]string{}, HashToNodeName: map[string]string{}}
+	return LogCtx{HashToIP: map[string]string{}, IPToHostname: map[string]string{}, IPToMethod: map[string]string{}, IPToNodeName: map[string]string{}, HashToNodeName: map[string]string{}, state: map[string]string{}}
+}
+
+func (ctx *LogCtx) State() string {
+	return ctx.state[ctx.FileType]
+}
+
+func (ctx *LogCtx) SetState(s string) {
+	if ctx.state == nil {
+		ctx.state = map[string]string{}
+	}
+
+	// NON-PRIMARY and RECOVERY are not a real wsrep state, but it's helpful here
+	// DONOR and DESYNCED are merged in wsrep, but we are able to distinguish here
+	// list at gcs/src/gcs.cpp, gcs_conn_state_str
+	if !utils.SliceContains([]string{"SYNCED", "JOINED", "DONOR", "DESYNCED", "JOINER", "PRIMARY", "NON-PRIMARY", "OPEN", "CLOSED", "DESTROYED", "ERROR", "RECOVERY"}, s) {
+		return
+	}
+	ctx.state[ctx.FileType] = s
+}
+
+func (ctx *LogCtx) IsPrimary() bool {
+	return utils.SliceContains([]string{"SYNCED", "DONOR", "DESYNCED", "JOINER", "PRIMARY"}, ctx.state[ctx.FileType])
 }
 
 func (ctx *LogCtx) OwnHostname() string {

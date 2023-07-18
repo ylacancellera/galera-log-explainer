@@ -60,7 +60,8 @@ func TimelineCLI(timeline types.Timeline, verbosity types.Verbosity) {
 			if !utils.SliceContains(nextNodes, node) {
 				// if there are no events, having a | is needed for tabwriter
 				// A few color can also help highlighting how the node is doing
-				args = append(args, utils.PaintForState("| ", currentContext[node].State))
+				ctx := currentContext[node]
+				args = append(args, utils.PaintForState("| ", ctx.State()))
 				continue
 			}
 			nl := timeline[node][0]
@@ -74,7 +75,7 @@ func TimelineCLI(timeline types.Timeline, verbosity types.Verbosity) {
 				args = append(args, msg)
 				displayedValue++
 			} else {
-				args = append(args, utils.PaintForState("| ", nl.Ctx.State))
+				args = append(args, utils.PaintForState("| ", nl.Ctx.State()))
 			}
 		}
 

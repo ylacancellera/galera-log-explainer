@@ -17,7 +17,7 @@ var (
 		log = internalRegex.FindString(log)
 
 		splitted := strings.Split(log, " -> ")
-		ctx.State = splitted[1]
+		ctx.SetState(splitted[1])
 		log = utils.PaintForState(splitted[0], splitted[0]) + " -> " + utils.PaintForState(splitted[1], splitted[1])
 
 		return ctx, types.SimpleDisplayer(log)

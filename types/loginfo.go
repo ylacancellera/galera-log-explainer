@@ -3,6 +3,8 @@ package types
 import (
 	"fmt"
 	"time"
+
+	"github.com/ylacancellera/galera-log-explainer/utils"
 )
 
 type Verbosity int
@@ -26,18 +28,24 @@ type LogInfo struct {
 	Ctx             LogCtx // the context is copied for each logInfo, so that it is easier to handle some info (current state), and this is also interesting to check how it evolved
 	Verbosity       Verbosity
 	RepetitionCount int
+	extraNotes      map[string]string
 }
 
-func NewLogInfo(date *Date, displayer LogDisplayer, log string, regex *LogRegex, regexkey string, ctx LogCtx) LogInfo {
-	return LogInfo{
-		Date:      date,
-		Log:       log,
-		displayer: displayer,
-		Ctx:       ctx,
-		RegexType: regex.Type,
-		RegexUsed: regexkey,
-		Verbosity: regex.Verbosity,
+func NewLogInfo(date *Date, displayer LogDisplayer, log string, regex *LogRegex, regexkey string, ctx LogCtx, filetype string) LogInfo {
+	li := LogInfo{
+		Date:       date,
+		Log:        log,
+		displayer:  displayer,
+		Ctx:        ctx,
+		RegexType:  regex.Type,
+		RegexUsed:  regexkey,
+		Verbosity:  regex.Verbosity,
+		extraNotes: map[string]string{},
 	}
+	if filetype != "error.log" && filetype != "" {
+		li.extraNotes["filetype"] = filetype
+	}
+	return li
 }
 
 func (li *LogInfo) Msg(ctx LogCtx) string {
@@ -46,9 +54,12 @@ func (li *LogInfo) Msg(ctx LogCtx) string {
 	}
 	msg := ""
 	if li.RepetitionCount > 0 {
-		msg += fmt.Sprintf("(repeated x%d)", li.RepetitionCount)
+		msg += utils.Paint(utils.BlueText, fmt.Sprintf("(repeated x%d)", li.RepetitionCount))
 	}
 	msg += li.displayer(ctx)
+	for _, note := range li.extraNotes {
+		msg += utils.Paint(utils.BlueText, fmt.Sprintf("(%s)", note))
+	}
 	return msg
 }
 

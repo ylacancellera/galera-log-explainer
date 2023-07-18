@@ -28,7 +28,7 @@ var PXCOperatorMap = types.RegexMap{
 			nodename := r[internalRegex.SubexpIndex(groupNodeName)]
 			nodename, _, _ = strings.Cut(nodename, ".")
 			ctx.AddOwnName(nodename)
-			return ctx, types.SimpleDisplayer("local name(operator):" + nodename)
+			return ctx, types.SimpleDisplayer("local name:" + nodename)
 		},
 		Verbosity: types.DebugMySQL,
 	},
@@ -44,7 +44,7 @@ var PXCOperatorMap = types.RegexMap{
 
 			ip := r[internalRegex.SubexpIndex(groupNodeIP)]
 			ctx.AddOwnIP(ip)
-			return ctx, types.SimpleDisplayer("local ip(operator):" + ip)
+			return ctx, types.SimpleDisplayer("local ip:" + ip)
 		},
 		Verbosity: types.DebugMySQL,
 	},

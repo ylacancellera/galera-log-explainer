@@ -28,7 +28,7 @@ var EventsMap = types.RegexMap{
 				msg += ", " + utils.Paint(utils.YellowText, "could not catch how/when it stopped")
 			}
 			msg += ")"
-			ctx.State = "OPEN"
+			ctx.SetState("OPEN")
 
 			return ctx, types.SimpleDisplayer(msg)
 		},
@@ -36,7 +36,7 @@ var EventsMap = types.RegexMap{
 	"RegexShutdownComplete": &types.LogRegex{
 		Regex: regexp.MustCompile("mysqld: Shutdown complete"),
 		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			ctx.State = "CLOSED"
+			ctx.SetState("CLOSED")
 
 			return ctx, types.SimpleDisplayer(utils.Paint(utils.RedText, "shutdown complete"))
 		},
@@ -44,7 +44,7 @@ var EventsMap = types.RegexMap{
 	"RegexTerminated": &types.LogRegex{
 		Regex: regexp.MustCompile("mysqld: Terminated"),
 		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			ctx.State = "CLOSED"
+			ctx.SetState("CLOSED")
 
 			return ctx, types.SimpleDisplayer(utils.Paint(utils.RedText, "terminated"))
 		},
@@ -52,21 +52,21 @@ var EventsMap = types.RegexMap{
 	"RegexGotSignal6": &types.LogRegex{
 		Regex: regexp.MustCompile("mysqld got signal 6"),
 		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			ctx.State = "CLOSED"
+			ctx.SetState("CLOSED")
 			return ctx, types.SimpleDisplayer(utils.Paint(utils.RedText, "crash: got signal 6"))
 		},
 	},
 	"RegexGotSignal11": &types.LogRegex{
 		Regex: regexp.MustCompile("mysqld got signal 11"),
 		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			ctx.State = "CLOSED"
+			ctx.SetState("CLOSED")
 			return ctx, types.SimpleDisplayer(utils.Paint(utils.RedText, "crash: got signal 11"))
 		},
 	},
 	"RegexShutdownSignal": &types.LogRegex{
 		Regex: regexp.MustCompile("Normal|Received shutdown"),
 		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			ctx.State = "CLOSED"
+			ctx.SetState("CLOSED")
 
 			return ctx, types.SimpleDisplayer(utils.Paint(utils.RedText, "received shutdown"))
 		},
@@ -77,7 +77,7 @@ var EventsMap = types.RegexMap{
 	"RegexAborting": &types.LogRegex{
 		Regex: regexp.MustCompile("Aborting"),
 		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			ctx.State = "CLOSED"
+			ctx.SetState("CLOSED")
 
 			return ctx, types.SimpleDisplayer(utils.Paint(utils.RedText, "ABORTING"))
 		},
@@ -86,7 +86,7 @@ var EventsMap = types.RegexMap{
 	"RegexWsrepLoad": &types.LogRegex{
 		Regex: regexp.MustCompile("wsrep_load\\(\\): loading provider library"),
 		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			ctx.State = "OPEN"
+			ctx.SetState("OPEN")
 			if regexWsrepLoadNone.MatchString(log) {
 				return ctx, types.SimpleDisplayer(utils.Paint(utils.GreenText, "started(standalone)"))
 			}
@@ -99,10 +99,12 @@ var EventsMap = types.RegexMap{
 		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 
 			msg := "wsrep recovery"
-			if isShutdownReasonMissing(ctx) && ctx.State != "JOINER" {
+			// if state is joiner, it can be due to sst
+			// if state is open, it is just a start sequence depending on platform
+			if isShutdownReasonMissing(ctx) && ctx.State() != "JOINER" && ctx.State() != "OPEN" {
 				msg += "(" + utils.Paint(utils.YellowText, "could not catch how/when it stopped") + ")"
 			}
-			ctx.State = "RECOVERY"
+			ctx.SetState("RECOVERY")
 
 			return ctx, types.SimpleDisplayer(msg)
 		},
@@ -126,7 +128,7 @@ var EventsMap = types.RegexMap{
 	"RegexAssertionFailure": &types.LogRegex{
 		Regex: regexp.MustCompile("Assertion failure"),
 		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			ctx.State = "CLOSED"
+			ctx.SetState("CLOSED")
 
 			return ctx, types.SimpleDisplayer(utils.Paint(utils.RedText, "ASSERTION FAILURE"))
 		},
@@ -134,9 +136,15 @@ var EventsMap = types.RegexMap{
 	"RegexBindAddressAlreadyUsed": &types.LogRegex{
 		Regex: regexp.MustCompile("asio error .bind: Address already in use"),
 		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			ctx.State = "CLOSED"
+			ctx.SetState("CLOSED")
 
 			return ctx, types.SimpleDisplayer(utils.Paint(utils.RedText, "bind address already used"))
+		},
+	},
+	"RegexTooManyConnections": &types.LogRegex{
+		Regex: regexp.MustCompile("Too many connections"),
+		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+			return ctx, types.SimpleDisplayer(utils.Paint(utils.RedText, "too many connections"))
 		},
 	},
 }
@@ -144,7 +152,7 @@ var regexWsrepLoadNone = regexp.MustCompile("none")
 
 // isShutdownReasonMissing is returning true if the latest wsrep state indicated a "working" node
 func isShutdownReasonMissing(ctx types.LogCtx) bool {
-	return ctx.State != "CLOSED" && ctx.State != "RECOVERY" && ctx.State != ""
+	return ctx.State() != "CLOSED" && ctx.State() != "RECOVERY" && ctx.State() != ""
 }
 
 /*

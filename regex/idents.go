@@ -73,7 +73,7 @@ var IdentsMap = types.RegexMap{
 			shorthash := utils.UUIDToShortUUID(hash)
 			ctx.HashToNodeName[shorthash] = nodename
 
-			if ctx.MyIdx == idx && (ctx.State == "PRIMARY" || ctx.MemberCount == 1) {
+			if ctx.MyIdx == idx && (ctx.IsPrimary() || ctx.MemberCount == 1) {
 				ctx.AddOwnHash(shorthash)
 				ctx.AddOwnName(nodename)
 			}

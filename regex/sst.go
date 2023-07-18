@@ -26,6 +26,8 @@ var SSTMap = types.RegexMap{
 			donor := r[internalRegex.SubexpIndex(groupNodeName2)]
 			displayJoiner := utils.ShortNodeName(joiner)
 			displayDonor := utils.ShortNodeName(donor)
+
+			//TODO: add that inside a bigger displayer
 			if utils.SliceContains(ctx.OwnNames, joiner) {
 				ctx.SST.ResyncedFromNode = donor
 				return ctx, types.SimpleDisplayer(displayDonor + utils.Paint(utils.GreenText, " will resync local node"))
@@ -78,6 +80,8 @@ var SSTMap = types.RegexMap{
 				displayType = ctx.SST.Type
 			}
 			ctx.SST.Reset()
+
+			//TODO: add that inside a bigger displayer
 			if utils.SliceContains(ctx.OwnNames, joiner) {
 				return ctx, types.SimpleDisplayer(utils.Paint(utils.GreenText, "got "+displayType+" from ") + displayDonor)
 			}
@@ -157,7 +161,7 @@ var SSTMap = types.RegexMap{
 	"RegexSSTProceeding": &types.LogRegex{
 		Regex: regexp.MustCompile("Proceeding with SST"),
 		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			ctx.State = "JOINER"
+			ctx.SetState("JOINER")
 			ctx.SST.Type = "SST"
 
 			return ctx, types.SimpleDisplayer(utils.Paint(utils.YellowText, "receiving SST"))
@@ -173,7 +177,7 @@ var SSTMap = types.RegexMap{
 				return ctx, nil
 			}
 
-			ctx.State = "DONOR"
+			ctx.SetState("DONOR")
 			node := r[internalRegex.SubexpIndex(groupNodeIP)]
 			if ctx.SST.ResyncingNode == "" { // we should already have something at this point
 				ctx.SST.ResyncingNode = node
@@ -211,7 +215,7 @@ var SSTMap = types.RegexMap{
 				return ctx, nil
 			}
 			ctx.SST.Type = "IST"
-			ctx.State = "DONOR"
+			ctx.SetState("DONOR")
 
 			seqno := r[internalRegex.SubexpIndex(groupSeqno)]
 			node := r[internalRegex.SubexpIndex(groupNodeIP)]
@@ -231,7 +235,7 @@ var SSTMap = types.RegexMap{
 			if err != nil {
 				return ctx, nil
 			}
-			ctx.State = "JOINER"
+			ctx.SetState("JOINER")
 
 			seqno := r[internalRegex.SubexpIndex(groupSeqno)]
 			msg := utils.Paint(utils.YellowText, "will receive ")

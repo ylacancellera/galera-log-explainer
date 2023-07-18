@@ -90,8 +90,8 @@ var ViewsMap = types.RegexMap{
 			if primary {
 				// we don't always store PRIMARY because we could have found DONOR/JOINER/SYNCED/DESYNCED just earlier
 				// and we do not want to override these as they have more value
-				if ctx.State == "CLOSED" || ctx.State == "NON-PRIMARY" || ctx.State == "OPEN" || ctx.State == "RECOVERY" || ctx.State == "" {
-					ctx.State = "PRIMARY"
+				if !ctx.IsPrimary() {
+					ctx.SetState("PRIMARY")
 				}
 				msg := utils.Paint(utils.GreenText, "PRIMARY") + "(n=" + membNum + ")"
 				if bootstrap {
@@ -100,7 +100,7 @@ var ViewsMap = types.RegexMap{
 				return ctx, types.SimpleDisplayer(msg)
 			}
 
-			ctx.State = "NON-PRIMARY"
+			ctx.SetState("NON-PRIMARY")
 			return ctx, types.SimpleDisplayer(utils.Paint(utils.RedText, "NON-PRIMARY") + "(n=" + membNum + ")")
 		},
 	},
@@ -158,7 +158,7 @@ var ViewsMap = types.RegexMap{
 	"RegexWsrepUnsafeBootstrap": &types.LogRegex{
 		Regex: regexp.MustCompile("ERROR.*not be safe to bootstrap"),
 		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			ctx.State = "CLOSED"
+			ctx.SetState("CLOSED")
 
 			return ctx, types.SimpleDisplayer(utils.Paint(utils.RedText, "not safe to bootstrap"))
 		},
@@ -166,7 +166,7 @@ var ViewsMap = types.RegexMap{
 	"RegexWsrepConsistenctyCompromised": &types.LogRegex{
 		Regex: regexp.MustCompile(".ode consistency compromi.ed"),
 		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			ctx.State = "CLOSED"
+			ctx.SetState("CLOSED")
 
 			return ctx, types.SimpleDisplayer(utils.Paint(utils.RedText, "consistency compromised"))
 		},

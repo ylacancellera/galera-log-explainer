@@ -259,7 +259,7 @@ func (e *extractor) iterateOnResults(s *bufio.Scanner) ([]types.LogInfo, error) 
 				continue
 			}
 			ctx, displayer = regex.Handle(ctx, line)
-			li := types.NewLogInfo(date, displayer, key, regex, key, ctx, filetype)
+			li := types.NewLogInfo(date, displayer, line, regex, key, ctx, filetype)
 
 			lt = lt.Add(li)
 		}

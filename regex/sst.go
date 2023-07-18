@@ -208,6 +208,7 @@ var SSTMap = types.RegexMap{
 	"RegexISTSender": &types.LogRegex{
 		Regex: regexp.MustCompile("IST sender starting"),
 
+		// TODO: sometimes, it's a hostname here
 		InternalRegex: regexp.MustCompile("IST sender starting to serve " + regexNodeIPMethod + " sending [0-9]+-" + regexSeqno),
 		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			r, err := internalRegexSubmatch(internalRegex, log)

@@ -31,7 +31,7 @@ var ViewsMap = types.RegexMap{
 			}
 			return ctx, func(ctx types.LogCtx) string { return types.DisplayNodeSimplestForm(ctx, ip) + " established" }
 		},
-		Verbosity: types.Detailed,
+		Verbosity: types.DebugMySQL,
 	},
 
 	"RegexNodeJoined": &types.LogRegex{

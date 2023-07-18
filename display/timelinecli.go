@@ -17,6 +17,8 @@ import (
 // It will print header and footers, and dequeue the timeline chronologically
 func TimelineCLI(timeline types.Timeline, verbosity types.Verbosity) {
 
+	timeline = removeEmptyColumns(timeline, verbosity)
+
 	// to hold the current context for each node
 	// "keys" is needed, because iterating over a map must give a different order each time
 	// a slice keeps its order
@@ -64,18 +66,18 @@ func TimelineCLI(timeline types.Timeline, verbosity types.Verbosity) {
 				args = append(args, utils.PaintForState("| ", ctx.State()))
 				continue
 			}
-			nl := timeline[node][0]
+			loginfo := timeline[node][0]
 			lastContext[node] = currentContext[node]
-			currentContext[node] = nl.Ctx
+			currentContext[node] = loginfo.Ctx
 
 			timeline.Dequeue(node)
 
-			msg := nl.Msg(latestContext[node])
-			if verbosity > nl.Verbosity && msg != "" {
+			msg := loginfo.Msg(latestContext[node])
+			if verbosity > loginfo.Verbosity && msg != "" {
 				args = append(args, msg)
 				displayedValue++
 			} else {
-				args = append(args, utils.PaintForState("| ", nl.Ctx.State()))
+				args = append(args, utils.PaintForState("| ", loginfo.Ctx.State()))
 			}
 		}
 
@@ -191,6 +193,16 @@ func headerName(keys []string, ctxs map[string]types.LogCtx) string {
 		}
 	}
 	return header
+}
+
+func removeEmptyColumns(timeline types.Timeline, verbosity types.Verbosity) types.Timeline {
+
+	for key := range timeline {
+		if !timeline[key][len(timeline[key])-1].Ctx.HasVisibleEvents(verbosity) {
+			delete(timeline, key)
+		}
+	}
+	return timeline
 }
 
 // transition is to builds the check+display of an important context transition

@@ -23,14 +23,19 @@ type LogCtx struct {
 	IPToHostname   map[string]string
 	IPToMethod     map[string]string
 	IPToNodeName   map[string]string
+	minVerbosity   Verbosity
 }
 
 func NewLogCtx() LogCtx {
-	return LogCtx{HashToIP: map[string]string{}, IPToHostname: map[string]string{}, IPToMethod: map[string]string{}, IPToNodeName: map[string]string{}, HashToNodeName: map[string]string{}, state: map[string]string{}}
+	return LogCtx{minVerbosity: Debug, HashToIP: map[string]string{}, IPToHostname: map[string]string{}, IPToMethod: map[string]string{}, IPToNodeName: map[string]string{}, HashToNodeName: map[string]string{}, state: map[string]string{}}
 }
 
 func (ctx *LogCtx) State() string {
 	return ctx.state[ctx.FileType]
+}
+
+func (ctx *LogCtx) HasVisibleEvents(level Verbosity) bool {
+	return level >= ctx.minVerbosity
 }
 
 func (ctx *LogCtx) SetState(s string) {

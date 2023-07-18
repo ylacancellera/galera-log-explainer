@@ -17,6 +17,9 @@ type LogRegex struct {
 }
 
 func (l *LogRegex) Handle(ctx LogCtx, line string) (LogCtx, LogDisplayer) {
+	if ctx.minVerbosity > l.Verbosity {
+		ctx.minVerbosity = l.Verbosity
+	}
 	return l.Handler(l.InternalRegex, ctx, line)
 }
 

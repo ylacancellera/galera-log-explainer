@@ -34,7 +34,7 @@ func TimelineCLI(timeline types.Timeline, verbosity types.Verbosity) {
 	fmt.Fprintln(w, headerFilePath(keys, currentContext))
 	fmt.Fprintln(w, headerIP(keys, latestContext))
 	fmt.Fprintln(w, headerName(keys, latestContext))
-	fmt.Fprintln(w, headerVersion(keys, currentContext))
+	fmt.Fprintln(w, headerVersion(keys, latestContext))
 	fmt.Fprintln(w, separator(keys))
 
 	var (

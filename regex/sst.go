@@ -193,7 +193,7 @@ var SSTMap = types.RegexMap{
 		Regex: regexp.MustCompile("IST received"),
 
 		// the UUID here is not from a node, it's a cluster state UUID, this is only used to ensure it's correctly parsed
-		InternalRegex: regexp.MustCompile("IST received: " + regexNodeHash4Dash + ":" + regexSeqno),
+		InternalRegex: regexp.MustCompile("IST received: " + regexUUID + ":" + regexSeqno),
 		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			r, err := internalRegexSubmatch(internalRegex, log)
 			if err != nil {

@@ -138,7 +138,7 @@ var ViewsMap = types.RegexMap{
 			hash := r[internalRegex.SubexpIndex(groupNodeHash)]
 			hash2 := r[internalRegex.SubexpIndex(groupNodeHash+"2")]
 			ip, ok := ctx.HashToIP[hash]
-			if !ok && regexp.MustCompile(regexNodeHash4Dash).MatchString(hash) {
+			if !ok && IsNodeUUID(hash) {
 				ip, ok = ctx.HashToIP[utils.UUIDToShortUUID(hash)]
 
 				// there could have additional corner case to discover yet

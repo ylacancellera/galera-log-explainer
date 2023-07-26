@@ -55,7 +55,7 @@ var IdentsMap = types.RegexMap{
 	// TO *never* DO: store indexes to later search for them using SST infos and STATES EXCHANGES logs. EDIT: is definitely NOT reliable
 	"RegexMemberAssociations": &types.LogRegex{
 		Regex:         regexp.MustCompile("[0-9]: [a-z0-9]+-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]+, [a-zA-Z0-9-_]+"),
-		InternalRegex: regexp.MustCompile(regexIdx + ": " + regexNodeHash4Dash + ", " + regexNodeName),
+		InternalRegex: regexp.MustCompile(regexIdx + ": " + regexUUID + ", " + regexNodeName),
 		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			r, err := internalRegexSubmatch(internalRegex, log)
 			if err != nil {
@@ -63,7 +63,7 @@ var IdentsMap = types.RegexMap{
 			}
 
 			idx := r[internalRegex.SubexpIndex(groupIdx)]
-			hash := r[internalRegex.SubexpIndex(groupNodeHash)]
+			hash := r[internalRegex.SubexpIndex(groupUUID)]
 			nodename := utils.ShortNodeName(r[internalRegex.SubexpIndex(groupNodeName)])
 
 			// nodenames are truncated after 32 characters ...
@@ -108,14 +108,14 @@ var IdentsMap = types.RegexMap{
 	// My UUID: 6938f4ae-32f4-11ed-be8d-8a0f53f88872
 	"RegexOwnUUID": &types.LogRegex{
 		Regex:         regexp.MustCompile("My UUID"),
-		InternalRegex: regexp.MustCompile("My UUID: " + regexNodeHash4Dash),
+		InternalRegex: regexp.MustCompile("My UUID: " + regexUUID),
 		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			r, err := internalRegexSubmatch(internalRegex, log)
 			if err != nil {
 				return ctx, nil
 			}
 
-			hash := r[internalRegex.SubexpIndex(groupNodeHash)]
+			hash := r[internalRegex.SubexpIndex(groupUUID)]
 			splitted := strings.Split(hash, "-")
 			shorthash := splitted[0] + "-" + splitted[3]
 

@@ -43,7 +43,8 @@ func AllRegexes() types.RegexMap {
 var (
 	groupMethod        = "ssltcp"
 	groupNodeIP        = "nodeip"
-	groupNodeHash      = "nodehash"
+	groupNodeHash      = "uuid"
+	groupUUID          = "uuid" // same value as groupnodehash, because both are used in same context
 	groupNodeName      = "nodename"
 	groupNodeName2     = "nodename2"
 	groupIdx           = "idx"
@@ -54,8 +55,8 @@ var (
 	regexNodeHash      = "(?P<" + groupNodeHash + ">[a-zA-Z0-9-_]+)"
 	regexNodeName      = "(?P<" + groupNodeName + `>[a-zA-Z0-9-_\.]+)`
 	regexNodeName2     = strings.Replace(regexNodeName, groupNodeName, groupNodeName2, 1)
-	regexNodeHash4Dash = "(?P<" + groupNodeHash + ">[a-z0-9]+-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]+)" // eg ed97c863-d5c9-11ec-8ab7-671bbd2d70ef
-	regexNodeHash1Dash = "(?P<" + groupNodeHash + ">[a-z0-9]+-[a-z0-9]{4})"                                   // eg ed97c863-8ab7
+	regexUUID          = "(?P<" + groupUUID + ">[a-z0-9]+-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]+)" // eg ed97c863-d5c9-11ec-8ab7-671bbd2d70ef
+	regexNodeHash1Dash = "(?P<" + groupNodeHash + ">[a-z0-9]+-[a-z0-9]{4})"                               // eg ed97c863-8ab7
 	regexSeqno         = "(?P<" + groupSeqno + ">[0-9]+)"
 	regexNodeIP        = "(?P<" + groupNodeIP + ">[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})"
 	regexNodeIPMethod  = "(?P<" + groupMethod + ">.+)://" + regexNodeIP + ":[0-9]{1,6}"
@@ -64,6 +65,6 @@ var (
 )
 
 func IsNodeUUID(s string) bool {
-	b, _ := regexp.MatchString(regexNodeHash4Dash, s)
+	b, _ := regexp.MatchString(regexUUID, s)
 	return b
 }

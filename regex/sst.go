@@ -16,14 +16,10 @@ var SSTMap = types.RegexMap{
 	"RegexSSTRequestSuccess": &types.LogRegex{
 		Regex:         regexp.MustCompile("requested state transfer.*Selected"),
 		InternalRegex: regexp.MustCompile("Member .* \\(" + regexNodeName + "\\) requested state transfer.*Selected .* \\(" + regexNodeName2 + "\\)\\("),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			r, err := internalRegexSubmatch(internalRegex, log)
-			if err != nil {
-				return ctx, nil
-			}
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 
-			joiner := r[internalRegex.SubexpIndex(groupNodeName)]
-			donor := r[internalRegex.SubexpIndex(groupNodeName2)]
+			joiner := submatches[groupNodeName]
+			donor := submatches[groupNodeName2]
 			displayJoiner := utils.ShortNodeName(joiner)
 			displayDonor := utils.ShortNodeName(donor)
 
@@ -45,13 +41,9 @@ var SSTMap = types.RegexMap{
 	"RegexSSTResourceUnavailable": &types.LogRegex{
 		Regex:         regexp.MustCompile("requested state transfer.*Resource temporarily unavailable"),
 		InternalRegex: regexp.MustCompile("Member .* \\(" + regexNodeName + "\\) requested state transfer"),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			r, err := internalRegexSubmatch(internalRegex, log)
-			if err != nil {
-				return ctx, nil
-			}
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 
-			joiner := r[internalRegex.SubexpIndex(groupNodeName)]
+			joiner := submatches[groupNodeName]
 			if utils.SliceContains(ctx.OwnNames, joiner) {
 
 				return ctx, types.SimpleDisplayer(utils.Paint(utils.YellowText, "cannot find donor"))
@@ -65,14 +57,10 @@ var SSTMap = types.RegexMap{
 	"RegexSSTComplete": &types.LogRegex{
 		Regex:         regexp.MustCompile("State transfer to.*complete"),
 		InternalRegex: regexp.MustCompile("\\(" + regexNodeName + "\\): State transfer.*\\(" + regexNodeName2 + "\\) complete"),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			r, err := internalRegexSubmatch(internalRegex, log)
-			if err != nil {
-				return ctx, nil
-			}
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 
-			donor := r[internalRegex.SubexpIndex(groupNodeName)]
-			joiner := r[internalRegex.SubexpIndex(groupNodeName2)]
+			donor := submatches[groupNodeName]
+			joiner := submatches[groupNodeName2]
 			displayJoiner := utils.ShortNodeName(joiner)
 			displayDonor := utils.ShortNodeName(donor)
 			displayType := "SST"
@@ -98,13 +86,9 @@ var SSTMap = types.RegexMap{
 	"RegexSSTCompleteUnknown": &types.LogRegex{
 		Regex:         regexp.MustCompile("State transfer to.*left the group.*complete"),
 		InternalRegex: regexp.MustCompile("\\(" + regexNodeName + "\\): State transfer.*\\(left the group\\) complete"),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			r, err := internalRegexSubmatch(internalRegex, log)
-			if err != nil {
-				return ctx, nil
-			}
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 
-			donor := r[internalRegex.SubexpIndex(groupNodeName)]
+			donor := submatches[groupNodeName]
 			displayDonor := utils.ShortNodeName(donor)
 			return ctx, types.SimpleDisplayer(displayDonor + utils.Paint(utils.RedText, " synced ??(node left)"))
 		},
@@ -113,13 +97,9 @@ var SSTMap = types.RegexMap{
 	"RegexSSTFailedUnknown": &types.LogRegex{
 		Regex:         regexp.MustCompile("State transfer to.*left the group.*failed"),
 		InternalRegex: regexp.MustCompile("\\(" + regexNodeName + "\\): State transfer.*\\(left the group\\) failed"),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			r, err := internalRegexSubmatch(internalRegex, log)
-			if err != nil {
-				return ctx, nil
-			}
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 
-			donor := r[internalRegex.SubexpIndex(groupNodeName)]
+			donor := submatches[groupNodeName]
 			displayDonor := utils.ShortNodeName(donor)
 			return ctx, types.SimpleDisplayer(displayDonor + utils.Paint(utils.RedText, " failed to sync ??(node left)"))
 		},
@@ -128,14 +108,10 @@ var SSTMap = types.RegexMap{
 	"RegexSSTStateTransferFailed": &types.LogRegex{
 		Regex:         regexp.MustCompile("State transfer to.*failed:"),
 		InternalRegex: regexp.MustCompile("\\(" + regexNodeName + "\\): State transfer.*\\(" + regexNodeName2 + "\\) failed"),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			r, err := internalRegexSubmatch(internalRegex, log)
-			if err != nil {
-				return ctx, nil
-			}
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 
-			donor := r[internalRegex.SubexpIndex(groupNodeName)]
-			joiner := r[internalRegex.SubexpIndex(groupNodeName2)]
+			donor := submatches[groupNodeName]
+			joiner := submatches[groupNodeName2]
 			displayDonor := utils.ShortNodeName(donor)
 			displayJoiner := utils.ShortNodeName(joiner)
 			return ctx, types.SimpleDisplayer(displayDonor + utils.Paint(utils.RedText, " failed to sync ") + displayJoiner)
@@ -144,7 +120,7 @@ var SSTMap = types.RegexMap{
 
 	"RegexSSTError": &types.LogRegex{
 		Regex: regexp.MustCompile("Process completed with error: wsrep_sst"),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 
 			return ctx, types.SimpleDisplayer(utils.Paint(utils.RedText, "SST error"))
 		},
@@ -152,7 +128,7 @@ var SSTMap = types.RegexMap{
 
 	"RegexSSTCancellation": &types.LogRegex{
 		Regex: regexp.MustCompile("Initiating SST cancellation"),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 
 			return ctx, types.SimpleDisplayer(utils.Paint(utils.RedText, "former SST cancelled"))
 		},
@@ -160,7 +136,7 @@ var SSTMap = types.RegexMap{
 
 	"RegexSSTProceeding": &types.LogRegex{
 		Regex: regexp.MustCompile("Proceeding with SST"),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			ctx.SetState("JOINER")
 			ctx.SST.Type = "SST"
 
@@ -171,14 +147,10 @@ var SSTMap = types.RegexMap{
 	"RegexSSTStreamingTo": &types.LogRegex{
 		Regex:         regexp.MustCompile("Streaming the backup to"),
 		InternalRegex: regexp.MustCompile("Streaming the backup to joiner at " + regexNodeIP),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			r, err := internalRegexSubmatch(internalRegex, log)
-			if err != nil {
-				return ctx, nil
-			}
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 
 			ctx.SetState("DONOR")
-			node := r[internalRegex.SubexpIndex(groupNodeIP)]
+			node := submatches[groupNodeIP]
 			if ctx.SST.ResyncingNode == "" { // we should already have something at this point
 				ctx.SST.ResyncingNode = node
 			}
@@ -194,13 +166,9 @@ var SSTMap = types.RegexMap{
 
 		// the UUID here is not from a node, it's a cluster state UUID, this is only used to ensure it's correctly parsed
 		InternalRegex: regexp.MustCompile("IST received: " + regexUUID + ":" + regexSeqno),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			r, err := internalRegexSubmatch(internalRegex, log)
-			if err != nil {
-				return ctx, nil
-			}
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 
-			seqno := r[internalRegex.SubexpIndex(groupSeqno)]
+			seqno := submatches[groupSeqno]
 			return ctx, types.SimpleDisplayer(utils.Paint(utils.GreenText, "IST received") + "(seqno:" + seqno + ")")
 		},
 	},
@@ -210,16 +178,12 @@ var SSTMap = types.RegexMap{
 
 		// TODO: sometimes, it's a hostname here
 		InternalRegex: regexp.MustCompile("IST sender starting to serve " + regexNodeIPMethod + " sending [0-9]+-" + regexSeqno),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			r, err := internalRegexSubmatch(internalRegex, log)
-			if err != nil {
-				return ctx, nil
-			}
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			ctx.SST.Type = "IST"
 			ctx.SetState("DONOR")
 
-			seqno := r[internalRegex.SubexpIndex(groupSeqno)]
-			node := r[internalRegex.SubexpIndex(groupNodeIP)]
+			seqno := submatches[groupSeqno]
+			node := submatches[groupNodeIP]
 
 			return ctx, func(ctx types.LogCtx) string {
 				return utils.Paint(utils.YellowText, "IST to ") + types.DisplayNodeSimplestForm(ctx, node) + "(seqno:" + seqno + ")"
@@ -231,17 +195,13 @@ var SSTMap = types.RegexMap{
 		Regex: regexp.MustCompile("Prepared IST receiver"),
 
 		InternalRegex: regexp.MustCompile("Prepared IST receiver( for (?P<startingseqno>[0-9]+)-" + regexSeqno + ")?"),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			r, err := internalRegexSubmatch(internalRegex, log)
-			if err != nil {
-				return ctx, nil
-			}
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			ctx.SetState("JOINER")
 
-			seqno := r[internalRegex.SubexpIndex(groupSeqno)]
+			seqno := submatches[groupSeqno]
 			msg := utils.Paint(utils.YellowText, "will receive ")
 
-			startingseqno := r[internalRegex.SubexpIndex("startingseqno")]
+			startingseqno := submatches["startingseqno"]
 			// if it's 0, it will go to SST without a doubt
 			if startingseqno == "0" {
 				ctx.SST.Type = "SST"
@@ -262,7 +222,7 @@ var SSTMap = types.RegexMap{
 
 	"RegexFailedToPrepareIST": &types.LogRegex{
 		Regex: regexp.MustCompile("Failed to prepare for incremental state transfer"),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			ctx.SST.Type = "SST"
 			return ctx, types.SimpleDisplayer("IST is not applicable")
 		},
@@ -271,7 +231,7 @@ var SSTMap = types.RegexMap{
 	// could not find production examples yet, but it did exist in older version there also was "Bypassing state dump"
 	"RegexBypassSST": &types.LogRegex{
 		Regex: regexp.MustCompile("Bypassing SST"),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			ctx.SST.Type = "IST"
 			return ctx, types.SimpleDisplayer("IST will be used")
 		},
@@ -279,7 +239,7 @@ var SSTMap = types.RegexMap{
 
 	"RegexSocatConnRefused": &types.LogRegex{
 		Regex: regexp.MustCompile("E connect.*Connection refused"),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			return ctx, types.SimpleDisplayer(utils.Paint(utils.RedText, "socat: connection refused"))
 		},
 	},
@@ -287,7 +247,7 @@ var SSTMap = types.RegexMap{
 	// 2023-05-12T02:52:33.767132Z 0 [Note] [MY-000000] [WSREP-SST] Preparing the backup at /var/lib/mysql/sst-xb-tmpdir
 	"RegexPreparingBackup": &types.LogRegex{
 		Regex: regexp.MustCompile("Preparing the backup at"),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			return ctx, types.SimpleDisplayer("preparing SST backup")
 		},
 		Verbosity: types.Detailed,
@@ -295,14 +255,14 @@ var SSTMap = types.RegexMap{
 
 	"RegexTimeoutReceivingFirstData": &types.LogRegex{
 		Regex: regexp.MustCompile("Possible timeout in receving first data from donor in gtid/keyring stage"),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			return ctx, types.SimpleDisplayer(utils.Paint(utils.RedText, "timeout from donor in gtid/keyring stage"))
 		},
 	},
 
 	"RegexWillNeverReceive": &types.LogRegex{
 		Regex: regexp.MustCompile("Will never receive state. Need to abort"),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			return ctx, types.SimpleDisplayer(utils.Paint(utils.RedText, "will never receive SST, aborting"))
 		},
 	},
@@ -310,14 +270,10 @@ var SSTMap = types.RegexMap{
 	"RegexISTFailed": &types.LogRegex{
 		Regex:         regexp.MustCompile("async IST sender failed to serve"),
 		InternalRegex: regexp.MustCompile("IST sender failed to serve " + regexNodeIPMethod + ":.*asio error '.*: [0-9]+ \\((?P<error>[\\w\\s]+)\\)"),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			r, err := internalRegexSubmatch(internalRegex, log)
-			if err != nil {
-				return ctx, nil
-			}
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 
-			node := r[internalRegex.SubexpIndex(groupNodeIP)]
-			istError := r[internalRegex.SubexpIndex("error")]
+			node := submatches[groupNodeIP]
+			istError := submatches["error"]
 
 			return ctx, func(ctx types.LogCtx) string {
 				return "IST to " + types.DisplayNodeSimplestForm(ctx, node) + utils.Paint(utils.RedText, " failed: ") + istError

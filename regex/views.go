@@ -18,14 +18,10 @@ var ViewsMap = types.RegexMap{
 	"RegexNodeEstablished": &types.LogRegex{
 		Regex:         regexp.MustCompile("connection established"),
 		InternalRegex: regexp.MustCompile("established to " + regexNodeHash + " " + regexNodeIPMethod),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			r, err := internalRegexSubmatch(internalRegex, log)
-			if err != nil {
-				return ctx, nil
-			}
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 
-			ip := r[internalRegex.SubexpIndex(groupNodeIP)]
-			ctx.HashToIP[r[internalRegex.SubexpIndex(groupNodeHash)]] = ip
+			ip := submatches[groupNodeIP]
+			ctx.HashToIP[submatches[groupNodeHash]] = ip
 			if utils.SliceContains(ctx.OwnIPs, ip) {
 				return ctx, nil
 			}
@@ -37,15 +33,11 @@ var ViewsMap = types.RegexMap{
 	"RegexNodeJoined": &types.LogRegex{
 		Regex:         regexp.MustCompile("declaring .* stable"),
 		InternalRegex: regexp.MustCompile("declaring " + regexNodeHash + " at " + regexNodeIPMethod),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			r, err := internalRegexSubmatch(internalRegex, log)
-			if err != nil {
-				return ctx, nil
-			}
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 
-			ip := r[internalRegex.SubexpIndex(groupNodeIP)]
-			ctx.HashToIP[r[internalRegex.SubexpIndex(groupNodeHash)]] = ip
-			ctx.IPToMethod[ip] = r[internalRegex.SubexpIndex(groupMethod)]
+			ip := submatches[groupNodeIP]
+			ctx.HashToIP[submatches[groupNodeHash]] = ip
+			ctx.IPToMethod[ip] = submatches[groupMethod]
 			return ctx, func(ctx types.LogCtx) string {
 				return types.DisplayNodeSimplestForm(ctx, ip) + utils.Paint(utils.GreenText, " joined")
 			}
@@ -55,13 +47,9 @@ var ViewsMap = types.RegexMap{
 	"RegexNodeLeft": &types.LogRegex{
 		Regex:         regexp.MustCompile("forgetting"),
 		InternalRegex: regexp.MustCompile("forgetting " + regexNodeHash + " \\(" + regexNodeIPMethod),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			r, err := internalRegexSubmatch(internalRegex, log)
-			if err != nil {
-				return ctx, nil
-			}
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 
-			ip := r[internalRegex.SubexpIndex(groupNodeIP)]
+			ip := submatches[groupNodeIP]
 			return ctx, func(ctx types.LogCtx) string {
 				return types.DisplayNodeSimplestForm(ctx, ip) + utils.Paint(utils.RedText, " left")
 			}
@@ -72,15 +60,11 @@ var ViewsMap = types.RegexMap{
 	"RegexNewComponent": &types.LogRegex{
 		Regex:         regexp.MustCompile("New COMPONENT:"),
 		InternalRegex: regexp.MustCompile("New COMPONENT: primary = (?P<primary>.+), bootstrap = (?P<bootstrap>.*), my_idx = .*, memb_num = (?P<memb_num>[0-9]{1,2})"),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			r, err := internalRegexSubmatch(internalRegex, log)
-			if err != nil {
-				return ctx, nil
-			}
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 
-			primary := r[internalRegex.SubexpIndex("primary")] == "yes"
-			membNum := r[internalRegex.SubexpIndex("memb_num")]
-			bootstrap := r[internalRegex.SubexpIndex("bootstrap")] == "yes"
+			primary := submatches["primary"] == "yes"
+			membNum := submatches["memb_num"]
+			bootstrap := submatches["bootstrap"] == "yes"
 			memberCount, err := strconv.Atoi(membNum)
 			if err != nil {
 				return ctx, nil
@@ -108,13 +92,9 @@ var ViewsMap = types.RegexMap{
 	"RegexNodeSuspect": &types.LogRegex{
 		Regex:         regexp.MustCompile("suspecting node"),
 		InternalRegex: regexp.MustCompile("suspecting node: " + regexNodeHash),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			r, err := internalRegexSubmatch(internalRegex, log)
-			if err != nil {
-				return ctx, nil
-			}
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 
-			hash := r[internalRegex.SubexpIndex(groupNodeHash)]
+			hash := submatches[groupNodeHash]
 			ip, ok := ctx.HashToIP[hash]
 			if ok {
 				return ctx, func(ctx types.LogCtx) string {
@@ -129,14 +109,10 @@ var ViewsMap = types.RegexMap{
 	"RegexNodeChangedIdentity": &types.LogRegex{
 		Regex:         regexp.MustCompile("remote endpoint.*changed identity"),
 		InternalRegex: regexp.MustCompile("remote endpoint " + regexNodeIPMethod + " changed identity " + regexNodeHash + " -> " + strings.Replace(regexNodeHash, groupNodeHash, groupNodeHash+"2", -1)),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			r, err := internalRegexSubmatch(internalRegex, log)
-			if err != nil {
-				return ctx, nil
-			}
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 
-			hash := r[internalRegex.SubexpIndex(groupNodeHash)]
-			hash2 := r[internalRegex.SubexpIndex(groupNodeHash+"2")]
+			hash := submatches[groupNodeHash]
+			hash2 := submatches[groupNodeHash+"2"]
 			ip, ok := ctx.HashToIP[hash]
 			if !ok && IsNodeUUID(hash) {
 				ip, ok = ctx.HashToIP[utils.UUIDToShortUUID(hash)]
@@ -157,7 +133,7 @@ var ViewsMap = types.RegexMap{
 
 	"RegexWsrepUnsafeBootstrap": &types.LogRegex{
 		Regex: regexp.MustCompile("ERROR.*not be safe to bootstrap"),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			ctx.SetState("CLOSED")
 
 			return ctx, types.SimpleDisplayer(utils.Paint(utils.RedText, "not safe to bootstrap"))
@@ -165,7 +141,7 @@ var ViewsMap = types.RegexMap{
 	},
 	"RegexWsrepConsistenctyCompromised": &types.LogRegex{
 		Regex: regexp.MustCompile(".ode consistency compromi.ed"),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			ctx.SetState("CLOSED")
 
 			return ctx, types.SimpleDisplayer(utils.Paint(utils.RedText, "consistency compromised"))
@@ -173,34 +149,34 @@ var ViewsMap = types.RegexMap{
 	},
 	"RegexWsrepNonPrimary": &types.LogRegex{
 		Regex: regexp.MustCompile("failed to reach primary view"),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			return ctx, types.SimpleDisplayer("received " + utils.Paint(utils.RedText, "non primary"))
 		},
 	},
 
 	"RegexBootstrap": &types.LogRegex{
 		Regex: regexp.MustCompile("gcomm: bootstrapping new group"),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			return ctx, types.SimpleDisplayer(utils.Paint(utils.YellowText, "bootstrapping"))
 		},
 	},
 
 	"RegexSafeToBoostrapSet": &types.LogRegex{
 		Regex: regexp.MustCompile("safe_to_bootstrap: 1"),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			return ctx, types.SimpleDisplayer(utils.Paint(utils.YellowText, "safe_to_bootstrap: 1"))
 		},
 	},
 	"RegexNoGrastate": &types.LogRegex{
 		Regex: regexp.MustCompile("Could not open state file for reading.*grastate.dat"),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			return ctx, types.SimpleDisplayer(utils.Paint(utils.YellowText, "no grastate.dat file"))
 		},
 		Verbosity: types.Detailed,
 	},
 	"RegexBootstrapingDefaultState": &types.LogRegex{
 		Regex: regexp.MustCompile("Bootstraping with default state"),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			return ctx, types.SimpleDisplayer(utils.Paint(utils.YellowText, "bootstrapping(empty grastate)"))
 		},
 	},

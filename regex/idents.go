@@ -19,14 +19,9 @@ var IdentsMap = types.RegexMap{
 	"RegexSourceNode": &types.LogRegex{
 		Regex:         regexp.MustCompile("(local endpoint for a connection, blacklisting address)|(points to own listening address, blacklisting)"),
 		InternalRegex: regexp.MustCompile("\\(" + regexNodeHash + ", '.+'\\).+" + regexNodeIPMethod),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 
-			r, err := internalRegexSubmatch(internalRegex, log)
-			if err != nil {
-				return ctx, nil
-			}
-
-			ip := r[internalRegex.SubexpIndex(groupNodeIP)]
+			ip := submatches[groupNodeIP]
 			ctx.AddOwnIP(ip)
 			return ctx, types.SimpleDisplayer(ip + " is local")
 		},
@@ -37,13 +32,9 @@ var IdentsMap = types.RegexMap{
 	"RegexBaseHost": &types.LogRegex{
 		Regex:         regexp.MustCompile("base_host"),
 		InternalRegex: regexp.MustCompile("base_host = " + regexNodeIP),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			r, err := internalRegexSubmatch(internalRegex, log)
-			if err != nil {
-				return ctx, nil
-			}
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 
-			ip := r[internalRegex.SubexpIndex(groupNodeIP)]
+			ip := submatches[groupNodeIP]
 			ctx.AddOwnIP(ip)
 			return ctx, types.SimpleDisplayer(ctx.OwnIPs[len(ctx.OwnIPs)-1] + " is local")
 		},
@@ -56,15 +47,11 @@ var IdentsMap = types.RegexMap{
 	"RegexMemberAssociations": &types.LogRegex{
 		Regex:         regexp.MustCompile("[0-9]: [a-z0-9]+-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]+, [a-zA-Z0-9-_]+"),
 		InternalRegex: regexp.MustCompile(regexIdx + ": " + regexUUID + ", " + regexNodeName),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			r, err := internalRegexSubmatch(internalRegex, log)
-			if err != nil {
-				return ctx, nil
-			}
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 
-			idx := r[internalRegex.SubexpIndex(groupIdx)]
-			hash := r[internalRegex.SubexpIndex(groupUUID)]
-			nodename := utils.ShortNodeName(r[internalRegex.SubexpIndex(groupNodeName)])
+			idx := submatches[groupIdx]
+			hash := submatches[groupUUID]
+			nodename := utils.ShortNodeName(submatches[groupNodeName])
 
 			// nodenames are truncated after 32 characters ...
 			if len(nodename) == 31 {
@@ -86,13 +73,9 @@ var IdentsMap = types.RegexMap{
 	"RegexMemberCount": &types.LogRegex{
 		Regex:         regexp.MustCompile("members.[0-9]+.:"),
 		InternalRegex: regexp.MustCompile(regexMembers),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			r, err := internalRegexSubmatch(internalRegex, log)
-			if err != nil {
-				return ctx, nil
-			}
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 
-			members := r[internalRegex.SubexpIndex(groupMembers)]
+			members := submatches[groupMembers]
 
 			membercount, err := strconv.Atoi(members)
 			if err != nil {
@@ -109,13 +92,9 @@ var IdentsMap = types.RegexMap{
 	"RegexOwnUUID": &types.LogRegex{
 		Regex:         regexp.MustCompile("My UUID"),
 		InternalRegex: regexp.MustCompile("My UUID: " + regexUUID),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			r, err := internalRegexSubmatch(internalRegex, log)
-			if err != nil {
-				return ctx, nil
-			}
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 
-			hash := r[internalRegex.SubexpIndex(groupUUID)]
+			hash := submatches[groupUUID]
 			splitted := strings.Split(hash, "-")
 			shorthash := splitted[0] + "-" + splitted[3]
 
@@ -130,13 +109,9 @@ var IdentsMap = types.RegexMap{
 	"RegexOwnUUIDFromMessageRelay": &types.LogRegex{
 		Regex:         regexp.MustCompile("turning message relay requesting"),
 		InternalRegex: regexp.MustCompile("\\(" + regexNodeHash + ", '" + regexNodeIPMethod + "'\\)"),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			r, err := internalRegexSubmatch(internalRegex, log)
-			if err != nil {
-				return ctx, nil
-			}
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 
-			hash := r[internalRegex.SubexpIndex(groupNodeHash)]
+			hash := submatches[groupNodeHash]
 			ctx.AddOwnHash(hash)
 
 			return ctx, types.SimpleDisplayer(hash + " is local")
@@ -148,13 +123,9 @@ var IdentsMap = types.RegexMap{
 	"RegexMyIDXFromComponent": &types.LogRegex{
 		Regex:         regexp.MustCompile("New COMPONENT:"),
 		InternalRegex: regexp.MustCompile("New COMPONENT:.*my_idx = " + regexIdx),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			r, err := internalRegexSubmatch(internalRegex, log)
-			if err != nil {
-				return ctx, nil
-			}
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 
-			idx := r[internalRegex.SubexpIndex(groupIdx)]
+			idx := submatches[groupIdx]
 			ctx.MyIdx = idx
 			return ctx, types.SimpleDisplayer("my_idx=" + idx)
 		},
@@ -185,14 +156,14 @@ var IdentsMap = types.RegexMap{
 				"RegexOwnNameFromStateExchange": &types.LogRegex{
 					Regex:         regexp.MustCompile("STATE EXCHANGE: got state msg"),
 					InternalRegex: regexp.MustCompile("STATE EXCHANGE:.* from " + regexIdx + " \\(" + regexNodeName + "\\)"),
-					Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+					Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 						r, err := internalRegexSubmatch(internalRegex, log)
 						if err != nil {
 							return ctx, nil
 						}
 
-						idx := r[internalRegex.SubexpIndex(groupIdx)]
-						name := r[internalRegex.SubexpIndex(groupNodeName)]
+						idx := submatches[groupIdx]
+						name := submatches[groupNodeName]
 						if idx != ctx.MyIdx {
 							return ctx, types.SimpleDisplayer("name(" + name + ") from unknown idx")
 						}
@@ -214,8 +185,8 @@ func init_add_regexes() {
 	IdentsMap["RegexOwnUUIDFromEstablished"] = &types.LogRegex{
 		Regex:         regexp.MustCompile("connection established to"),
 		InternalRegex: IdentsMap["RegexOwnUUIDFromMessageRelay"].InternalRegex,
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			return IdentsMap["RegexOwnUUIDFromMessageRelay"].Handler(internalRegex, ctx, log)
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+			return IdentsMap["RegexOwnUUIDFromMessageRelay"].Handler(submatches, ctx, log)
 		},
 		Verbosity: types.DebugMySQL,
 	}
@@ -223,8 +194,8 @@ func init_add_regexes() {
 	IdentsMap["RegexOwnIndexFromView"] = &types.LogRegex{
 		Regex:         regexp.MustCompile("own_index:"),
 		InternalRegex: regexp.MustCompile("own_index: " + regexIdx),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			return IdentsMap["RegexMyIDXFromComponent"].Handler(internalRegex, ctx, log)
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+			return IdentsMap["RegexMyIDXFromComponent"].Handler(submatches, ctx, log)
 		},
 		Verbosity: types.DebugMySQL,
 	}
@@ -235,7 +206,7 @@ func init_add_regexes() {
 		IdentsMap["RegexMyIDXFromClusterView"] = &types.LogRegex{
 			Regex:         regexp.MustCompile("New cluster view:"),
 			InternalRegex: regexp.MustCompile("New cluster view:.*my index: " + regexIdx + ","),
-			Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+			Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 				return IdentsMap["RegexMyIDXFromComponent"].Handler(internalRegex, ctx, log)
 			},
 			Verbosity: types.DebugMySQL,

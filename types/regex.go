@@ -12,7 +12,7 @@ type LogRegex struct {
 
 	// Taking into arguments the current context and log line, returning an updated context and a closure to get the msg to display
 	// Why a closure: to later inject an updated context instead of the current partial context, to ensure hash/ip/nodenames are known
-	Handler   func(*regexp.Regexp, LogCtx, string) (LogCtx, LogDisplayer)
+	Handler   func(map[string]string, LogCtx, string) (LogCtx, LogDisplayer)
 	Verbosity Verbosity // To be able to hide details from summaries
 }
 
@@ -20,7 +20,21 @@ func (l *LogRegex) Handle(ctx LogCtx, line string) (LogCtx, LogDisplayer) {
 	if ctx.minVerbosity > l.Verbosity {
 		ctx.minVerbosity = l.Verbosity
 	}
-	return l.Handler(l.InternalRegex, ctx, line)
+	mergedResults := map[string]string{}
+	if l.InternalRegex == nil {
+		return l.Handler(mergedResults, ctx, line)
+	}
+	slice := l.InternalRegex.FindStringSubmatch(line)
+	if len(slice) == 0 {
+		return ctx, nil
+	}
+	for _, subexpname := range l.InternalRegex.SubexpNames() {
+		if subexpname == "" { // 1st element is always empty for the complete regex
+			continue
+		}
+		mergedResults[subexpname] = slice[l.InternalRegex.SubexpIndex(subexpname)]
+	}
+	return l.Handler(mergedResults, ctx, line)
 }
 
 func (l *LogRegex) MarshalJSON() ([]byte, error) {

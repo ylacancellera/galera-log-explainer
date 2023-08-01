@@ -16,12 +16,8 @@ var EventsMap = types.RegexMap{
 	"RegexStarting": &types.LogRegex{
 		Regex:         regexp.MustCompile("starting as process"),
 		InternalRegex: regexp.MustCompile("\\(mysqld " + regexVersion + ".*\\)"),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			r, err := internalRegexSubmatch(internalRegex, log)
-			if err != nil {
-				return ctx, nil
-			}
-			ctx.Version = r[internalRegex.SubexpIndex(groupVersion)]
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+			ctx.Version = submatches[groupVersion]
 
 			msg := "starting(" + ctx.Version
 			if isShutdownReasonMissing(ctx) {
@@ -35,7 +31,7 @@ var EventsMap = types.RegexMap{
 	},
 	"RegexShutdownComplete": &types.LogRegex{
 		Regex: regexp.MustCompile("mysqld: Shutdown complete"),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			ctx.SetState("CLOSED")
 
 			return ctx, types.SimpleDisplayer(utils.Paint(utils.RedText, "shutdown complete"))
@@ -43,7 +39,7 @@ var EventsMap = types.RegexMap{
 	},
 	"RegexTerminated": &types.LogRegex{
 		Regex: regexp.MustCompile("mysqld: Terminated"),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			ctx.SetState("CLOSED")
 
 			return ctx, types.SimpleDisplayer(utils.Paint(utils.RedText, "terminated"))
@@ -51,21 +47,21 @@ var EventsMap = types.RegexMap{
 	},
 	"RegexGotSignal6": &types.LogRegex{
 		Regex: regexp.MustCompile("mysqld got signal 6"),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			ctx.SetState("CLOSED")
 			return ctx, types.SimpleDisplayer(utils.Paint(utils.RedText, "crash: got signal 6"))
 		},
 	},
 	"RegexGotSignal11": &types.LogRegex{
 		Regex: regexp.MustCompile("mysqld got signal 11"),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			ctx.SetState("CLOSED")
 			return ctx, types.SimpleDisplayer(utils.Paint(utils.RedText, "crash: got signal 11"))
 		},
 	},
 	"RegexShutdownSignal": &types.LogRegex{
 		Regex: regexp.MustCompile("Normal|Received shutdown"),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			ctx.SetState("CLOSED")
 
 			return ctx, types.SimpleDisplayer(utils.Paint(utils.RedText, "received shutdown"))
@@ -76,7 +72,7 @@ var EventsMap = types.RegexMap{
 
 	"RegexAborting": &types.LogRegex{
 		Regex: regexp.MustCompile("Aborting"),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			ctx.SetState("CLOSED")
 
 			return ctx, types.SimpleDisplayer(utils.Paint(utils.RedText, "ABORTING"))
@@ -85,7 +81,7 @@ var EventsMap = types.RegexMap{
 
 	"RegexWsrepLoad": &types.LogRegex{
 		Regex: regexp.MustCompile("wsrep_load\\(\\): loading provider library"),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			ctx.SetState("OPEN")
 			if regexWsrepLoadNone.MatchString(log) {
 				return ctx, types.SimpleDisplayer(utils.Paint(utils.GreenText, "started(standalone)"))
@@ -96,7 +92,7 @@ var EventsMap = types.RegexMap{
 	"RegexWsrepRecovery": &types.LogRegex{
 		//  INFO: WSREP: Recovered position 00000000-0000-0000-0000-000000000000:-1
 		Regex: regexp.MustCompile("Recovered position"),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 
 			msg := "wsrep recovery"
 			// if state is joiner, it can be due to sst
@@ -112,7 +108,7 @@ var EventsMap = types.RegexMap{
 
 	"RegexUnknownConf": &types.LogRegex{
 		Regex: regexp.MustCompile("unknown variable"),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			split := strings.Split(log, "'")
 			v := "?"
 			if len(split) > 0 {
@@ -127,7 +123,7 @@ var EventsMap = types.RegexMap{
 
 	"RegexAssertionFailure": &types.LogRegex{
 		Regex: regexp.MustCompile("Assertion failure"),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			ctx.SetState("CLOSED")
 
 			return ctx, types.SimpleDisplayer(utils.Paint(utils.RedText, "ASSERTION FAILURE"))
@@ -135,7 +131,7 @@ var EventsMap = types.RegexMap{
 	},
 	"RegexBindAddressAlreadyUsed": &types.LogRegex{
 		Regex: regexp.MustCompile("asio error .bind: Address already in use"),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			ctx.SetState("CLOSED")
 
 			return ctx, types.SimpleDisplayer(utils.Paint(utils.RedText, "bind address already used"))
@@ -143,7 +139,7 @@ var EventsMap = types.RegexMap{
 	},
 	"RegexTooManyConnections": &types.LogRegex{
 		Regex: regexp.MustCompile("Too many connections"),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			return ctx, types.SimpleDisplayer(utils.Paint(utils.RedText, "too many connections"))
 		},
 	},

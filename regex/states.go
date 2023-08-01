@@ -2,7 +2,6 @@ package regex
 
 import (
 	"regexp"
-	"strings"
 
 	"github.com/ylacancellera/galera-log-explainer/types"
 	"github.com/ylacancellera/galera-log-explainer/utils"
@@ -13,16 +12,14 @@ func init() {
 }
 
 var (
-	shiftFunc = func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-		log = internalRegex.FindString(log)
+	shiftFunc = func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 
-		splitted := strings.Split(log, " -> ")
-		ctx.SetState(splitted[1])
-		log = utils.PaintForState(splitted[0], splitted[0]) + " -> " + utils.PaintForState(splitted[1], splitted[1])
+		ctx.SetState(submatches["state2"])
+		log = utils.PaintForState(submatches["state1"], submatches["state1"]) + " -> " + utils.PaintForState(submatches["state2"], submatches["state2"])
 
 		return ctx, types.SimpleDisplayer(log)
 	}
-	shiftRegex = regexp.MustCompile("[A-Z]+ -> [A-Z]+")
+	shiftRegex = regexp.MustCompile("(?P<state1>[A-Z]+) -> (?P<state2>[A-Z]+)")
 )
 
 var StatesMap = types.RegexMap{
@@ -36,9 +33,9 @@ var StatesMap = types.RegexMap{
 	"RegexRestoredState": &types.LogRegex{
 		Regex:         regexp.MustCompile("Restored state"),
 		InternalRegex: shiftRegex,
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			var displayer types.LogDisplayer
-			ctx, displayer = shiftFunc(internalRegex, ctx, log)
+			ctx, displayer = shiftFunc(submatches, ctx, log)
 
 			return ctx, types.SimpleDisplayer("(restored)" + displayer(ctx))
 		},

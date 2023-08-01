@@ -15,7 +15,7 @@ var ApplicativeMap = types.RegexMap{
 
 	"RegexDesync": &types.LogRegex{
 		Regex: regexp.MustCompile("desyncs itself from group"),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			ctx.Desynced = true
 			return ctx, types.SimpleDisplayer(utils.Paint(utils.YellowText, "desyncs itself from group"))
 		},
@@ -23,7 +23,7 @@ var ApplicativeMap = types.RegexMap{
 
 	"RegexResync": &types.LogRegex{
 		Regex: regexp.MustCompile("resyncs itself to group"),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			ctx.Desynced = false
 			return ctx, types.SimpleDisplayer(utils.Paint(utils.YellowText, "resyncs itself to group"))
 		},
@@ -32,16 +32,12 @@ var ApplicativeMap = types.RegexMap{
 	"RegexInconsistencyVoteInit": &types.LogRegex{
 		Regex:         regexp.MustCompile("initiates vote on"),
 		InternalRegex: regexp.MustCompile("Member " + regexIdx + "\\(" + regexNodeName + "\\) initiates vote on " + regexUUID + ":" + regexSeqno + "," + regexErrorMD5 + ":  (?P<error>.*), Error_code:"),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			r, err := internalRegexSubmatch(internalRegex, log)
-			if err != nil {
-				return ctx, nil
-			}
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 
-			node := r[internalRegex.SubexpIndex(groupNodeName)]
-			seqno := r[internalRegex.SubexpIndex(groupSeqno)]
-			errormd5 := r[internalRegex.SubexpIndex(groupErrorMD5)]
-			errorstring := r[internalRegex.SubexpIndex("error")]
+			node := submatches[groupNodeName]
+			seqno := submatches[groupSeqno]
+			errormd5 := submatches[groupErrorMD5]
+			errorstring := submatches["error"]
 
 			c := types.Conflict{
 				InitiatedBy: []string{node},
@@ -65,16 +61,12 @@ var ApplicativeMap = types.RegexMap{
 	"RegexInconsistencyVoteRespond": &types.LogRegex{
 		Regex:         regexp.MustCompile("responds to vote on "),
 		InternalRegex: regexp.MustCompile("Member " + regexIdx + "\\(" + regexNodeName + "\\) responds to vote on " + regexUUID + ":" + regexSeqno + "," + regexErrorMD5 + ": (?P<error>.*)"),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			r, err := internalRegexSubmatch(internalRegex, log)
-			if err != nil {
-				return ctx, nil
-			}
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 
-			node := r[internalRegex.SubexpIndex(groupNodeName)]
-			seqno := r[internalRegex.SubexpIndex(groupSeqno)]
-			errormd5 := r[internalRegex.SubexpIndex(groupErrorMD5)]
-			errorstring := r[internalRegex.SubexpIndex("error")]
+			node := submatches[groupNodeName]
+			seqno := submatches[groupSeqno]
+			errormd5 := submatches[groupErrorMD5]
+			errorstring := submatches["error"]
 
 			latestConflict := ctx.Conflicts.ConflictWithSeqno(seqno)
 			if latestConflict == nil {
@@ -100,7 +92,7 @@ var ApplicativeMap = types.RegexMap{
 
 	"RegexInconsistencyVoted": &types.LogRegex{
 		Regex: regexp.MustCompile("Inconsistency detected: Inconsistent by consensus"),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			return ctx, types.SimpleDisplayer(utils.Paint(utils.RedText, "found inconsistent by vote"))
 		},
 	},
@@ -108,13 +100,9 @@ var ApplicativeMap = types.RegexMap{
 	"RegexInconsistencyWinner": &types.LogRegex{
 		Regex:         regexp.MustCompile("Winner: "),
 		InternalRegex: regexp.MustCompile("Winner: " + regexErrorMD5),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			r, err := internalRegexSubmatch(internalRegex, log)
-			if err != nil {
-				return ctx, nil
-			}
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 
-			errormd5 := r[internalRegex.SubexpIndex(groupErrorMD5)]
+			errormd5 := submatches[groupErrorMD5]
 
 			if len(ctx.Conflicts) == 0 {
 				return ctx, nil // nothing to guess
@@ -154,18 +142,13 @@ var ApplicativeMap = types.RegexMap{
 	"RegexInconsistencyRecovery": &types.LogRegex{
 		Regex:         regexp.MustCompile("Recovering vote result from history"),
 		InternalRegex: regexp.MustCompile("Recovering vote result from history: " + regexUUID + ":" + regexSeqno + "," + regexErrorMD5),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			if len(ctx.OwnNames) == 0 {
 				return ctx, nil
 			}
 
-			r, err := internalRegexSubmatch(internalRegex, log)
-			if err != nil {
-				return ctx, nil
-			}
-
-			errormd5 := r[internalRegex.SubexpIndex(groupErrorMD5)]
-			seqno := r[internalRegex.SubexpIndex(groupSeqno)]
+			errormd5 := submatches[groupErrorMD5]
+			seqno := submatches[groupSeqno]
 			c := ctx.Conflicts.ConflictWithSeqno(seqno)
 			vote := types.ConflictVote{MD5: errormd5}
 			c.VotePerNode[ctx.OwnNames[len(ctx.OwnNames)-1]] = vote

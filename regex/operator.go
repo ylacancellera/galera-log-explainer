@@ -19,13 +19,9 @@ var PXCOperatorMap = types.RegexMap{
 	"RegexNodeNameFromEnv": &types.LogRegex{
 		Regex:         regexp.MustCompile(". NODE_NAME="),
 		InternalRegex: regexp.MustCompile("NODE_NAME=" + regexNodeName),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			r, err := internalRegexSubmatch(internalRegex, log)
-			if err != nil {
-				return ctx, nil
-			}
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 
-			nodename := r[internalRegex.SubexpIndex(groupNodeName)]
+			nodename := submatches[groupNodeName]
 			nodename, _, _ = strings.Cut(nodename, ".")
 			ctx.AddOwnName(nodename)
 			return ctx, types.SimpleDisplayer("local name:" + nodename)
@@ -36,13 +32,9 @@ var PXCOperatorMap = types.RegexMap{
 	"RegexNodeIPFromEnv": &types.LogRegex{
 		Regex:         regexp.MustCompile(". NODE_IP="),
 		InternalRegex: regexp.MustCompile("NODE_IP=" + regexNodeIP),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
-			r, err := internalRegexSubmatch(internalRegex, log)
-			if err != nil {
-				return ctx, nil
-			}
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 
-			ip := r[internalRegex.SubexpIndex(groupNodeIP)]
+			ip := submatches[groupNodeIP]
 			ctx.AddOwnIP(ip)
 			return ctx, types.SimpleDisplayer("local ip:" + ip)
 		},
@@ -56,7 +48,7 @@ var PXCOperatorMap = types.RegexMap{
 		// those "operators" regexes do not have the log prefix added implicitely. It's not strictly needed, but
 		// it will help to avoid catching random piece of log out of order
 		Regex: regexp.MustCompile("^{\"log\":\".*GCache::RingBuffer initial scan"),
-		Handler: func(internalRegex *regexp.Regexp, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			return ctx, types.SimpleDisplayer("recovering gcache")
 		},
 	},

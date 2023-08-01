@@ -3,7 +3,6 @@ package regex
 import (
 	"regexp"
 	"strconv"
-	"strings"
 
 	"github.com/ylacancellera/galera-log-explainer/types"
 	"github.com/ylacancellera/galera-log-explainer/utils"
@@ -94,9 +93,7 @@ var IdentsMap = types.RegexMap{
 		InternalRegex: regexp.MustCompile("My UUID: " + regexUUID),
 		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 
-			hash := submatches[groupUUID]
-			splitted := strings.Split(hash, "-")
-			shorthash := splitted[0] + "-" + splitted[3]
+			shorthash := utils.UUIDToShortUUID(submatches[groupUUID])
 
 			ctx.AddOwnHash(shorthash)
 

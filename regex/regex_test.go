@@ -5,6 +5,7 @@ import (
 	"os/exec"
 	"testing"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/pkg/errors"
@@ -1086,11 +1087,106 @@ func TestRegexes(t *testing.T) {
 			mapToTest:   ApplicativeMap,
 			key:         "RegexResync",
 		},
+
+		{
+			log:         "{\"log\":\"2001-01-01T01:01:01.000000Z 0 [Note] [MY-000000] [Galera] Member 1(node1) initiates vote on 8c9b5610-e020-11ed-a5ea-e253cc5f629d:20,bdb2b9234ae75cb3:  some error, Error_code: 123;\n\",\"file\":\"/var/lib/mysql/mysqld-error.log\"}",
+			expectedOut: "inconsistency vote started by node1(seqno:20)",
+			expectedCtx: types.LogCtx{Conflicts: types.Conflicts{&types.Conflict{InitiatedBy: []string{"node1"}, Seqno: "20", VotePerNode: map[string]types.ConflictVote{"node1": types.ConflictVote{MD5: "bdb2b9234ae75cb3", Error: "some error"}}}}},
+			mapToTest:   ApplicativeMap,
+			key:         "RegexInconsistencyVoteInit",
+		},
+		{
+			log:         "{\"log\":\"2001-01-01T01:01:01.000000Z 0 [Note] [MY-000000] [Galera] Member 1(node1) initiates vote on 8c9b5610-e020-11ed-a5ea-e253cc5f629d:20,bdb2b9234ae75cb3:  some error, Error_code: 123;\n\",\"file\":\"/var/lib/mysql/mysqld-error.log\"}",
+			inputCtx:    types.LogCtx{OwnNames: []string{"node1"}},
+			expectedCtx: types.LogCtx{OwnNames: []string{"node1"}, Conflicts: types.Conflicts{&types.Conflict{InitiatedBy: []string{"node1"}, Seqno: "20", VotePerNode: map[string]types.ConflictVote{"node1": types.ConflictVote{MD5: "bdb2b9234ae75cb3", Error: "some error"}}}}},
+			expectedOut: "inconsistency vote started(seqno:20)",
+			mapToTest:   ApplicativeMap,
+			key:         "RegexInconsistencyVoteInit",
+		},
+
+		{
+			log:         "{\"log\":\"2001-01-01T01:01:01.000000Z 0 [Note] [MY-000000] [Galera] Member 2(node2) responds to vote on 8c9b5610-e020-11ed-a5ea-e253cc5f629d:20,0000000000000000: Success\n\",\"file\":\"/var/lib/mysql/mysqld-error.log\"}",
+			inputCtx:    types.LogCtx{OwnNames: []string{"node2"}, Conflicts: types.Conflicts{&types.Conflict{InitiatedBy: []string{"node1"}, Seqno: "20", VotePerNode: map[string]types.ConflictVote{"node1": types.ConflictVote{MD5: "bdb2b9234ae75cb3", Error: "some error"}}}}},
+			expectedCtx: types.LogCtx{OwnNames: []string{"node2"}, Conflicts: types.Conflicts{&types.Conflict{InitiatedBy: []string{"node1"}, Seqno: "20", VotePerNode: map[string]types.ConflictVote{"node1": types.ConflictVote{MD5: "bdb2b9234ae75cb3", Error: "some error"}, "node2": types.ConflictVote{MD5: "0000000000000000", Error: "Success"}}}}},
+			expectedOut: "consistency vote(seqno:20): voted Success",
+			mapToTest:   ApplicativeMap,
+			key:         "RegexInconsistencyVoteRespond",
+		},
+		{
+			log:         "{\"log\":\"2001-01-01T01:01:01.000000Z 0 [Note] [MY-000000] [Galera] Member 2(node2) responds to vote on 8c9b5610-e020-11ed-a5ea-e253cc5f629d:20,bdb2b9234ae75cb3: some error\n\",\"file\":\"/var/lib/mysql/mysqld-error.log\"}",
+			inputCtx:    types.LogCtx{OwnNames: []string{"node2"}, Conflicts: types.Conflicts{&types.Conflict{InitiatedBy: []string{"node1"}, Seqno: "20", VotePerNode: map[string]types.ConflictVote{"node1": types.ConflictVote{MD5: "bdb2b9234ae75cb3", Error: "some error"}}}}},
+			expectedCtx: types.LogCtx{OwnNames: []string{"node2"}, Conflicts: types.Conflicts{&types.Conflict{InitiatedBy: []string{"node1"}, Seqno: "20", VotePerNode: map[string]types.ConflictVote{"node1": types.ConflictVote{MD5: "bdb2b9234ae75cb3", Error: "some error"}, "node2": types.ConflictVote{MD5: "bdb2b9234ae75cb3", Error: "some error"}}}}},
+			expectedOut: "consistency vote(seqno:20): voted same error",
+			mapToTest:   ApplicativeMap,
+			key:         "RegexInconsistencyVoteRespond",
+		},
+		{
+			// could not actually find a "responds to" with any error for now
+			log:         "{\"log\":\"2001-01-01T01:01:01.000000Z 0 [Note] [MY-000000] [Galera] Member 2(node2) responds to vote on 8c9b5610-e020-11ed-a5ea-e253cc5f629d:20,ed9774a3cad44656: some different error\n\",\"file\":\"/var/lib/mysql/mysqld-error.log\"}",
+			inputCtx:    types.LogCtx{OwnNames: []string{"node2"}, Conflicts: types.Conflicts{&types.Conflict{InitiatedBy: []string{"node1"}, Seqno: "20", VotePerNode: map[string]types.ConflictVote{"node1": types.ConflictVote{MD5: "bdb2b9234ae75cb3", Error: "some error"}}}}},
+			expectedCtx: types.LogCtx{OwnNames: []string{"node2"}, Conflicts: types.Conflicts{&types.Conflict{InitiatedBy: []string{"node1"}, Seqno: "20", VotePerNode: map[string]types.ConflictVote{"node1": types.ConflictVote{MD5: "bdb2b9234ae75cb3", Error: "some error"}, "node2": types.ConflictVote{MD5: "ed9774a3cad44656", Error: "some different error"}}}}},
+			expectedOut: "consistency vote(seqno:20): voted different error",
+			mapToTest:   ApplicativeMap,
+			key:         "RegexInconsistencyVoteRespond",
+		},
+
+		{
+			log:         "{\"log\":\"2001-01-01T01:01:01.000000Z 1 [ERROR] [MY-000000] [Galera] Inconsistency detected: Inconsistent by consensus on 8c9b5610-e020-11ed-a5ea-e253cc5f629d:127\n\t at galera/src/replicator_smm.cpp:process_apply_error():1469\n\",\"file\":\"/var/lib/mysql/mysqld-error.log\"}",
+			expectedOut: "found inconsistent by vote",
+			mapToTest:   ApplicativeMap,
+			key:         "RegexInconsistencyVoted",
+		},
+
+		{
+			log:         "Winner: bdb2b9234ae75cb3",
+			inputCtx:    types.LogCtx{OwnNames: []string{"node1"}, Conflicts: types.Conflicts{&types.Conflict{InitiatedBy: []string{"node1"}, Seqno: "20", VotePerNode: map[string]types.ConflictVote{"node1": types.ConflictVote{MD5: "bdb2b9234ae75cb3", Error: "some error"}}}}},
+			expectedCtx: types.LogCtx{OwnNames: []string{"node1"}, Conflicts: types.Conflicts{&types.Conflict{InitiatedBy: []string{"node1"}, Winner: "bdb2b9234ae75cb3", Seqno: "20", VotePerNode: map[string]types.ConflictVote{"node1": types.ConflictVote{MD5: "bdb2b9234ae75cb3", Error: "some error"}}}}},
+			expectedOut: "consistency vote(seqno:20): won",
+			mapToTest:   ApplicativeMap,
+			key:         "RegexInconsistencyWinner",
+		},
+		{
+			log:         "Winner: 0000000000000000",
+			inputCtx:    types.LogCtx{OwnNames: []string{"node1"}, Conflicts: types.Conflicts{&types.Conflict{InitiatedBy: []string{"node1"}, Seqno: "20", VotePerNode: map[string]types.ConflictVote{"node1": types.ConflictVote{MD5: "bdb2b9234ae75cb3", Error: "some error"}, "node2": types.ConflictVote{MD5: "0000000000000000", Error: "Success"}}}}},
+			expectedCtx: types.LogCtx{OwnNames: []string{"node1"}, Conflicts: types.Conflicts{&types.Conflict{InitiatedBy: []string{"node1"}, Winner: "0000000000000000", Seqno: "20", VotePerNode: map[string]types.ConflictVote{"node1": types.ConflictVote{MD5: "bdb2b9234ae75cb3", Error: "some error"}, "node2": types.ConflictVote{MD5: "0000000000000000", Error: "Success"}}}}},
+			expectedOut: "consistency vote(seqno:20): lost",
+			mapToTest:   ApplicativeMap,
+			key:         "RegexInconsistencyWinner",
+		},
+		{
+			name:                 "already voted conflict, should not print anything",
+			log:                  "Winner: 0000000000000000",
+			inputCtx:             types.LogCtx{OwnNames: []string{"node1"}, Conflicts: types.Conflicts{&types.Conflict{InitiatedBy: []string{"node1"}, Winner: "bdb2b9234ae75cb3", Seqno: "20", VotePerNode: map[string]types.ConflictVote{"node1": types.ConflictVote{MD5: "bdb2b9234ae75cb3", Error: "some error"}}}}},
+			expectedCtx:          types.LogCtx{OwnNames: []string{"node1"}, Conflicts: types.Conflicts{&types.Conflict{InitiatedBy: []string{"node1"}, Winner: "bdb2b9234ae75cb3", Seqno: "20", VotePerNode: map[string]types.ConflictVote{"node1": types.ConflictVote{MD5: "bdb2b9234ae75cb3", Error: "some error"}}}}},
+			displayerExpectedNil: true,
+			mapToTest:            ApplicativeMap,
+			key:                  "RegexInconsistencyWinner",
+		},
+
+		{
+			log:         "{\"log\":\"2001-01-01T01:01:01.000000Z 1 [ERROR] [MY-000000] [Galera] Recovering vote result from history: 8c9b5610-e020-11ed-a5ea-e253cc5f629d:20,bdb2b9234ae75cb3\n\",\"file\":\"/var/lib/mysql/mysqld-error.log\"}",
+			inputCtx:    types.LogCtx{OwnNames: []string{"node2"}, Conflicts: types.Conflicts{&types.Conflict{InitiatedBy: []string{"node1"}, Winner: "bdb2b9234ae75cb3", Seqno: "20", VotePerNode: map[string]types.ConflictVote{"node1": types.ConflictVote{MD5: "bdb2b9234ae75cb3", Error: "some error"}}}}},
+			expectedCtx: types.LogCtx{OwnNames: []string{"node2"}, Conflicts: types.Conflicts{&types.Conflict{InitiatedBy: []string{"node1"}, Winner: "bdb2b9234ae75cb3", Seqno: "20", VotePerNode: map[string]types.ConflictVote{"node1": types.ConflictVote{MD5: "bdb2b9234ae75cb3", Error: "some error"}, "node2": types.ConflictVote{MD5: "bdb2b9234ae75cb3"}}}}},
+			expectedOut: "consistency vote(seqno:20): voted same error",
+			mapToTest:   ApplicativeMap,
+			key:         "RegexInconsistencyRecovery",
+		},
+		{
+			log:         "{\"log\":\"2001-01-01T01:01:01.000000Z 1 [ERROR] [MY-000000] [Galera] Recovering vote result from history: 8c9b5610-e020-11ed-a5ea-e253cc5f629d:20,0000000000000000\n\",\"file\":\"/var/lib/mysql/mysqld-error.log\"}",
+			inputCtx:    types.LogCtx{OwnNames: []string{"node2"}, Conflicts: types.Conflicts{&types.Conflict{InitiatedBy: []string{"node1"}, Winner: "bdb2b9234ae75cb3", Seqno: "20", VotePerNode: map[string]types.ConflictVote{"node1": types.ConflictVote{MD5: "bdb2b9234ae75cb3", Error: "some error"}}}}},
+			expectedCtx: types.LogCtx{OwnNames: []string{"node2"}, Conflicts: types.Conflicts{&types.Conflict{InitiatedBy: []string{"node1"}, Winner: "bdb2b9234ae75cb3", Seqno: "20", VotePerNode: map[string]types.ConflictVote{"node1": types.ConflictVote{MD5: "bdb2b9234ae75cb3", Error: "some error"}, "node2": types.ConflictVote{MD5: "0000000000000000"}}}}},
+			expectedOut: "consistency vote(seqno:20): voted Success",
+			mapToTest:   ApplicativeMap,
+			key:         "RegexInconsistencyRecovery",
+		},
 	}
 
 	for _, test := range tests {
 		if test.name == "" {
 			test.name = "default"
+		}
+		if _, ok := test.mapToTest[test.key]; !ok {
+			t.Fatalf("key %s does not exist in maps", test.key)
 		}
 		err := testRegexFromMap(t, test.log, test.mapToTest[test.key])
 		if err != nil {
@@ -1115,7 +1211,7 @@ func TestRegexes(t *testing.T) {
 		// alternative to reflect.deepequal, it enables to avoid comparing "states" map
 		res := cmp.Equal(ctx, test.expectedCtx, cmpopts.IgnoreUnexported(types.LogCtx{}))
 		if !res || msg != test.expectedOut || ctx.State() != test.expectedState {
-			t.Errorf("\nkey: %s\ntestname: %s\nctx: %v\nexpected ctx: %v\nout: %s\nexpected out: %s\nstate: %s\nexpected state: %s", test.key, test.name, ctx, test.expectedCtx, msg, test.expectedOut, ctx.State(), test.expectedState)
+			t.Errorf("\nkey: %s\ntestname: %s\nctx: %+v\nexpected ctx: %+v\nout: %s\nexpected out: %s\nstate: %s\nexpected state: %s", test.key, test.name, spew.Sdump(ctx), spew.Sdump(test.expectedCtx), msg, test.expectedOut, ctx.State(), test.expectedState)
 			t.Fail()
 		}
 	}

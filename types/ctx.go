@@ -24,6 +24,7 @@ type LogCtx struct {
 	IPToMethod     map[string]string
 	IPToNodeName   map[string]string
 	minVerbosity   Verbosity
+	Conflicts      Conflicts
 }
 
 func NewLogCtx() LogCtx {

@@ -51,6 +51,7 @@ var (
 	groupSeqno         = "seqno"
 	groupMembers       = "members"
 	groupVersion       = "version"
+	groupErrorMD5      = "errormd5"
 	regexMembers       = "(?P<" + groupMembers + ">[0-9]{1,2})"
 	regexNodeHash      = "(?P<" + groupNodeHash + ">[a-zA-Z0-9-_]+)"
 	regexNodeName      = "(?P<" + groupNodeName + `>[a-zA-Z0-9-_\.]+)`
@@ -62,6 +63,7 @@ var (
 	regexNodeIPMethod  = "(?P<" + groupMethod + ">.+)://" + regexNodeIP + ":[0-9]{1,6}"
 	regexIdx           = "(?P<" + groupIdx + ">-?[0-9]{1,2})"
 	regexVersion       = "(?P<" + groupVersion + ">(5|8|10|11)\\.[0-9]\\.[0-9]{1,2})"
+	regexErrorMD5      = "(?P<" + groupErrorMD5 + ">[a-z0-9]*)"
 )
 
 func IsNodeUUID(s string) bool {

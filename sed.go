@@ -28,8 +28,7 @@ You can also simply call the command to get a generated sed command to review an
 }
 
 func (s *sed) Run() error {
-	regex.SetVerbosity(types.DebugMySQL, regex.ViewsMap)
-	toCheck := regex.IdentsMap.Merge(regex.ViewsMap)
+	toCheck := regex.AllRegexes()
 	timeline, err := timelineFromPaths(s.Paths, toCheck, CLI.Since, CLI.Until)
 	if err != nil {
 		return errors.Wrap(err, "Found nothing worth replacing")
@@ -46,6 +45,7 @@ func (s *sed) Run() error {
 		for _, tosearch := range tosearchs {
 			ni := whoIs(ctxs, tosearch)
 
+			fmt.Println(ni)
 			switch {
 			case CLI.Sed.ByIP:
 				args = append(args, sedByIP(ni)...)
@@ -73,7 +73,11 @@ func (s *sed) Run() error {
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	return cmd.Start()
+	err = cmd.Start()
+	if err != nil {
+		return err
+	}
+	return cmd.Wait()
 }
 
 func sedByName(ni types.NodeInfo) []string {

@@ -739,9 +739,9 @@ func TestRegexes(t *testing.T) {
 			mapToTest:   SSTMap,
 			key:         "RegexSSTRequestSuccess",
 		},
-
 		{
-			log:         "2022-02-22T15:44:48.507924Z 0 [Note] [MY-000000] [Galera] Member 2.0 (node2.host.com) requested state transfer from '*any*'. Selected 0.0 (node1.host.com)(SYNCED) as donor.",
+			name:        "with fqdn",
+			log:         "2001-01-01T01:01:01.000000Z 0 [Note] [MY-000000] [Galera] Member 2.0 (node2.host.com) requested state transfer from '*any*'. Selected 0.0 (node1.host.com)(SYNCED) as donor.",
 			inputCtx:    types.LogCtx{},
 			expectedCtx: types.LogCtx{},
 			expectedOut: "node1 will resync node2",
@@ -866,6 +866,38 @@ func TestRegexes(t *testing.T) {
 			expectedOut: "finished sending IST to node2",
 			mapToTest:   SSTMap,
 			key:         "RegexSSTComplete",
+		},
+		{
+			name: "with donor name",
+			log:  "2001-01-01T01:01:01.000000Z 0 [Note] WSREP: 0.0 (node1): State transfer to 2.0 (node2) complete.",
+			inputCtx: types.LogCtx{
+				SST: types.SST{ResyncingNode: "node2", Type: "IST"},
+			},
+			expectedCtx: types.LogCtx{
+				SST:      types.SST{ResyncingNode: "", Type: ""},
+				OwnNames: []string{"node1"},
+			},
+			inputState:    "DONOR",
+			expectedState: "DONOR",
+			expectedOut:   "finished sending IST to node2",
+			mapToTest:     SSTMap,
+			key:           "RegexSSTComplete",
+		},
+		{
+			name: "with joiner name",
+			log:  "2001-01-01T01:01:01.000000Z 0 [Note] WSREP: 0.0 (node1): State transfer to 2.0 (node2) complete.",
+			inputCtx: types.LogCtx{
+				SST: types.SST{ResyncingNode: "node2", Type: "IST"},
+			},
+			expectedCtx: types.LogCtx{
+				SST:      types.SST{ResyncingNode: "", Type: ""},
+				OwnNames: []string{"node2"},
+			},
+			inputState:    "JOINER",
+			expectedState: "JOINER",
+			expectedOut:   "got IST from node1",
+			mapToTest:     SSTMap,
+			key:           "RegexSSTComplete",
 		},
 
 		{

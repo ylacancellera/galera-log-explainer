@@ -120,6 +120,7 @@ func (ctx *LogCtx) AllNodeNames() []string {
 func (ctx *LogCtx) AddOwnName(name string) {
 	// used to be a simple "if utils.SliceContains", changed to "is it the last known name?"
 	// because somes names/ips come back and forth, we should keep track of that
+	name = utils.ShortNodeName(name)
 	if len(ctx.OwnNames) > 0 && ctx.OwnNames[len(ctx.OwnNames)-1] == name {
 		return
 	}

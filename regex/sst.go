@@ -18,22 +18,25 @@ var SSTMap = types.RegexMap{
 		InternalRegex: regexp.MustCompile("Member .* \\(" + regexNodeName + "\\) requested state transfer.*Selected .* \\(" + regexNodeName2 + "\\)\\("),
 		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 
-			joiner := submatches[groupNodeName]
-			donor := submatches[groupNodeName2]
-			displayJoiner := utils.ShortNodeName(joiner)
-			displayDonor := utils.ShortNodeName(donor)
-
-			//TODO: add that inside a bigger displayer
+			joiner := utils.ShortNodeName(submatches[groupNodeName])
+			donor := utils.ShortNodeName(submatches[groupNodeName2])
 			if utils.SliceContains(ctx.OwnNames, joiner) {
 				ctx.SST.ResyncedFromNode = donor
-				return ctx, types.SimpleDisplayer(displayDonor + utils.Paint(utils.GreenText, " will resync local node"))
 			}
 			if utils.SliceContains(ctx.OwnNames, donor) {
 				ctx.SST.ResyncingNode = joiner
-				return ctx, types.SimpleDisplayer(utils.Paint(utils.GreenText, "local node will resync ") + displayJoiner)
 			}
 
-			return ctx, types.SimpleDisplayer(displayDonor + utils.Paint(utils.GreenText, " will resync ") + displayJoiner)
+			return ctx, func(ctx types.LogCtx) string {
+				if utils.SliceContains(ctx.OwnNames, joiner) {
+					return donor + utils.Paint(utils.GreenText, " will resync local node")
+				}
+				if utils.SliceContains(ctx.OwnNames, donor) {
+					return utils.Paint(utils.GreenText, "local node will resync ") + joiner
+				}
+
+				return donor + utils.Paint(utils.GreenText, " will resync ") + joiner
+			}
 		},
 		Verbosity: types.Detailed,
 	},
@@ -59,25 +62,26 @@ var SSTMap = types.RegexMap{
 		InternalRegex: regexp.MustCompile("\\(" + regexNodeName + "\\): State transfer.*\\(" + regexNodeName2 + "\\) complete"),
 		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 
-			donor := submatches[groupNodeName]
-			joiner := submatches[groupNodeName2]
-			displayJoiner := utils.ShortNodeName(joiner)
-			displayDonor := utils.ShortNodeName(donor)
+			donor := utils.ShortNodeName(submatches[groupNodeName])
+			joiner := utils.ShortNodeName(submatches[groupNodeName2])
 			displayType := "SST"
 			if ctx.SST.Type != "" {
 				displayType = ctx.SST.Type
 			}
 			ctx.SST.Reset()
 
-			//TODO: add that inside a bigger displayer
-			if utils.SliceContains(ctx.OwnNames, joiner) {
-				return ctx, types.SimpleDisplayer(utils.Paint(utils.GreenText, "got "+displayType+" from ") + displayDonor)
-			}
-			if utils.SliceContains(ctx.OwnNames, donor) {
-				return ctx, types.SimpleDisplayer(utils.Paint(utils.GreenText, "finished sending "+displayType+" to ") + displayJoiner)
-			}
+			ctx = addOwnNameWithSSTMetadata(ctx, joiner, donor)
 
-			return ctx, types.SimpleDisplayer(displayDonor + utils.Paint(utils.GreenText, " synced ") + displayJoiner)
+			return ctx, func(ctx types.LogCtx) string {
+				if utils.SliceContains(ctx.OwnNames, joiner) {
+					return utils.Paint(utils.GreenText, "got "+displayType+" from ") + donor
+				}
+				if utils.SliceContains(ctx.OwnNames, donor) {
+					return utils.Paint(utils.GreenText, "finished sending "+displayType+" to ") + joiner
+				}
+
+				return donor + utils.Paint(utils.GreenText, " synced ") + joiner
+			}
 		},
 	},
 
@@ -88,9 +92,9 @@ var SSTMap = types.RegexMap{
 		InternalRegex: regexp.MustCompile("\\(" + regexNodeName + "\\): State transfer.*\\(left the group\\) complete"),
 		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 
-			donor := submatches[groupNodeName]
-			displayDonor := utils.ShortNodeName(donor)
-			return ctx, types.SimpleDisplayer(displayDonor + utils.Paint(utils.RedText, " synced ??(node left)"))
+			donor := utils.ShortNodeName(submatches[groupNodeName])
+			ctx = addOwnNameWithSSTMetadata(ctx, "", donor)
+			return ctx, types.SimpleDisplayer(donor + utils.Paint(utils.RedText, " synced ??(node left)"))
 		},
 	},
 
@@ -99,9 +103,9 @@ var SSTMap = types.RegexMap{
 		InternalRegex: regexp.MustCompile("\\(" + regexNodeName + "\\): State transfer.*\\(left the group\\) failed"),
 		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 
-			donor := submatches[groupNodeName]
-			displayDonor := utils.ShortNodeName(donor)
-			return ctx, types.SimpleDisplayer(displayDonor + utils.Paint(utils.RedText, " failed to sync ??(node left)"))
+			donor := utils.ShortNodeName(submatches[groupNodeName])
+			ctx = addOwnNameWithSSTMetadata(ctx, "", donor)
+			return ctx, types.SimpleDisplayer(donor + utils.Paint(utils.RedText, " failed to sync ??(node left)"))
 		},
 	},
 
@@ -110,11 +114,10 @@ var SSTMap = types.RegexMap{
 		InternalRegex: regexp.MustCompile("\\(" + regexNodeName + "\\): State transfer.*\\(" + regexNodeName2 + "\\) failed"),
 		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 
-			donor := submatches[groupNodeName]
-			joiner := submatches[groupNodeName2]
-			displayDonor := utils.ShortNodeName(donor)
-			displayJoiner := utils.ShortNodeName(joiner)
-			return ctx, types.SimpleDisplayer(displayDonor + utils.Paint(utils.RedText, " failed to sync ") + displayJoiner)
+			donor := utils.ShortNodeName(submatches[groupNodeName])
+			joiner := utils.ShortNodeName(submatches[groupNodeName2])
+			ctx = addOwnNameWithSSTMetadata(ctx, joiner, donor)
+			return ctx, types.SimpleDisplayer(donor + utils.Paint(utils.RedText, " failed to sync ") + joiner)
 		},
 	},
 
@@ -280,6 +283,22 @@ var SSTMap = types.RegexMap{
 			}
 		},
 	},
+}
+
+func addOwnNameWithSSTMetadata(ctx types.LogCtx, joiner, donor string) types.LogCtx {
+
+	var nameToAdd string
+
+	if ctx.State() == "JOINER" && joiner != "" {
+		nameToAdd = joiner
+	}
+	if ctx.State() == "DONOR" && donor != "" {
+		nameToAdd = donor
+	}
+	if nameToAdd != "" {
+		ctx.AddOwnName(nameToAdd)
+	}
+	return ctx
 }
 
 /*

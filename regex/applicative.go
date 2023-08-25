@@ -14,18 +14,33 @@ func init() {
 var ApplicativeMap = types.RegexMap{
 
 	"RegexDesync": &types.LogRegex{
-		Regex: regexp.MustCompile("desyncs itself from group"),
+		Regex:         regexp.MustCompile("desyncs itself from group"),
+		InternalRegex: regexp.MustCompile("\\(" + regexNodeName + "\\) desyncs"),
 		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			ctx.Desynced = true
-			return ctx, types.SimpleDisplayer(utils.Paint(utils.YellowText, "desyncs itself from group"))
+
+			node := submatches[groupNodeName]
+			return ctx, func(ctx types.LogCtx) string {
+				if utils.SliceContains(ctx.OwnNames, node) {
+					return utils.Paint(utils.YellowText, "desyncs itself from group")
+				}
+				return node + utils.Paint(utils.YellowText, " desyncs itself from group")
+			}
 		},
 	},
 
 	"RegexResync": &types.LogRegex{
-		Regex: regexp.MustCompile("resyncs itself to group"),
+		Regex:         regexp.MustCompile("resyncs itself to group"),
+		InternalRegex: regexp.MustCompile("\\(" + regexNodeName + "\\) resyncs"),
 		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
 			ctx.Desynced = false
-			return ctx, types.SimpleDisplayer(utils.Paint(utils.YellowText, "resyncs itself to group"))
+			node := submatches[groupNodeName]
+			return ctx, func(ctx types.LogCtx) string {
+				if utils.SliceContains(ctx.OwnNames, node) {
+					return utils.Paint(utils.YellowText, "resyncs itself to group")
+				}
+				return node + utils.Paint(utils.YellowText, " resyncs itself to group")
+			}
 		},
 	},
 

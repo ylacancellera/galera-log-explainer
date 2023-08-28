@@ -183,31 +183,6 @@ var ViewsMap = types.RegexMap{
 }
 
 /*
-var (
-	"SELF-LEAVE."
-	REGEX_NODE_INACTIVE     = "declaring inactive"
-	REGEX_NODE_TIMEOUT      = "timed out, no messages seen in"
-	REGEX_INCONSISTENT_VIEW = "node uuid:.*is inconsistent to restored view"
-)
-*/
-
-/*
-
-
-
-2022-11-25T17:05:00.693591-05:00 468765 [Warning] [MY-000000] [WSREP] Toggling wsrep_on to OFF will affect sql_log_bin. Check manual for more details
-
-2022-11-21T20:59:04.893186-05:00 0 [Note] [MY-000000] [Galera] Member 2(node1) initiates vote on 9214cd54-5acd-11ed-8489-f7f024f872b4:5405,ad544d173db06c24:  <error>, Error_code: 1304;
-2022-11-21T20:59:04.893287-05:00 0 [Note] [MY-000000] [Galera] Votes over 9214cd54-5acd-11ed-8489-f7f024f872b4:5405:
-   ad544d173db06c24:   1/3
-Waiting for more votes.
-2022-11-21T20:59:04.893345-05:00 12 [Note] [MY-000000] [Galera] Got vote request for seqno 9214cd54-5acd-11ed-8489-f7f024f872b4:5405
-2022-11-21T20:59:04.894150-05:00 0 [Note] [MY-000000] [Galera] Member 1(node1) initiates vote on 9214cd54-5acd-11ed-8489-f7f024f872b4:5405,ad544d173db06c24:  <error>,  Error_code: 1304;
-2022-11-21T20:59:04.894178-05:00 0 [Note] [MY-000000] [Galera] Votes over 9214cd54-5acd-11ed-8489-f7f024f872b4:5405:
-   ad544d173db06c24:   2/3
-Winner: ad544d173db06c24
-2022-11-21T20:59:04.898114-05:00 10 [ERROR] [MY-010584] [Repl] Slave SQL: Error '<query>', Error_code: MY-001304
-2022-11-21T20:59:04.898180-05:00 10 [Warning] [MY-000000] [WSREP] Event 1 Query apply failed: 1, seqno 5405
 
 2022-11-29T23:34:51.820009-05:00 0 [Warning] [MY-000000] [Galera] Could not find peer: c0ff4085-5ad7-11ed-8b74-cfeec74147fe
 

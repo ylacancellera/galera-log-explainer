@@ -116,6 +116,8 @@ func TimelineCLI(timeline types.Timeline, verbosity types.Verbosity) {
 		fmt.Fprintln(w, headerName(keys, currentContext))
 		fmt.Fprintln(w, headerVersion(keys, currentContext))
 	}
+
+	// TODO: where to print conflicts details ?
 }
 
 func initKeysContext(timeline types.Timeline) ([]string, map[string]types.LogCtx) {

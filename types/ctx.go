@@ -1,6 +1,8 @@
 package types
 
 import (
+	"encoding/json"
+
 	"github.com/ylacancellera/galera-log-explainer/utils"
 )
 
@@ -197,4 +199,45 @@ func (base *LogCtx) Inherit(ctx LogCtx) {
 		base.Version = ctx.Version
 	}
 	base.MergeMapsWith([]LogCtx{ctx})
+}
+
+func (l LogCtx) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		FilePath       string
+		FileType       string
+		OwnIPs         []string
+		OwnHashes      []string
+		OwnNames       []string
+		State          map[string]string
+		Version        string
+		SST            SST
+		MyIdx          string
+		MemberCount    int
+		Desynced       bool
+		HashToIP       map[string]string
+		HashToNodeName map[string]string
+		IPToHostname   map[string]string
+		IPToMethod     map[string]string
+		IPToNodeName   map[string]string
+		MinVerbosity   Verbosity
+		Conflicts      Conflicts
+	}{
+		FilePath:       l.FilePath,
+		FileType:       l.FileType,
+		OwnIPs:         l.OwnIPs,
+		OwnHashes:      l.OwnHashes,
+		State:          l.state,
+		Version:        l.Version,
+		SST:            l.SST,
+		MyIdx:          l.MyIdx,
+		MemberCount:    l.MemberCount,
+		Desynced:       l.Desynced,
+		HashToIP:       l.HashToIP,
+		HashToNodeName: l.HashToNodeName,
+		IPToHostname:   l.IPToHostname,
+		IPToMethod:     l.IPToMethod,
+		IPToNodeName:   l.IPToNodeName,
+		MinVerbosity:   l.minVerbosity,
+		Conflicts:      l.Conflicts,
+	})
 }

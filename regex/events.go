@@ -143,6 +143,15 @@ var EventsMap = types.RegexMap{
 			return ctx, types.SimpleDisplayer(utils.Paint(utils.RedText, "too many connections"))
 		},
 	},
+
+	"RegexReversingHistory": &types.LogRegex{
+		Regex:         regexp.MustCompile("Reversing history"),
+		InternalRegex: regexp.MustCompile("Reversing history: " + regexSeqno + " -> [0-9]*, this member has applied (?P<diff>[0-9]*) more events than the primary component"),
+		Handler: func(submatches map[string]string, ctx types.LogCtx, log string) (types.LogCtx, types.LogDisplayer) {
+
+			return ctx, types.SimpleDisplayer(utils.Paint(utils.BrightRedText, "having "+submatches["diff"]+" more events than the other nodes, data loss possible"))
+		},
+	},
 }
 var regexWsrepLoadNone = regexp.MustCompile("none")
 

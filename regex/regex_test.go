@@ -271,6 +271,13 @@ func TestRegexes(t *testing.T) {
 		},
 
 		{
+			log:         "2001-01-01T01:01:01.000000Z 0 [ERROR] [MY-000000] [Galera] gcs/src/gcs_group.cpp:group_post_state_exchange():431: Reversing history: 150 -> 10, this member has applied 140 more events than the primary component.Data loss is possible. Must abort.",
+			expectedOut: "having 140 more events than the other nodes, data loss possible",
+			mapToTest:   EventsMap,
+			key:         "RegexReversingHistory",
+		},
+
+		{
 			log:         "2001-01-01T01:01:01.000000Z 0 [Note] [MY-000000] [Galera] (90002222-1111, 'ssl://0.0.0.0:4567') Found matching local endpoint for a connection, blacklisting address ssl://127.0.0.1:4567",
 			expectedCtx: types.LogCtx{OwnIPs: []string{"127.0.0.1"}},
 			expectedOut: "127.0.0.1 is local",
@@ -1106,7 +1113,7 @@ func TestRegexes(t *testing.T) {
 		{
 			log:         "2001-01-01  1:01:01 0 [Note] WSREP: Member 0.0 (node) desyncs itself from group",
 			expectedCtx: types.LogCtx{Desynced: true},
-			expectedOut: "desyncs itself from group",
+			expectedOut: "node desyncs itself from group",
 			mapToTest:   ApplicativeMap,
 			key:         "RegexDesync",
 		},
@@ -1115,7 +1122,7 @@ func TestRegexes(t *testing.T) {
 			log:         "2001-01-01  1:01:01 0 [Note] WSREP: Member 0.0 (node) resyncs itself to group",
 			expectedCtx: types.LogCtx{Desynced: false},
 			inputCtx:    types.LogCtx{Desynced: true},
-			expectedOut: "resyncs itself to group",
+			expectedOut: "node resyncs itself to group",
 			mapToTest:   ApplicativeMap,
 			key:         "RegexResync",
 		},

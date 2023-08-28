@@ -9,42 +9,49 @@ import (
 // LogCtx is a context for a given file.
 // It used to keep track of what is going on at each new event.
 type LogCtx struct {
-	FilePath       string
-	FileType       string
-	OwnIPs         []string
-	OwnHashes      []string
-	OwnNames       []string
-	state          map[string]string
-	Version        string
-	SST            SST
-	MyIdx          string
-	MemberCount    int
-	Desynced       bool
-	HashToIP       map[string]string
-	HashToNodeName map[string]string
-	IPToHostname   map[string]string
-	IPToMethod     map[string]string
-	IPToNodeName   map[string]string
-	minVerbosity   Verbosity
-	Conflicts      Conflicts
+	FilePath               string
+	FileType               string
+	OwnIPs                 []string
+	OwnHashes              []string
+	OwnNames               []string
+	stateErrorLog          string
+	stateRecoveryLog       string
+	statePostProcessingLog string
+	stateBackupLog         string
+	Version                string
+	SST                    SST
+	MyIdx                  string
+	MemberCount            int
+	Desynced               bool
+	HashToIP               map[string]string
+	HashToNodeName         map[string]string
+	IPToHostname           map[string]string
+	IPToMethod             map[string]string
+	IPToNodeName           map[string]string
+	minVerbosity           Verbosity
+	Conflicts              Conflicts
 }
 
 func NewLogCtx() LogCtx {
-	return LogCtx{minVerbosity: Debug, HashToIP: map[string]string{}, IPToHostname: map[string]string{}, IPToMethod: map[string]string{}, IPToNodeName: map[string]string{}, HashToNodeName: map[string]string{}, state: map[string]string{}}
+	return LogCtx{minVerbosity: Debug, HashToIP: map[string]string{}, IPToHostname: map[string]string{}, IPToMethod: map[string]string{}, IPToNodeName: map[string]string{}, HashToNodeName: map[string]string{}}
 }
 
-func (ctx *LogCtx) State() string {
-	return ctx.state[ctx.FileType]
-}
-
-func (ctx *LogCtx) HasVisibleEvents(level Verbosity) bool {
-	return level >= ctx.minVerbosity
+func (ctx LogCtx) State() string {
+	switch ctx.FileType {
+	case "post.processing.log":
+		return ctx.statePostProcessingLog
+	case "recovery.log":
+		return ctx.stateRecoveryLog
+	case "backup.log":
+		return ctx.stateBackupLog
+	case "error.log":
+		fallthrough
+	default:
+		return ctx.stateErrorLog
+	}
 }
 
 func (ctx *LogCtx) SetState(s string) {
-	if ctx.state == nil {
-		ctx.state = map[string]string{}
-	}
 
 	// NON-PRIMARY and RECOVERY are not a real wsrep state, but it's helpful here
 	// DONOR and DESYNCED are merged in wsrep, but we are able to distinguish here
@@ -52,11 +59,27 @@ func (ctx *LogCtx) SetState(s string) {
 	if !utils.SliceContains([]string{"SYNCED", "JOINED", "DONOR", "DESYNCED", "JOINER", "PRIMARY", "NON-PRIMARY", "OPEN", "CLOSED", "DESTROYED", "ERROR", "RECOVERY"}, s) {
 		return
 	}
-	ctx.state[ctx.FileType] = s
+	//ctx.state[ctx.FileType] = append(ctx.state[ctx.FileType], s)
+	switch ctx.FileType {
+	case "post.processing.log":
+		ctx.statePostProcessingLog = s
+	case "recovery.log":
+		ctx.stateRecoveryLog = s
+	case "backup.log":
+		ctx.stateBackupLog = s
+	case "error.log":
+		fallthrough
+	default:
+		ctx.stateErrorLog = s
+	}
+}
+
+func (ctx *LogCtx) HasVisibleEvents(level Verbosity) bool {
+	return level >= ctx.minVerbosity
 }
 
 func (ctx *LogCtx) IsPrimary() bool {
-	return utils.SliceContains([]string{"SYNCED", "DONOR", "DESYNCED", "JOINER", "PRIMARY"}, ctx.state[ctx.FileType])
+	return utils.SliceContains([]string{"SYNCED", "DONOR", "DESYNCED", "JOINER", "PRIMARY"}, ctx.State())
 }
 
 func (ctx *LogCtx) OwnHostname() string {
@@ -203,41 +226,47 @@ func (base *LogCtx) Inherit(ctx LogCtx) {
 
 func (l LogCtx) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
-		FilePath       string
-		FileType       string
-		OwnIPs         []string
-		OwnHashes      []string
-		OwnNames       []string
-		State          map[string]string
-		Version        string
-		SST            SST
-		MyIdx          string
-		MemberCount    int
-		Desynced       bool
-		HashToIP       map[string]string
-		HashToNodeName map[string]string
-		IPToHostname   map[string]string
-		IPToMethod     map[string]string
-		IPToNodeName   map[string]string
-		MinVerbosity   Verbosity
-		Conflicts      Conflicts
+		FilePath               string
+		FileType               string
+		OwnIPs                 []string
+		OwnHashes              []string
+		OwnNames               []string
+		StateErrorLog          string
+		StateRecoveryLog       string
+		StatePostProcessingLog string
+		StateBackupLog         string
+		Version                string
+		SST                    SST
+		MyIdx                  string
+		MemberCount            int
+		Desynced               bool
+		HashToIP               map[string]string
+		HashToNodeName         map[string]string
+		IPToHostname           map[string]string
+		IPToMethod             map[string]string
+		IPToNodeName           map[string]string
+		MinVerbosity           Verbosity
+		Conflicts              Conflicts
 	}{
-		FilePath:       l.FilePath,
-		FileType:       l.FileType,
-		OwnIPs:         l.OwnIPs,
-		OwnHashes:      l.OwnHashes,
-		State:          l.state,
-		Version:        l.Version,
-		SST:            l.SST,
-		MyIdx:          l.MyIdx,
-		MemberCount:    l.MemberCount,
-		Desynced:       l.Desynced,
-		HashToIP:       l.HashToIP,
-		HashToNodeName: l.HashToNodeName,
-		IPToHostname:   l.IPToHostname,
-		IPToMethod:     l.IPToMethod,
-		IPToNodeName:   l.IPToNodeName,
-		MinVerbosity:   l.minVerbosity,
-		Conflicts:      l.Conflicts,
+		FilePath:               l.FilePath,
+		FileType:               l.FileType,
+		OwnIPs:                 l.OwnIPs,
+		OwnHashes:              l.OwnHashes,
+		StateErrorLog:          l.stateErrorLog,
+		StateRecoveryLog:       l.stateRecoveryLog,
+		StatePostProcessingLog: l.statePostProcessingLog,
+		StateBackupLog:         l.stateBackupLog,
+		Version:                l.Version,
+		SST:                    l.SST,
+		MyIdx:                  l.MyIdx,
+		MemberCount:            l.MemberCount,
+		Desynced:               l.Desynced,
+		HashToIP:               l.HashToIP,
+		HashToNodeName:         l.HashToNodeName,
+		IPToHostname:           l.IPToHostname,
+		IPToMethod:             l.IPToMethod,
+		IPToNodeName:           l.IPToNodeName,
+		MinVerbosity:           l.minVerbosity,
+		Conflicts:              l.Conflicts,
 	})
 }

@@ -3,8 +3,8 @@ package types
 type Conflicts []*Conflict
 
 type Conflict struct {
-	InitiatedBy []string
 	Seqno       string
+	InitiatedBy []string
 	Winner      string
 	VotePerNode map[string]ConflictVote
 }
@@ -28,6 +28,7 @@ func (cs Conflicts) Merge(c Conflict) Conflicts {
 }
 
 func (cs Conflicts) ConflictWithSeqno(seqno string) *Conflict {
+	// technically could make it a binary search, seqno should be ever increasing
 	for _, c := range cs {
 		if seqno == c.Seqno {
 			return c

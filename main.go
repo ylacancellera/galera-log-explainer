@@ -39,6 +39,7 @@ var CLI struct {
 	Ctx       ctx        `cmd:""`
 	RegexList regexList  `cmd:""`
 	Version   versioncmd `cmd:""`
+	Conflicts conflicts  `cmd:""`
 
 	GrepCmd  string `help:"'grep' command path. Could need to be set to 'ggrep' for darwin systems" default:"grep"`
 	GrepArgs string `help:"'grep' arguments. perl regexp (-P) is necessary. -o will break the tool" default:"-P"`

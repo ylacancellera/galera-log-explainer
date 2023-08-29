@@ -14,15 +14,22 @@ Filter, aggregate and summarize multiple galera logs together.
 * Filter on type of events
 * Aggregates rotated logs together, even when there are logs from multiple nodes
 
-
+<br/><br/>
 Get the latest cluster changes on a local server
 ```sh
 galera-log-explainer list --all --since 2023-01-05T03:24:26.000000Z /var/log/mysql/*.log
 ```
 
+Or gather every log files and compile them
+```sh
+galera-log-explainer list --all *.log
+```
+![example](example.png)
+
+<br/><br/>
 Find out information about nodes, using any type of info
 ```sh
-galera-log-explainer whois 'galera-node2' mysql.log 
+galera-log-explainer whois '218469b2' mysql.log 
 {
 	"input": "218469b2",
 	"IPs": [
@@ -46,7 +53,7 @@ galera-log-explainer whois '172.17.0.3' mysql.log
 
 galera-log-explainer whois 'galera-node2' mysql.log 
 ```
-
+<br/><br/>
 Automatically translate every information (IP, UUID) from a log
 ```
 galera-log-explainer sed some/log.log another/one.log to_translate.log < to_translate.log  | less
@@ -57,7 +64,7 @@ Or get the raw `sed` command to do it yourself
 ```
 galera-log-explainer sed some/log.log another/one.log to_translate.log
 ```
-
+<br/><br/>
 Usage:
 
 	$ galera-log-explainer --help

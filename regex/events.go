@@ -157,7 +157,7 @@ var regexWsrepLoadNone = regexp.MustCompile("none")
 
 // isShutdownReasonMissing is returning true if the latest wsrep state indicated a "working" node
 func isShutdownReasonMissing(ctx types.LogCtx) bool {
-	return ctx.State() != "CLOSED" && ctx.State() != "RECOVERY" && ctx.State() != ""
+	return ctx.State() != "DESTROYED" && ctx.State() != "CLOSED" && ctx.State() != "RECOVERY" && ctx.State() != ""
 }
 
 /*

@@ -54,6 +54,14 @@ galera-log-explainer whois '172.17.0.3' mysql.log
 galera-log-explainer whois 'galera-node2' mysql.log 
 ```
 <br/><br/>
+List every replication failures (Galera 4)
+```sh
+galera-log-explainer conflicts [--json|--yaml] *.log
+```
+![conflicts example](example_conflicts.png)
+
+<br/><br/>
+
 Automatically translate every information (IP, UUID) from a log
 ```
 galera-log-explainer sed some/log.log another/one.log to_translate.log < to_translate.log  | less
@@ -66,41 +74,43 @@ galera-log-explainer sed some/log.log another/one.log to_translate.log
 ```
 <br/><br/>
 Usage:
+```
+Usage: galera-log-explainer <command>
 
-	$ galera-log-explainer --help
-	Usage: galera-log-explainer <command>
+An utility to transform Galera logs in a readable version
 
-	An utility to transform Galera logs in a readable version
-	
-	Flags:
-	  -h, --help               Show context-sensitive help.
-	      --no-color
-	      --since=SINCE        Only list events after this date, you can copy-paste a date from mysql
-	                           error log
-	      --until=UNTIL        Only list events before this date, you can copy-paste a date from mysql
-	                           error log
-	      --verbosity=1        0: Info, 1: Detailed, 2: DebugMySQL (every mysql info the tool used), 3:
-	                           Debug (internal tool debug)
-	      --pxc-operator       Analyze logs from Percona PXC operator. Off by default because it
-	                           negatively impacts performance for non-k8s setups
-	      --exclude-regexes=EXCLUDE-REGEXES,...
-	                           Remove regexes from analysis. List regexes using 'galera-log-explainer
-	                           regex-list'
-	      --grep-cmd="grep"    'grep' command path. Could need to be set to 'ggrep' for darwin systems
-	      --grep-args="-P"     'grep' arguments. perl regexp (-P) is necessary. -o will break the tool
-	
-	Commands:
-	  list <paths> ...
-	
-	  whois <search> <paths> ...
-	
-	  sed <paths> ...
-	
-	  ctx <paths> ...
-	
-	  regex-list
-	
-	Run "galera-log-explainer <command> --help" for more information on a command.
+Flags:
+  -h, --help               Show context-sensitive help.
+      --no-color
+      --since=SINCE        Only list events after this date, format: 2023-01-23T03:53:40Z (RFC3339)
+      --until=UNTIL        Only list events before this date
+  -v, --verbosity=1        -v: Detailed (default), -vv: DebugMySQL (add every mysql info the tool used),
+                           -vvv: Debug (internal tool debug)
+      --pxc-operator       Analyze logs from Percona PXC operator. Off by default because it negatively
+                           impacts performance for non-k8s setups
+      --exclude-regexes=EXCLUDE-REGEXES,...
+                           Remove regexes from analysis. List regexes using 'galera-log-explainer
+                           regex-list'
+      --grep-cmd="grep"    'grep' command path. Could need to be set to 'ggrep' for darwin systems
+      --grep-args="-P"     'grep' arguments. perl regexp (-P) is necessary. -o will break the tool
+
+Commands:
+  list <paths> ...
+
+  whois <search> <paths> ...
+
+  sed <paths> ...
+
+  ctx <paths> ...
+
+  regex-list
+
+  version
+
+  conflicts <paths> ...
+
+Run "galera-log-explainer <command> --help" for more information on a command.
+```
 
 
 ## Compatibility

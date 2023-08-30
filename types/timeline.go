@@ -97,7 +97,7 @@ func MergeTimeline(t1, t2 LocalTimeline) LocalTimeline {
 
 func getfirsttime(l LocalTimeline) time.Time {
 	for _, event := range l {
-		if event.Date != nil {
+		if event.Date != nil && event.Ctx.FileType == "error.log" {
 			return event.Date.Time
 		}
 	}
@@ -105,7 +105,7 @@ func getfirsttime(l LocalTimeline) time.Time {
 }
 func getlasttime(l LocalTimeline) time.Time {
 	for i := len(l) - 1; i >= 0; i-- {
-		if l[i].Date != nil {
+		if l[i].Date != nil && l[i].Ctx.FileType == "error.log" {
 			return l[i].Date.Time
 		}
 	}

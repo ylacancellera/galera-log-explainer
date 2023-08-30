@@ -10,8 +10,8 @@ import (
 
 type conflicts struct {
 	list
-	Yaml bool `name:"json" xor:"format"`
-	Json bool `name:"yaml" xor:"format"`
+	Yaml bool `xor:"format"`
+	Json bool `xor:"format"`
 }
 
 func (c *conflicts) Help() string {

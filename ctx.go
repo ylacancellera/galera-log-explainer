@@ -5,10 +5,11 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	"github.com/ylacancellera/galera-log-explainer/regex"
 )
 
 type ctx struct {
-	list
+	Paths []string `arg:"" name:"paths" help:"paths of the log to use"`
 }
 
 func (c *ctx) Help() string {
@@ -21,9 +22,7 @@ func (c *ctx) Run() error {
 		return errors.New("Can only use 1 path at a time for ctx subcommand")
 	}
 
-	// for this use case, why restrict regexes
-	c.list.All = true
-	timeline, err := timelineFromPaths(c.Paths, c.list.regexesToUse(), CLI.Since, CLI.Until)
+	timeline, err := timelineFromPaths(c.Paths, regex.AllRegexes(), CLI.Since, CLI.Until)
 	if err != nil {
 		return err
 	}

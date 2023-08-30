@@ -27,9 +27,9 @@ var (
 
 var CLI struct {
 	NoColor        bool
-	Since          *time.Time      `help:"Only list events after this date, you can copy-paste a date from mysql error log"`
-	Until          *time.Time      `help:"Only list events before this date, you can copy-paste a date from mysql error log"`
-	Verbosity      types.Verbosity `default:"1" help:"0: Info, 1: Detailed, 2: DebugMySQL (every mysql info the tool used), 3: Debug (internal tool debug)"`
+	Since          *time.Time      `help:"Only list events after this date, format: 2023-01-23T03:53:40Z (RFC3339)"`
+	Until          *time.Time      `help:"Only list events before this date"`
+	Verbosity      types.Verbosity `type:"counter" short:"v" default:"1" help:"-v: Detailed (default), -vv: DebugMySQL (add every mysql info the tool used), -vvv: Debug (internal tool debug)"`
 	PxcOperator    bool            `default:"false" help:"Analyze logs from Percona PXC operator. Off by default because it negatively impacts performance for non-k8s setups"`
 	ExcludeRegexes []string        `help:"Remove regexes from analysis. List regexes using 'galera-log-explainer regex-list'"`
 
@@ -93,7 +93,8 @@ func timelineFromPaths(paths []string, toCheck types.RegexMap, since, until *tim
 		extr.logger.Debug().Str("path", path).Msg("Finished searching")
 
 		// identify the node with the easiest to read information
-		//		return , lt, nil
+		// this is critical part to aggregate logs: this is what enable to merge logs
+		// ultimately the "identifier" will be used for columns header
 		var node string
 		if CLI.PxcOperator {
 			node = path
@@ -103,7 +104,7 @@ func timelineFromPaths(paths []string, toCheck types.RegexMap, since, until *tim
 			// Why it should not just identify using the file path:
 			// so that we are able to merge files that belong to the same nodes
 			// we wouldn't want them to be shown as from different nodes
-			node = types.DisplayLocalNodeSimplestForm(localTimeline[len(localTimeline)-1].Ctx)
+			node = types.Identifier(localTimeline[len(localTimeline)-1].Ctx)
 			if t, ok := timeline[node]; ok {
 
 				extr.logger.Debug().Str("path", path).Str("node", node).Msg("Merging with existing timeline")
@@ -120,6 +121,7 @@ func timelineFromPaths(paths []string, toCheck types.RegexMap, since, until *tim
 	return timeline, nil
 }
 
+// extractor is an utility struct to store what needs to be done
 type extractor struct {
 	regexes      types.RegexMap
 	path         string
@@ -136,6 +138,7 @@ func newExtractor(path string, toCheck types.RegexMap, since, until *time.Time) 
 	if until != nil {
 		e.logger = e.logger.With().Time("until", *e.until).Logger()
 	}
+	e.logger.Debug().Msg("new extractor")
 
 	return e
 }
@@ -152,7 +155,6 @@ func (e *extractor) grepArgument() string {
 		// this is to keep things as close as '^' as possible to keep doing prefix searches
 		grepRegex += "((" + strings.Join(regex.PXCOperatorMap.Compile(), "|") + ")|^{\"log\":\""
 		e.regexes.Merge(regex.PXCOperatorMap)
-		//grepRegex += "{\"log\":\"" //
 	}
 	if e.since != nil {
 		grepRegex += "(" + regex.BetweenDateRegex(e.since, CLI.PxcOperator) + "|" + regex.NoDatesRegex(CLI.PxcOperator) + ")"
@@ -162,6 +164,7 @@ func (e *extractor) grepArgument() string {
 	if CLI.PxcOperator {
 		grepRegex += ")"
 	}
+	e.logger.Debug().Str("grepArg", grepRegex).Msg("Compiled grep arguments")
 	return grepRegex
 }
 
@@ -170,7 +173,6 @@ func (e *extractor) search() (types.LocalTimeline, error) {
 
 	// A first pass is done, with every regexes we want compiled in a single one.
 	grepRegex := e.grepArgument()
-	e.logger.Debug().Str("grepArg", grepRegex).Msg("")
 
 	/*
 		Regular grep is actually used
@@ -188,9 +190,12 @@ func (e *extractor) search() (types.LocalTimeline, error) {
 	if runtime.GOOS == "darwin" && CLI.GrepCmd == "grep" {
 		e.logger.Warn().Msg("On Darwin systems, use 'galera-log-explainer --grep-cmd=ggrep' as it requires grep v3")
 	}
+
 	cmd := exec.Command(CLI.GrepCmd, CLI.GrepArgs, grepRegex, e.path)
+
 	out, _ := cmd.StdoutPipe()
 	defer out.Close()
+
 	err := cmd.Start()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to search in %s", e.path)
@@ -199,17 +204,22 @@ func (e *extractor) search() (types.LocalTimeline, error) {
 	// grep treatment
 	s := bufio.NewScanner(out)
 
+	// it will iterate on stdout pipe results
 	lt, err := e.iterateOnResults(s)
 	if err != nil {
 		e.logger.Warn().Err(err).Msg("Failed to iterate on results")
 	}
 
-	// If we found anything
+	// double-check it stopped correctly
+	if err = cmd.Wait(); err != nil {
+		return nil, errors.Wrap(err, "grep subprocess error")
+	}
+
 	if len(lt) == 0 {
 		return nil, errors.New("Found nothing")
 	}
-	return lt, nil
 
+	return lt, nil
 }
 
 func (e *extractor) sanitizeLine(s string) string {
@@ -219,6 +229,9 @@ func (e *extractor) sanitizeLine(s string) string {
 	return s
 }
 
+// iterateOnResults will take line by line each logs that matched regex
+// it will iterate on every regexes in slice, and apply the handler for each
+// it also filters out --since and --until rows
 func (e *extractor) iterateOnResults(s *bufio.Scanner) ([]types.LogInfo, error) {
 
 	var (

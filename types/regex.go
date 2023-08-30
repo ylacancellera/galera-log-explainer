@@ -5,13 +5,16 @@ import (
 	"regexp"
 )
 
+// LogRegex is the work struct to work on lines that were sent by "grep"
+
 type LogRegex struct {
 	Regex         *regexp.Regexp // to send to grep, should be as simple as possible but without collisions
 	InternalRegex *regexp.Regexp // for internal usage in handler func
 	Type          RegexType
 
 	// Taking into arguments the current context and log line, returning an updated context and a closure to get the msg to display
-	// Why a closure: to later inject an updated context instead of the current partial context, to ensure hash/ip/nodenames are known
+	// Why a closure: to later inject an updated context instead of the current partial context
+	// This ensure every hash/ip/nodenames are already known when crafting the message
 	Handler   func(map[string]string, LogCtx, string) (LogCtx, LogDisplayer)
 	Verbosity Verbosity // To be able to hide details from summaries
 }

@@ -63,6 +63,8 @@ func (li *LogInfo) Msg(ctx LogCtx) string {
 	return msg
 }
 
+// IsDuplicatedEvent will aim to keep 2 occurences of the same event
+// To be considered duplicated, they must be from the same regexes and have the same message
 func (current *LogInfo) IsDuplicatedEvent(base, previous LogInfo) bool {
 	return base.RegexUsed == previous.RegexUsed &&
 		base.displayer != nil && previous.displayer != nil && current.displayer != nil &&

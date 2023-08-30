@@ -7,7 +7,8 @@ import (
 )
 
 // LogCtx is a context for a given file.
-// It used to keep track of what is going on at each new event.
+// It is the principal storage of this tool
+// Everything relevant will be stored here
 type LogCtx struct {
 	FilePath               string
 	FileType               string
@@ -36,6 +37,11 @@ func NewLogCtx() LogCtx {
 	return LogCtx{minVerbosity: Debug, HashToIP: map[string]string{}, IPToHostname: map[string]string{}, IPToMethod: map[string]string{}, IPToNodeName: map[string]string{}, HashToNodeName: map[string]string{}}
 }
 
+// State will return the wsrep state of the current file type
+// That is because for operator related logs, we have every type of files
+// Not tracking and differenciating by file types led to confusions in most subcommands
+// as it would seem that sometimes mysql is restarting after a crash, while actually
+// the operator was simply launching a "wsrep-recover" instance while mysql was still running
 func (ctx LogCtx) State() string {
 	switch ctx.FileType {
 	case "post.processing.log":
@@ -51,6 +57,7 @@ func (ctx LogCtx) State() string {
 	}
 }
 
+// SetState will double-check if the STATE exists, and also store it on the correct status
 func (ctx *LogCtx) SetState(s string) {
 
 	// NON-PRIMARY and RECOVERY are not a real wsrep state, but it's helpful here
@@ -214,6 +221,8 @@ func (base *LogCtx) MergeMapsWith(ctxs []LogCtx) {
 
 // Inherit will fill the local information from given context
 // into the base
+// It is used when merging, so that we do not start from nothing
+// It helps when dealing with many small files
 func (base *LogCtx) Inherit(ctx LogCtx) {
 	base.OwnHashes = append(ctx.OwnHashes, base.OwnHashes...)
 	base.OwnNames = append(ctx.OwnNames, base.OwnNames...)

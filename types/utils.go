@@ -5,12 +5,12 @@ import (
 	"github.com/ylacancellera/galera-log-explainer/utils"
 )
 
-// DisplayLocalNodeSimplestForm is used to identify a node timeline.
-// This has impacts on how logs are identified in the global timelines,
+// Identifier is used to identify a node timeline.
+// It will the column headers
 // It will also impacts how logs are merged if we have multiple logs per nodes
 //
 // In order of preference: wsrep_node_name (or galera "node" name), hostname, ip, filepath
-func DisplayLocalNodeSimplestForm(ctx LogCtx) string {
+func Identifier(ctx LogCtx) string {
 	if len(ctx.OwnNames) > 0 {
 		return ctx.OwnNames[len(ctx.OwnNames)-1]
 	}

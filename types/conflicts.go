@@ -5,7 +5,7 @@ type Conflicts []*Conflict
 type Conflict struct {
 	Seqno       string
 	InitiatedBy []string
-	Winner      string
+	Winner      string // winner will help the winning md5sum
 	VotePerNode map[string]ConflictVote
 }
 

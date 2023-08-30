@@ -46,12 +46,10 @@ func TimelineCLI(timeline types.Timeline, verbosity types.Verbosity) {
 	for nextNodes := timeline.IterateNode(); len(nextNodes) != 0; nextNodes = timeline.IterateNode() {
 
 		// Date column
-		//formattedDate, tmpLastLayout := dateBlock(nextDate, lastDate, timeline[nextNodes[0]][0].DateLayout, lastLayout)
 		date := timeline[nextNodes[0]][0].Date
+		args = []string{""}
 		if date != nil {
 			args = []string{date.DisplayTime}
-		} else {
-			args = []string{""}
 		}
 
 		displayedValue := 0
@@ -242,6 +240,11 @@ const NumberOfPossibleTransition = 4
 //           V
 //   mysqld.log.1
 // or a change of ip, node name, ...
+// This feels complicated: it is
+// It was made difficult because of how "tabwriter" works
+// it needs an element on each columns so that we don't break columns
+// The rows can't have a variable count of elements: it has to be strictly identical each time
+// so the whole next functions are here to ensure it takes minimal spaces, while giving context and preserving columns
 func transitionSeparator(keys []string, oldctxs, ctxs map[string]types.LogCtx) string {
 
 	ts := map[string]*transitions{}
@@ -314,6 +317,7 @@ func (ts *transitions) iterate() {
 	}
 
 }
+
 func (ts *transitions) stackPrioritizeFound(height int) {
 	for i, test := range ts.tests {
 		// if at the right height

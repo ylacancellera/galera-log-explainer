@@ -4,14 +4,15 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/ylacancellera/galera-log-explainer/regex"
 	"github.com/ylacancellera/galera-log-explainer/utils"
 	"gopkg.in/yaml.v2"
 )
 
 type conflicts struct {
-	list
-	Yaml bool `xor:"format"`
-	Json bool `xor:"format"`
+	Paths []string `arg:"" name:"paths" help:"paths of the log to use"`
+	Yaml  bool     `xor:"format"`
+	Json  bool     `xor:"format"`
 }
 
 func (c *conflicts) Help() string {
@@ -20,8 +21,8 @@ func (c *conflicts) Help() string {
 
 func (c *conflicts) Run() error {
 
-	c.list.Applicative = true
-	timeline, err := timelineFromPaths(c.Paths, c.list.regexesToUse(), CLI.Since, CLI.Until)
+	regexes := regex.IdentsMap.Merge(regex.ApplicativeMap)
+	timeline, err := timelineFromPaths(c.Paths, regexes, CLI.Since, CLI.Until)
 	if err != nil {
 		return err
 	}

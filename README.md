@@ -1,3 +1,5 @@
+Archived, moved at https://github.com/percona/percona-toolkit/tree/3.x/src/go/pt-galera-log-explainer
+
 [![Go Report Card](https://goreportcard.com/badge/github.com/ylacancellera/galera-log-explainer)](https://goreportcard.com/report/github.com/ylacancellera/galera-log-explainer) 
 
 # galera-log-explainer
